@@ -1,38 +1,51 @@
+import fs from 'fs';
 import child_process from 'child_process';
+
 import { IOwnable__factory } from '../../typechain';
 import {
   BlockExplorerUrl,
   ChainID,
   ContractKey,
   ContractType,
-  DeploymentInfos,
+  DeploymentMetadata,
+  DeploymentPath,
 } from './types';
-import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
+import { ethers, run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
-import arbitrumDeployment from './arbitrum.json';
-import arbitrumGoerliDeployment from './arbitrumGoerli.json';
-import { ethers } from 'hardhat';
+import arbitrumDeployment from './arbitrum/metadata.json';
+import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
+import { generateTables } from '../tables/model';
+
+interface UpdateDeploymentMetadataOptions {
+  logTxUrl?: boolean;
+  skipWriteFile?: boolean;
+  verification?: VerificationOptions;
+}
+
+interface VerificationOptions {
+  enableVerification?: boolean;
+  contract?: string;
+  libraries?: { [key: string]: string };
+}
 
 export async function initialize(
   providerOrSigner: Provider | SignerWithAddress,
 ) {
   const network = await getNetwork(providerOrSigner);
 
-  let deployment: DeploymentInfos;
+  let deployment: DeploymentMetadata = getDeployment(network.chainId);
   let proposeToMultiSig: boolean;
   let proxyManager: string;
 
   if (network.chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    deployment = arbitrumDeployment;
     proposeToMultiSig = true;
   } else if (network.chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
-    deployment = arbitrumGoerliDeployment;
     proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
@@ -41,22 +54,32 @@ export async function initialize(
   return { network, deployment, proposeToMultiSig, proxyManager };
 }
 
-export async function updateDeploymentInfos(
+export function getDeployment(chain: ChainID): DeploymentMetadata {
+  if (chain === ChainID.Arbitrum) return arbitrumDeployment;
+  if (chain === ChainID.ArbitrumGoerli) return arbitrumGoerliDeployment;
+  throw new Error('ChainId not implemented');
+}
+
+export async function updateDeploymentMetadata(
   providerOrSigner: Provider | SignerWithAddress,
   objectPath: ContractKey | string,
   contractType: ContractType,
   deployedContract: BaseContract,
   deploymentArgs: string[],
-  logTxUrl = false,
-  writeFile = true,
+  options: UpdateDeploymentMetadataOptions = {},
 ) {
+  if (objectPath in ContractKey) {
+    objectPath = 'core.' + objectPath;
+  }
+
   const provider = getProvider(providerOrSigner);
-  const chainId = (await getNetwork(provider)).chainId;
-  const jsonPath = getDeploymentJsonPath(chainId);
+  const network = await getNetwork(provider);
+  const chainId = network.chainId;
+  const metadataJsonPath = DeploymentPath[chainId] + 'metadata.json';
 
   const data = JSON.parse(
-    fs.readFileSync(jsonPath).toString(),
-  ) as DeploymentInfos;
+    fs.readFileSync(metadataJsonPath).toString(),
+  ) as DeploymentMetadata;
 
   const txReceipt = await deployedContract.deployTransaction.wait();
   let owner = '';
@@ -77,35 +100,33 @@ export async function updateDeploymentInfos(
     owner: owner,
   });
 
-  if (writeFile) {
-    fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+  if (!options.skipWriteFile) {
+    fs.writeFileSync(metadataJsonPath, JSON.stringify(data, undefined, 2));
   }
 
-  if (logTxUrl) {
+  if (options.logTxUrl) {
     const addressUrl = await getAddressUrl(
       deployedContract.address,
       providerOrSigner,
     );
 
     console.log(
-      `Contract deployed: ${deployedContract.address} (${addressUrl})`,
+      `${objectPath} deployed: ${deployedContract.address} (${addressUrl})`,
     );
   }
 
-  return data;
-}
-
-export function getDeploymentJsonPath(chainId: ChainID) {
-  switch (chainId) {
-    case ChainID.Arbitrum:
-      return 'utils/deployment/arbitrum.json';
-    case ChainID.ArbitrumGoerli:
-      return 'utils/deployment/arbitrumGoerli.json';
-    case ChainID.ArbitrumNova:
-      return 'utils/deployment/arbitrumNova.json';
-    default:
-      throw new Error('ChainId not implemented');
+  if (options.verification?.enableVerification) {
+    await verifyContractsOnEtherscan(
+      deployedContract.address,
+      deploymentArgs,
+      options.verification?.libraries ?? {},
+      options.verification?.contract,
+    );
   }
+
+  await generateTables(chainId);
+
+  return data;
 }
 
 export async function getBlockTimestamp(
@@ -149,4 +170,18 @@ export function getProvider(
     (providerOrSigner as SignerWithAddress).provider ??
     (providerOrSigner as Provider)
   );
+}
+
+export async function verifyContractsOnEtherscan(
+  address: string,
+  constructorArguments: string[],
+  libraries: { [key: string]: string } = {},
+  contractPath: string | undefined = undefined, // Example : contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable
+) {
+  await run('verify:verify', {
+    address,
+    contract: contractPath,
+    constructorArguments,
+    libraries,
+  });
 }

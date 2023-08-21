@@ -12,7 +12,7 @@ import {
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -41,7 +41,7 @@ async function main() {
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
   const currentSettings = await vaultRegistry.getSettings(vaultType);
@@ -52,27 +52,27 @@ async function main() {
   const optionMathExternal = await new OptionMathExternal__factory(
     deployer,
   ).deploy();
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionMathExternal,
     ContractType.Standalone,
     optionMathExternal,
     [],
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
 
   // Deploy UnderwriterVault implementation
   const underwriterVaultImplArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.feeConverter.insuranceFund.address,
-    deployment.VolatilityOracleProxy.address,
-    deployment.PoolFactoryProxy.address,
-    deployment.ERC20Router.address,
-    deployment.VxPremiaProxy.address,
-    deployment.PremiaDiamond.address,
-    deployment.VaultMiningProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
+    deployment.core.PoolFactoryProxy.address,
+    deployment.core.ERC20Router.address,
+    deployment.core.VxPremiaProxy.address,
+    deployment.core.PremiaDiamond.address,
+    deployment.core.VaultMiningProxy.address,
   ];
 
   const underwriterVaultImpl = await new UnderwriterVault__factory(
@@ -92,13 +92,13 @@ async function main() {
     underwriterVaultImplArgs[7],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.UnderwriterVaultImplementation,
     ContractType.Implementation,
     underwriterVaultImpl,
     underwriterVaultImplArgs,
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////

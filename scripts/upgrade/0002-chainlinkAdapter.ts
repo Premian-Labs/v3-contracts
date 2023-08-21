@@ -6,7 +6,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -29,17 +29,17 @@ async function main() {
     args[0],
     args[1],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterImplementation,
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.ChainlinkAdapterProxy.address,
+    deployment.core.ChainlinkAdapterProxy.address,
     deployer,
   );
 
@@ -49,8 +49,8 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
-    proposer,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

@@ -13,7 +13,7 @@ import {
 } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -30,7 +30,7 @@ async function main() {
 
   weth = deployment.tokens.WETH;
   wbtc = deployment.tokens.WBTC;
-  vxPremia = deployment.VxPremiaProxy.address;
+  vxPremia = deployment.core.VxPremiaProxy.address;
 
   //////////////////////////
   // Deploy ChainlinkAdapter
@@ -38,26 +38,26 @@ async function main() {
   const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
     deployer,
   ).deploy(chainlinkAdapterImplArgs[0], chainlinkAdapterImplArgs[1]);
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterImplementation,
     ContractType.Implementation,
     chainlinkAdapterImpl,
     chainlinkAdapterImplArgs,
-    true,
+    { logTxUrl: true },
   );
 
   const chainlinkAdapterProxyArgs = [chainlinkAdapterImpl.address];
   const chainlinkAdapterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(chainlinkAdapterProxyArgs[0]);
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterProxy,
     ContractType.Proxy,
     chainlinkAdapterProxy,
     chainlinkAdapterProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
@@ -86,13 +86,13 @@ async function main() {
     weth,
     chainlinkAdapter,
     deployment.feeConverter.main.address,
-    deployment.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
+    deployment.addresses.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
     discountPerPool,
     log,
     vxPremia,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
-    deployment.ExchangeHelper.address,
+    deployment.core.ExchangeHelper.address,
   );
 }
 

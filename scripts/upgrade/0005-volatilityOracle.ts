@@ -6,7 +6,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -17,17 +17,17 @@ async function main() {
   //////////////////////////
 
   const implementation = await new VolatilityOracle__factory(deployer).deploy();
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VolatilityOracleImplementation,
     ContractType.Implementation,
     implementation,
     [],
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.VolatilityOracleProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
     deployer,
   );
   const transaction = await proxy.populateTransaction.setImplementation(
@@ -36,8 +36,8 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
-    proposer,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

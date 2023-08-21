@@ -7,7 +7,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -20,7 +20,7 @@ async function main() {
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
 
@@ -28,20 +28,20 @@ async function main() {
 
   // Deploy UnderwriterVault implementation
   const underwriterVaultImplArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.feeConverter.insuranceFund.address,
-    deployment.VolatilityOracleProxy.address,
-    deployment.PoolFactoryProxy.address,
-    deployment.ERC20Router.address,
-    deployment.VxPremiaProxy.address,
-    deployment.PremiaDiamond.address,
-    deployment.VaultMiningProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
+    deployment.core.PoolFactoryProxy.address,
+    deployment.core.ERC20Router.address,
+    deployment.core.VxPremiaProxy.address,
+    deployment.core.PremiaDiamond.address,
+    deployment.core.VaultMiningProxy.address,
   ];
 
   const underwriterVaultImpl = await new UnderwriterVault__factory(
     {
       'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
-        deployment.OptionMathExternal.address,
+        deployment.core.OptionMathExternal.address,
     },
     deployer,
   ).deploy(
@@ -55,13 +55,21 @@ async function main() {
     underwriterVaultImplArgs[7],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.UnderwriterVaultImplementation,
     ContractType.Implementation,
     underwriterVaultImpl,
     underwriterVaultImplArgs,
-    true,
+    {
+      logTxUrl: true,
+      verification: {
+        enableVerification: true,
+        libraries: {
+          OptionMathExternal: deployment.core.OptionMathExternal.address,
+        },
+      },
+    },
   );
 
   //////////////////////////
@@ -74,8 +82,8 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
-    proposer,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

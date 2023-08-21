@@ -11,13 +11,13 @@ async function main() {
   let { deployment } = await initialize(deployer);
 
   const poolFactory = PoolFactory__factory.connect(
-    deployment.PoolFactoryProxy.address,
+    deployment.core.PoolFactoryProxy.address,
     deployer,
   );
   const poolKey: PoolKey = {
     base: deployment.tokens.testWETH,
     quote: deployment.tokens.USDC,
-    oracleAdapter: deployment.ChainlinkAdapterProxy.address,
+    oracleAdapter: deployment.core.ChainlinkAdapterProxy.address,
     strike: parseEther('2000'),
     maturity: BigNumber.from(await getValidMaturity(1, 'months')),
     isCallPool: true,

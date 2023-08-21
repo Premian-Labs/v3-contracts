@@ -6,7 +6,7 @@ import { ethers } from 'hardhat';
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -18,9 +18,9 @@ async function main() {
   //////////////////////////
 
   const vaultMiningImplementationArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.tokens.PREMIA,
-    deployment.VxPremiaProxy.address,
+    deployment.core.VxPremiaProxy.address,
     deployment.optionReward['PREMIA/USDC'].address,
   ];
 
@@ -33,13 +33,13 @@ async function main() {
     vaultMiningImplementationArgs[3],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningImplementation,
     ContractType.Implementation,
     vaultMiningImplementation,
     vaultMiningImplementationArgs,
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
@@ -54,13 +54,13 @@ async function main() {
     vaultMiningProxyArgs[0],
     vaultMiningProxyArgs[1],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningProxy,
     ContractType.Proxy,
     vaultMiningProxy,
     vaultMiningProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 

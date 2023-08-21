@@ -3,7 +3,7 @@ import {
   VolatilityOracle__factory,
 } from '../../typechain';
 import { ethers } from 'hardhat';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { updateDeploymentMetadata } from '../../utils/deployment/deployment';
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 
 async function main() {
@@ -13,13 +13,13 @@ async function main() {
     deployer,
   ).deploy();
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VolatilityOracleImplementation,
     ContractType.Implementation,
     volatilityOracleImplementation,
     [],
-    true,
+    { logTxUrl: true },
   );
 
   const volatilityOracleProxyArgs = [volatilityOracleImplementation.address];
@@ -27,13 +27,13 @@ async function main() {
     deployer,
   ).deploy(volatilityOracleProxyArgs[0]);
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VolatilityOracleProxy,
     ContractType.Proxy,
     volatilityOracleProxy,
     volatilityOracleProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 

@@ -1,6 +1,5 @@
 import { diamondCut } from '../scripts/utils/diamond';
 import {
-  ERC20Mock__factory,
   ERC20Router,
   ERC20Router__factory,
   ExchangeHelper__factory,
@@ -29,7 +28,7 @@ import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { updateDeploymentInfos } from './deployment/deployment';
+import { updateDeploymentMetadata } from './deployment/deployment';
 import { ContractKey, ContractType } from './deployment/types';
 
 interface PoolUtilArgs {
@@ -68,19 +67,20 @@ export class PoolUtil {
     feeReceiver: string,
     referralAddress: string,
     vaultRegistry: string,
+    verifyContracts: boolean,
   ) {
     const result: DeployedFacets[] = [];
 
     // PoolBase
     const poolBaseFactory = new PoolBase__factory(deployer);
     const poolBaseImpl = await poolBaseFactory.deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolBase,
       ContractType.DiamondFacet,
       poolBaseImpl,
       [],
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -112,13 +112,13 @@ export class PoolUtil {
       poolCoreImplArgs[6],
       poolCoreImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolCore,
       ContractType.DiamondFacet,
       poolCoreImpl,
       poolCoreImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -151,13 +151,13 @@ export class PoolUtil {
       poolDepositWithdrawImplArgs[6],
       poolDepositWithdrawImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolDepositWithdraw,
       ContractType.DiamondFacet,
       poolDepositWithdrawImpl,
       poolDepositWithdrawImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -189,13 +189,13 @@ export class PoolUtil {
       poolTradeImplArgs[6],
       poolTradeImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolTrade,
       ContractType.DiamondFacet,
       poolTradeImpl,
       poolTradeImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -227,13 +227,13 @@ export class PoolUtil {
 
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PremiaDiamond,
       ContractType.DiamondProxy,
       premiaDiamond,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -260,13 +260,13 @@ export class PoolUtil {
       poolFactoryProxyArgs[1],
       poolFactoryProxyArgs[2],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryProxy,
       ContractType.Proxy,
       poolFactoryProxy,
       poolFactoryProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -278,13 +278,13 @@ export class PoolUtil {
     const poolFactoryDeployer = await new PoolFactoryDeployer__factory(
       deployer,
     ).deploy(poolFactoryDeployerArgs[0], poolFactoryDeployerArgs[1]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryDeployer,
       ContractType.Standalone,
       poolFactoryDeployer,
       poolFactoryDeployerArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -301,13 +301,13 @@ export class PoolUtil {
       poolFactoryImplArgs[2],
       poolFactoryImplArgs[3],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryImplementation,
       ContractType.Implementation,
       poolFactoryImpl,
       poolFactoryImplArgs,
-      true,
+      { logTxUrl: true },
     );
 
     await (
@@ -330,13 +330,13 @@ export class PoolUtil {
     const router = await new ERC20Router__factory(deployer).deploy(
       routerArgs[0],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ERC20Router,
       ContractType.Standalone,
       router,
       routerArgs,
-      true,
+      { logTxUrl: true },
     );
 
     // ExchangeHelper
@@ -344,13 +344,13 @@ export class PoolUtil {
       const exchangeHelper = await new ExchangeHelper__factory(
         deployer,
       ).deploy();
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.ExchangeHelper,
         ContractType.Standalone,
         exchangeHelper,
         [],
-        true,
+        { logTxUrl: true },
       );
 
       exchangeHelperAddress = exchangeHelper.address;
@@ -358,26 +358,26 @@ export class PoolUtil {
 
     // UserSettings
     const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.UserSettingsImplementation,
       ContractType.Implementation,
       userSettingsImpl,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     const userSettingsProxyArgs = [userSettingsImpl.address];
     const userSettingsProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(userSettingsProxyArgs[0]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.UserSettingsProxy,
       ContractType.Proxy,
       userSettingsProxy,
       userSettingsProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -386,26 +386,26 @@ export class PoolUtil {
     const vaultRegistryImpl = await new VaultRegistry__factory(
       deployer,
     ).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.VaultRegistryImplementation,
       ContractType.Implementation,
       vaultRegistryImpl,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     const vaultRegistryProxyArgs = [vaultRegistryImpl.address];
     const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(vaultRegistryProxyArgs[0]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.VaultRegistryProxy,
       ContractType.Proxy,
       vaultRegistryProxy,
       vaultRegistryProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -428,26 +428,26 @@ export class PoolUtil {
         vxPremiaImplArgs[4],
         vxPremiaImplArgs[5],
       );
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.VxPremiaImplementation,
         ContractType.Implementation,
         vxPremiaImpl,
         vxPremiaImplArgs,
-        true,
+        { logTxUrl: true },
       );
 
       const vxPremiaProxyArgs = [vxPremiaImpl.address];
       const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
         vxPremiaProxyArgs[0],
       );
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.VxPremiaProxy,
         ContractType.Proxy,
         vxPremiaProxy,
         vxPremiaProxyArgs,
-        true,
+        { logTxUrl: true },
       );
       vxPremiaAddress = vxPremiaProxy.address;
     }
@@ -456,26 +456,26 @@ export class PoolUtil {
     const referralImpl = await new Referral__factory(deployer).deploy(
       poolFactory.address,
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ReferralImplementation,
       ContractType.Implementation,
       referralImpl,
       referralImplArgs,
-      true,
+      { logTxUrl: true },
     );
 
     const referralProxyArgs = [referralImpl.address];
     const referralProxy = await new ReferralProxy__factory(deployer).deploy(
       referralImpl.address,
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ReferralProxy,
       ContractType.Proxy,
       referralProxy,
       referralProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     const referral = IReferral__factory.connect(
@@ -495,6 +495,7 @@ export class PoolUtil {
       feeReceiver,
       referral.address,
       vaultRegistryProxy.address,
+      false,
     );
 
     let registeredSelectors = [

@@ -6,7 +6,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -19,8 +19,8 @@ async function main() {
   let premiaDiamond: string;
   let chainlinkAdapter: string;
 
-  premiaDiamond = deployment.PremiaDiamond.address;
-  chainlinkAdapter = deployment.ChainlinkAdapterProxy.address;
+  premiaDiamond = deployment.core.PremiaDiamond.address;
+  chainlinkAdapter = deployment.core.ChainlinkAdapterProxy.address;
 
   //////////////////////////
 
@@ -28,7 +28,7 @@ async function main() {
     premiaDiamond,
     chainlinkAdapter,
     deployment.tokens.WETH,
-    deployment.PoolFactoryDeployer.address,
+    deployment.core.PoolFactoryDeployer.address,
   ];
   const implementation = await new PoolFactory__factory(deployer).deploy(
     args[0],
@@ -36,17 +36,17 @@ async function main() {
     args[2],
     args[3],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.PoolFactoryImplementation,
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = PoolFactoryProxy__factory.connect(
-    deployment.PoolFactoryProxy.address,
+    deployment.core.PoolFactoryProxy.address,
     deployer,
   );
 
@@ -56,8 +56,8 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
-    proposer,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

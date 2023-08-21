@@ -6,7 +6,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -17,17 +17,17 @@ async function main() {
   //////////////////////////
 
   const implementation = await new VaultRegistry__factory(deployer).deploy();
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultRegistryImplementation,
     ContractType.Implementation,
     implementation,
     [],
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
 
@@ -37,8 +37,8 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
-    proposer,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

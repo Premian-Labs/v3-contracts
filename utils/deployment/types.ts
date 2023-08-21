@@ -1,52 +1,15 @@
-export interface DeploymentInfos {
+export interface DeploymentMetadata {
+  addresses: { treasury: string; insuranceFund: string; lzEndpoint: string };
   tokens: { [symbol: string]: string };
 
   feeConverter: {
-    main: ContractDeploymentInfos;
-    insuranceFund: ContractDeploymentInfos;
+    main: ContractDeploymentMetadata;
+    insuranceFund: ContractDeploymentMetadata;
   };
-  optionPS: { [name: string]: ContractDeploymentInfos };
-  optionReward: { [name: string]: ContractDeploymentInfos };
-  vaults: { [name: string]: ContractDeploymentInfos };
-
-  treasury: string;
-  insuranceFund: string;
-  lzEndpoint: string;
-
-  ChainlinkAdapterImplementation: ContractDeploymentInfos;
-  ChainlinkAdapterProxy: ContractDeploymentInfos;
-  PremiaDiamond: ContractDeploymentInfos;
-  PoolFactoryImplementation: ContractDeploymentInfos;
-  PoolFactoryProxy: ContractDeploymentInfos;
-  PoolFactoryDeployer: ContractDeploymentInfos;
-  UserSettingsImplementation: ContractDeploymentInfos;
-  UserSettingsProxy: ContractDeploymentInfos;
-  ExchangeHelper: ContractDeploymentInfos;
-  ReferralImplementation: ContractDeploymentInfos;
-  ReferralProxy: ContractDeploymentInfos;
-  VxPremiaImplementation: ContractDeploymentInfos;
-  VxPremiaProxy: ContractDeploymentInfos;
-  ERC20Router: ContractDeploymentInfos;
-  PoolBase: ContractDeploymentInfos;
-  PoolCore: ContractDeploymentInfos;
-  PoolDepositWithdraw: ContractDeploymentInfos;
-  PoolTrade: ContractDeploymentInfos;
-  OrderbookStream: ContractDeploymentInfos;
-  VaultRegistryImplementation: ContractDeploymentInfos;
-  VaultRegistryProxy: ContractDeploymentInfos;
-  VolatilityOracleImplementation: ContractDeploymentInfos;
-  VolatilityOracleProxy: ContractDeploymentInfos;
-  OptionMathExternal: ContractDeploymentInfos;
-  UnderwriterVaultImplementation: ContractDeploymentInfos;
-  VaultMiningImplementation: ContractDeploymentInfos;
-  VaultMiningProxy: ContractDeploymentInfos;
-  OptionPSFactoryImplementation: ContractDeploymentInfos;
-  OptionPSFactoryProxy: ContractDeploymentInfos;
-  OptionPSImplementation: ContractDeploymentInfos;
-  OptionRewardFactoryImplementation: ContractDeploymentInfos;
-  OptionRewardFactoryProxy: ContractDeploymentInfos;
-  OptionRewardImplementation: ContractDeploymentInfos;
-  FeeConverterImplementation: ContractDeploymentInfos;
+  core: { [key in ContractKey]: ContractDeploymentMetadata };
+  optionPS: { [name: string]: ContractDeploymentMetadata };
+  optionReward: { [name: string]: ContractDeploymentMetadata };
+  vaults: { [name: string]: ContractDeploymentMetadata };
 }
 
 export enum ContractKey {
@@ -86,7 +49,7 @@ export enum ContractKey {
   FeeConverterImplementation = 'FeeConverterImplementation',
 }
 
-export interface ContractDeploymentInfos {
+export interface ContractDeploymentMetadata {
   address: string;
   contractType: ContractType | string;
   deploymentArgs: string[];
@@ -113,6 +76,14 @@ export enum ChainID {
   ArbitrumNova = 42170,
 }
 
+export const ChainName: { [chainId: number]: string } = {
+  [ChainID.Ethereum]: 'Ethereum',
+  [ChainID.Goerli]: 'Goerli',
+  [ChainID.Arbitrum]: 'Arbitrum',
+  [ChainID.ArbitrumGoerli]: 'Arbitrum Goerli',
+  [ChainID.ArbitrumNova]: 'Arbitrum Nova',
+};
+
 export const SafeChainPrefix: { [chainId: number]: string } = {
   [ChainID.Ethereum]: 'eth',
   [ChainID.Goerli]: 'gor',
@@ -124,6 +95,12 @@ export const BlockExplorerUrl: { [chainId: number]: string } = {
   [ChainID.Ethereum]: 'https://etherscan.io',
   [ChainID.Goerli]: 'https://goerli.etherscan.io',
   [ChainID.Arbitrum]: 'https://arbiscan.io',
-  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io/',
-  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io/',
+  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io',
+  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io',
+};
+
+export const DeploymentPath: { [chainId: number]: string } = {
+  [ChainID.Arbitrum]: 'utils/deployment/arbitrum/',
+  [ChainID.ArbitrumGoerli]: 'utils/deployment/arbitrumGoerli/',
+  [ChainID.ArbitrumNova]: 'utils/deployment/arbitrumNova/',
 };
