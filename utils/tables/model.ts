@@ -127,50 +127,58 @@ function updateTableView(
 
         category.sections[0].contracts.push(contractInfo);
       }
-    } else if (key in ContractKey) {
-      // Update Core view
-      const category = tableView.categories.core;
-      category.chain = chain;
+    } else if (key === 'core') {
+      for (const contract in deploymentMetadata.core) {
+        // Update Core view
+        const category = tableView.categories.core;
+        category.chain = chain;
 
-      const contractData = deploymentMetadata[key as ContractKey];
-      const contractName = inferContractName(key, contractData.contractType);
+        const contractData = deploymentMetadata.core[contract as ContractKey];
+        const contractName = inferContractName(
+          contract,
+          contractData.contractType,
+        );
 
-      const filePath = getContractFilePath(contractName, contractFilePaths);
+        const filePath = getContractFilePath(contractName, contractFilePaths);
 
-      let sectionIndex = -1;
-      let section = '--UNRESOLVED--';
-      if (filePath) {
-        section = filePath.split('/')[1];
-        // Capitalize first letter of section
-        section = section.charAt(0).toUpperCase() + section.slice(1);
+        let sectionIndex = -1;
+        let section = '--UNRESOLVED--';
+        if (filePath) {
+          section = filePath.split('/')[1];
+          // Capitalize first letter of section
+          section = section.charAt(0).toUpperCase() + section.slice(1);
 
-        sectionIndex = _.findIndex(category.sections, ['name', section]);
-      } else {
-        console.warn(`[WARNING] No file found for ${contractName}`);
+          sectionIndex = _.findIndex(category.sections, ['name', section]);
+        } else {
+          console.warn(`[WARNING] No file found for ${contractName}`);
+        }
+
+        if (sectionIndex === -1) {
+          category.sections.push({
+            name: section,
+            contracts: [],
+          });
+
+          sectionIndex = category.sections.length - 1;
+        }
+
+        const contractInfo: Contract = {
+          name: contractName,
+          description: inferContractDescription(
+            contract,
+            contractData.contractType,
+          ),
+          address: contractData.address,
+          commitHash: contractData.commitHash,
+          etherscanUrl,
+          filePath,
+          displayAddress,
+          displayEtherscanUrl,
+          displayFilePathUrl,
+        };
+
+        category.sections[sectionIndex].contracts.push(contractInfo);
       }
-
-      if (sectionIndex === -1) {
-        category.sections.push({
-          name: section,
-          contracts: [],
-        });
-
-        sectionIndex = category.sections.length - 1;
-      }
-
-      const contractInfo: Contract = {
-        name: contractName,
-        description: inferContractDescription(key, contractData.contractType),
-        address: contractData.address,
-        commitHash: contractData.commitHash,
-        etherscanUrl,
-        filePath,
-        displayAddress,
-        displayEtherscanUrl,
-        displayFilePathUrl,
-      };
-
-      category.sections[sectionIndex].contracts.push(contractInfo);
     }
   }
 
