@@ -1,3 +1,4 @@
 ignore:
   - 'test'
   - 'contracts/layerZero'
+  - 'contracts/test'
