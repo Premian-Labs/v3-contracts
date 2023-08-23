@@ -14,5 +14,6 @@ contract ProxyManager is IProxyManager, OwnableInternal {
 
     function setManagedProxyImplementation(address implementation) external onlyOwner {
         ProxyManagerStorage.layout().managedProxyImplementation = implementation;
+        emit ManagedImplementationSet(implementation);
     }
 }
