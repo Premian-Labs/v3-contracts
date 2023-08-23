@@ -32,6 +32,8 @@ interface IVaultRegistry {
     }
 
     // Events
+    event VaultImplementationSet(bytes32 indexed vaultType, address implementation);
+
     event VaultAdded(
         address indexed vault,
         address indexed asset,

@@ -337,5 +337,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     function setImplementation(bytes32 vaultType, address implementation) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         l.implementations[vaultType] = implementation;
+
+        emit VaultImplementationSet(vaultType, implementation);
     }
 }
