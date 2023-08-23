@@ -51,8 +51,6 @@ async function main() {
         'contracts/mining/optionReward/OptionRewardFactory.sol:OptionRewardFactory.sol';
     }
 
-    console.log([address, deploymentArgs, libraries, contractPath]);
-
     await verifyContractsOnEtherscan(
       address,
       deploymentArgs,
