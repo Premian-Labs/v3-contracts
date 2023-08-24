@@ -26,7 +26,9 @@ contract OptionRewardProxy is Proxy {
         UD60x18 penalty,
         uint256 optionDuration,
         uint256 lockupDuration,
-        uint256 claimDuration
+        uint256 claimDuration,
+        UD60x18 fee,
+        address feeReceiver
     ) {
         MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
@@ -52,6 +54,9 @@ contract OptionRewardProxy is Proxy {
         l.penalty = penalty;
         l.lockupDuration = lockupDuration;
         l.claimDuration = claimDuration;
+
+        l.fee = fee;
+        l.feeReceiver = feeReceiver;
     }
 
     /// @inheritdoc Proxy

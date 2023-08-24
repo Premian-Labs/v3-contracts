@@ -133,8 +133,8 @@ contract OptionRewardTest is Assertions, Test {
         ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
         oracleAdapter = OracleAdapterMock(address(proxy));
 
-        OptionReward optionRewardImplementation = new OptionReward(feeReceiverOptionReward, fee);
-        address optionRewardFactoryImpl = address(new OptionRewardFactory());
+        OptionReward optionRewardImplementation = new OptionReward();
+        address optionRewardFactoryImpl = address(new OptionRewardFactory(fee, feeReceiverOptionReward));
         ProxyUpgradeableOwnable optionRewardFactoryProxy = new ProxyUpgradeableOwnable(optionRewardFactoryImpl);
         OptionRewardFactory optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
         optionRewardFactory.setManagedProxyImplementation(address(optionRewardImplementation));
@@ -145,7 +145,7 @@ contract OptionRewardTest is Assertions, Test {
             )
         );
 
-        IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs({
+        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
             option: option,
             oracleAdapter: oracleAdapter,
             paymentSplitter: paymentSplitter,
@@ -153,13 +153,15 @@ contract OptionRewardTest is Assertions, Test {
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
-            claimDuration: claimDuration
+            claimDuration: claimDuration,
+            fee: fee,
+            feeReceiver: feeReceiverOptionReward
         });
 
-        optionReward = OptionReward(optionRewardFactory.deployProxy(args));
+        optionReward = OptionReward(optionRewardFactory.deployProxy(key));
 
         assertTrue(optionRewardFactory.isProxyDeployed(address(optionReward)));
-        (address _optionReward, ) = optionRewardFactory.getProxyAddress(args);
+        (address _optionReward, ) = optionRewardFactory.getProxyAddress(key);
         assertEq(address(optionReward), _optionReward);
 
         address[4] memory users = [underwriter, otherUnderwriter, longReceiver, otherLongReceiver];

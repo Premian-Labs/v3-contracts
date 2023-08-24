@@ -32,14 +32,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
     address internal constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
-    address public immutable FEE_RECEIVER;
-    UD60x18 public immutable FEE;
-
-    constructor(address feeReceiver, UD60x18 fee) {
-        FEE_RECEIVER = feeReceiver;
-        FEE = fee;
-    }
-
     /// @inheritdoc IOptionReward
     function underwrite(address longReceiver, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
@@ -147,9 +139,9 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
         (, uint256 quoteAmount) = l.option.settle(strike, maturity, vars.totalUnderwritten);
 
-        vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * FEE, false);
+        vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * l.fee, false);
 
-        if (vars.fee > 0) IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
+        if (vars.fee > 0) IERC20(l.quote).safeTransfer(l.feeReceiver, vars.fee);
         IERC20(l.quote).approve(address(l.paymentSplitter), quoteAmount - vars.fee);
 
         // There is a possible scenario where, if other underwriters have underwritten the same strike/maturity,

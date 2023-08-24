@@ -49,6 +49,8 @@ library OptionRewardStorage {
         uint256 totalBaseReserved;
         // Amount of base tokens reserved for a strike/maturity
         mapping(UD60x18 strike => mapping(uint64 maturity => uint256 amount)) baseReserved;
+        UD60x18 fee;
+        address feeReceiver;
     }
 
     function layout() internal pure returns (Layout storage l) {
