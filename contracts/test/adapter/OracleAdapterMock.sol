@@ -66,7 +66,7 @@ contract OracleAdapterMock is IOracleAdapter {
     }
 
     // Not used, but implemented to be able to inherit from interface
-    function isPairSupported(address tokenA, address tokenB) external view returns (bool isCached, bool hasPath) {
+    function isPairSupported(address, address) external pure returns (bool isCached, bool hasPath) {
         return (false, false);
     }
 }
