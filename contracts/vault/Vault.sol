@@ -17,7 +17,7 @@ abstract contract Vault is IVault, SolidStateERC4626 {
         VAULT_MINING = vaultMining;
     }
 
-    /// @notice `_beforeTokenTransfer` wrapper, updates VaultMining user state
+    /// @notice Updates VaultMining user state
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         if (from == to) return;
 
@@ -53,6 +53,7 @@ abstract contract Vault is IVault, SolidStateERC4626 {
         }
     }
 
+    /// @inheritdoc IVault
     function getUtilisation() public view virtual returns (UD60x18) {
         return ZERO;
     }

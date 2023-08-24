@@ -62,6 +62,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         POOL_DIAMOND = poolDiamond;
     }
 
+    /// @inheritdoc IVault
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -71,6 +72,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return l.totalLockedAssets / totalAssets;
     }
 
+    /// @inheritdoc IVault
     function updateSettings(bytes memory settings) external {
         if (msg.sender != VAULT_REGISTRY) revert Vault__SettingsNotFromRegistry();
 

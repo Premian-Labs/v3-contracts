@@ -3,6 +3,8 @@
 pragma solidity ^0.8.19;
 
 interface IProxyManager {
+    event ManagedImplementationSet(address implementation);
+
     function getManagedProxyImplementation() external view returns (address);
 
     function setManagedProxyImplementation(address implementation) external;

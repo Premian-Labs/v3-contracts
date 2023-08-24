@@ -2,55 +2,44 @@ import {
   ProxyUpgradeableOwnable__factory,
   VolatilityOracle__factory,
 } from '../../typechain';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import {
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
-
-  //////////////////////////
-
-  let deployment: DeploymentInfos;
-  let setImplementation: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-    setImplementation = false;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
+  const [deployer, proposer] = await ethers.getSigners();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
 
   const implementation = await new VolatilityOracle__factory(deployer).deploy();
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VolatilityOracleImplementation,
     ContractType.Implementation,
     implementation,
     [],
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
-  if (setImplementation) {
-    const proxy = ProxyUpgradeableOwnable__factory.connect(
-      deployment.VolatilityOracleProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = ProxyUpgradeableOwnable__factory.connect(
+    deployment.core.VolatilityOracleProxy.address,
+    deployer,
+  );
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [transaction],
+  );
 }
 
 main()

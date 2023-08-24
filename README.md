@@ -4,9 +4,12 @@ https://premia.finance
 
 ## Deployments
 
-| Network         |                                              |
-| --------------- | -------------------------------------------- |
-| Arbitrum Goerli | [📜](./utils/deployment/arbitrumGoerli.json) |
+| Deployment                | Arbitrum                                             | Arbitrum Goerli                                            | Arbitrum Nova                                    |
+| ------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| Core Contracts            | [📜](utils/deployment/arbitrum/coreTable.md)         | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         | [📜](utils/deployment/arbitrumNova/coreTable.md) |
+| Option Physically Settled | [📜](utils/deployment/arbitrum/optionPSTable.md)     | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |                                                  |
+| Option Rewards            | [📜](utils/deployment/arbitrum/optionRewardTable.md) | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |                                                  |
+| Vaults                    | [📜](utils/deployment/arbitrum/vaultsTable.md)       | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |                                                  |
 
 <!---
  | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
@@ -28,12 +31,14 @@ yarn postinstall
 
 Create a `.env` file with the following values defined:
 
-| Key                | Description                                                            | Required for           |
-| ------------------ | ---------------------------------------------------------------------- | ---------------------- |
-| `API_KEY_ALCHEMY`  | [Alchemy](https://www.alchemy.com/) API key for node connectivity      | Tests + deployments    |
-| `API_KEY_ARBISCAN` | [Arbiscan](https://arbiscan.io//) API key for source code verification | Contracts verification |
-| `PKEY_ETH_MAIN`    | private key for production use on mainnets                             | Mainnet deployment     |
-| `PKEY_ETH_TEST`    | private key for test/development use on testnets                       | Testnet deployment     |
+| Key                  | Description                                                                          | Required for           |
+| -------------------- | ------------------------------------------------------------------------------------ | ---------------------- |
+| `API_KEY_ALCHEMY`    | [Alchemy](https://www.alchemy.com/) API key for node connectivity                    | Tests + deployments    |
+| `API_KEY_ARBISCAN`   | [Arbiscan](https://arbiscan.io//) API key for source code verification               | Contracts verification |
+| `PKEY_DEPLOYER_MAIN` | contract deployer private key for production use on mainnets                         | Mainnet deployment     |
+| `PKEY_DEPLOYER_TEST` | contract deployer private key for test/development use on testnets                   | Testnet deployment     |
+| `PKEY_PROPOSER_MAIN` | Safe multi-sig transaction proposer private key for production use on mainnets       | Mainnet deployment     |
+| `PKEY_PROPOSER_TEST` | Safe multi-sig transaction proposer private key for test/development use on testnets | Testnet deployment     |
 
 ### Testing
 

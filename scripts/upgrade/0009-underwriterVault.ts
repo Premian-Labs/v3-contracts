@@ -4,39 +4,23 @@ import {
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import { solidityKeccak256 } from 'ethers/lib/utils';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const [deployer, proposer] = await ethers.getSigners();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
-
-  let deployment: DeploymentInfos;
-  let setImplementation: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-    setImplementation = false;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
 
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
 
@@ -44,20 +28,20 @@ async function main() {
 
   // Deploy UnderwriterVault implementation
   const underwriterVaultImplArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.feeConverter.insuranceFund.address,
-    deployment.VolatilityOracleProxy.address,
-    deployment.PoolFactoryProxy.address,
-    deployment.ERC20Router.address,
-    deployment.VxPremiaProxy.address,
-    deployment.PremiaDiamond.address,
-    deployment.VaultMiningProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
+    deployment.core.PoolFactoryProxy.address,
+    deployment.core.ERC20Router.address,
+    deployment.core.VxPremiaProxy.address,
+    deployment.core.PremiaDiamond.address,
+    deployment.core.VaultMiningProxy.address,
   ];
 
   const underwriterVaultImpl = await new UnderwriterVault__factory(
     {
       'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
-        deployment.OptionMathExternal.address,
+        deployment.core.OptionMathExternal.address,
     },
     deployer,
   ).deploy(
@@ -71,24 +55,37 @@ async function main() {
     underwriterVaultImplArgs[7],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.UnderwriterVaultImplementation,
     ContractType.Implementation,
     underwriterVaultImpl,
     underwriterVaultImplArgs,
-    true,
+    {
+      logTxUrl: true,
+      verification: {
+        enableVerification: true,
+        libraries: {
+          OptionMathExternal: deployment.core.OptionMathExternal.address,
+        },
+      },
+    },
   );
 
   //////////////////////////
 
   // Set the implementation on the registry
-  if (setImplementation) {
-    await vaultRegistry.setImplementation(
-      vaultType,
-      underwriterVaultImpl.address,
-    );
-  }
+  const transaction = await vaultRegistry.populateTransaction.setImplementation(
+    vaultType,
+    underwriterVaultImpl.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [transaction],
+  );
 }
 
 main()

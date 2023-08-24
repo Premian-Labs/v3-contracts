@@ -2,38 +2,22 @@ import {
   ChainlinkAdapter__factory,
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import {
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const [deployer, proposer] = await ethers.getSigners();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
 
-  let deployment: DeploymentInfos;
   let weth: string;
   let wbtc: string;
-  let setImplementation: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    // Arbitrum
-    deployment = arbitrumDeployment;
-    setImplementation = false;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
 
   weth = deployment.tokens.WETH;
   wbtc = deployment.tokens.WBTC;
@@ -45,22 +29,30 @@ async function main() {
     args[0],
     args[1],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterImplementation,
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
-  if (setImplementation) {
-    const proxy = ProxyUpgradeableOwnable__factory.connect(
-      deployment.ChainlinkAdapterProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = ProxyUpgradeableOwnable__factory.connect(
+    deployment.core.ChainlinkAdapterProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [transaction],
+  );
 }
 
 main()

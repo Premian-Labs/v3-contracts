@@ -1,0 +1,14 @@
+{
+  "core": {
+    "OrderbookStream": {
+      "address": "0xF92b8AD7a62437142C4bf87D91e2bE0Fe1F44e9f",
+      "block": 17568802,
+      "commitHash": "fe96af7bd45eaad80ba5c14ed71a5f1cc3943d4b",
+      "contractType": "Standalone",
+      "deploymentArgs": [],
+      "timestamp": 1691662833,
+      "txHash": "0x5394ebd048e12555f6729afc3f9be05e255622e50bf0128d2d4e236fdaf4a61e",
+      "owner": ""
+    }
+  }
+}

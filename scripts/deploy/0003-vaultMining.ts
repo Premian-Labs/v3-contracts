@@ -3,40 +3,24 @@ import {
   VaultMiningProxy__factory,
 } from '../../typechain';
 import { ethers } from 'hardhat';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
-
-  //////////////////////////
-
-  let deployment: DeploymentInfos;
-
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
+  const { deployment } = await initialize(deployer);
 
   // ToDo : Deploy OptionReward contract
 
   //////////////////////////
 
   const vaultMiningImplementationArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.tokens.PREMIA,
-    deployment.VxPremiaProxy.address,
+    deployment.core.VxPremiaProxy.address,
     deployment.optionReward['PREMIA/USDC'].address,
   ];
 
@@ -49,13 +33,13 @@ async function main() {
     vaultMiningImplementationArgs[3],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningImplementation,
     ContractType.Implementation,
     vaultMiningImplementation,
     vaultMiningImplementationArgs,
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
@@ -70,13 +54,13 @@ async function main() {
     vaultMiningProxyArgs[0],
     vaultMiningProxyArgs[1],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningProxy,
     ContractType.Proxy,
     vaultMiningProxy,
     vaultMiningProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 
