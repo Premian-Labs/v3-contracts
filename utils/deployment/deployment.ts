@@ -174,7 +174,7 @@ export function getProvider(
 
 export async function verifyContractsOnEtherscan(
   address: string,
-  constructorArguments: string[],
+  constructorArguments: any[],
   libraries: { [key: string]: string } = {},
   contractPath: string | undefined = undefined, // Example : contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable
 ) {
