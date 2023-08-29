@@ -809,7 +809,7 @@ By using, modifying, and/or redistributing the Software as-is or in a Derivative
 Work, which you use directly or indirectly to gain compensation of any kind, you
 indicate your assent to be bound by the terms herein.
 
-1. Definitions
+0. Definitions
 
 The following definitions apply to this License:
 
@@ -852,7 +852,7 @@ function of the licensed Technology or adding new functionality.
 alter the basic functions of the licensed software. Upgrades incorporate all
 Updates as well as all fixes for known errors.
 
-2. Grant of Software License.
+1. Grant of Software License.
 
 Subject to the terms herein, Licensor hereby grants to Licensee a nonexclusive
 license to use the Software and Intellectual Property Rights thereto and convey,
@@ -885,7 +885,7 @@ Reservation of Rights.
 
 Licensor reserves all rights not specifically granted to Licensee hereunder.
 
-3. ROYALTY FEES.
+2. ROYALTY FEES.
 
 Licensee shall also pay to Licensor a royalty fee in the amount of twenty
 percent (20%) of Licensee’s total gross revenues earned directly or indirectly
@@ -921,13 +921,13 @@ written notice of the Assessment and Licensee shall pay to Licensor or the
 taxing authority the amount set forth as due in the Assessment within thirty
 (30) days of receipt of such written notice from Licensor.
 
-4. BRANDING.
+3. BRANDING.
 
 Licensee and its Affiliates may use the Licensor trademarks in conjunction with
 the distribution of the Derivative Works and in their advertising, promotional,
 and printed materials for any Derivative Works.
 
-5. PROPRIETARY RIGHTS.
+4. PROPRIETARY RIGHTS.
 
 Ownership of Software. Notwithstanding the granting of the License, the Licensor
 shall be and remain the sole and exclusive owner of the Technology and any
@@ -950,7 +950,7 @@ software development agreement and/or software maintenance agreement by and
 between Licensor and Licensee. Licensee has the right to resell and/or license
 the Derivative Work and Software that it creates.
 
-6. END-USER LICENSING.
+5. END-USER LICENSING.
 
 Licensee agrees that each copy of any Software distributed by Licensee hereunder
 will be accompanied by an end-user license at least as protective of Licensor’s
@@ -958,7 +958,7 @@ Software as the terms and conditions governing this PPL License. Licensee agrees
 to enforce the terms and conditions applicable to the Software contained in such
 license.
 
-7. REPRESENTATIONS AND WARRANTIES.
+6. REPRESENTATIONS AND WARRANTIES.
 
 Licensor and Licensee each represents and warrants to the other that: (i) it is
 organized, validly existing, and in good standing under the laws of the country
@@ -990,11 +990,11 @@ To the best of Licensor’s knowledge, the Software contains no malicious code o
 computer viruses. Licensor shall immediately notify Licensee if any such problem
 is suspected.
 
-8. INTELLECTUAL PROPERTY RIGHTS.
+7. INTELLECTUAL PROPERTY RIGHTS.
 
 Title to the Software and to Intellectual Property Rights therein shall remain in Licensor.
 
-9. OUTSOURCING.
+8. OUTSOURCING.
 
 In the event that the Licensee elects to have the functions for which it uses
 the Technology performed by a Third Party (referred to as the “Outsourcer”), the
@@ -1006,29 +1006,29 @@ will ensure that such Third Party agrees to use the Software or Derivative Work
 only for such purpose and to be otherwise bound by the provisions of this PPL
 License.
 
-10. COMPLIANCE WITH LAWS.
+9. COMPLIANCE WITH LAWS.
 
 Both Parties shall comply at their own expense with all applicable laws,
 ordinances, regulations, and codes in the performance of this PPL License.
 
-11. CHOICE OF LAW AND VENUE.
+10. CHOICE OF LAW AND VENUE.
 
 The laws of England and Wales shall govern this PPL License and all transactions
 under it. Venue for any dispute arising under the terms of this PPL License
 shall be in the courts of England and Wales.
 
-12. LIMITATION OF LIABILITY.
+11. LIMITATION OF LIABILITY.
 
 THIS AGREEMENT DISCLAIMS ANY IMPLIED WARRANTY NOT EXPRESSLY STATED HEREIN.
 
-13. WAIVER.
+12. WAIVER.
 
 The failure of either Party at any time to enforce any right or remedy available
 to it under this PPL License or otherwise with respect to any breach or failure
 by the other Party shall not be construed to be a waiver of that right or remedy
 with respect to any other breach or failure by the other Party.
 
-14. SEVERABILITY.
+13. SEVERABILITY.
 
 If any of the provisions of this PPL License shall be invalid or unenforceable,
 the invalidity or unenforceability shall not invalidate or render unenforceable
@@ -1037,14 +1037,14 @@ if not containing the particular invalid or unenforceable provision or
 provisions, and the rights and obligations of the Parties shall be construed and
 enforced accordingly.
 
-15. SURVIVAL OF OBLIGATIONS.
+14. SURVIVAL OF OBLIGATIONS.
 
 The obligations of the Parties under this PPL License, which by their nature
 would continue beyond the termination, cancellation, or expiration of this PPL
 License, shall survive termination, cancellation, or expiration of this PPL
 License.
 
-16. TERM AND TERMINATION.
+15. TERM AND TERMINATION.
 
 Term.
 
