@@ -226,6 +226,31 @@ abstract contract PoolSettlePositionTest is DeployTest {
         _test_settlePositionFor_Buy100Options(false);
     }
 
+    function test_settlePositionFor_RevertIf_SettlementFailed() public {
+        TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
+
+        UD60x18 settlementPrice = getSettlementPrice(true);
+        uint256 poolBalance = IERC20(trade.poolToken).balanceOf(address(pool));
+        UD60x18 _poolBalance = fromTokenDecimals(poolBalance);
+        UD60x18 poolBalanceInWrappedNativeTokens = isCallTest ? _poolBalance : _poolBalance / settlementPrice;
+
+        posKey.owner = users.otherLP;
+        posKey.operator = users.otherLP;
+
+        enableExerciseSettleAuthorization(posKey.operator, poolBalanceInWrappedNativeTokens);
+
+        vm.warp(poolKey.maturity);
+        oracleAdapter.setPrice(settlementPrice);
+        oracleAdapter.setPriceAt(poolKey.maturity, settlementPrice);
+
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = posKey;
+
+        vm.expectRevert(IPoolInternal.Pool__SettlementFailed.selector);
+        vm.prank(users.otherLP);
+        pool.settlePositionFor(p, 0);
+    }
+
     function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue() public {
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
