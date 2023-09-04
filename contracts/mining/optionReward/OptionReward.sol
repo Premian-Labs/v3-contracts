@@ -12,14 +12,11 @@ import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 
-import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
-
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
-import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionReward is IOptionReward, ReentrancyGuard {
     using OptionRewardStorage for IERC20;
