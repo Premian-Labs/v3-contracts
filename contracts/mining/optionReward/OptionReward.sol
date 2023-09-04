@@ -43,7 +43,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         // Calculates the maturity starting from the 8AM UTC timestamp of the current day
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
 
-        UD60x18 price = IOracleAdapter(l.oracleAdapter).getPrice(l.base, l.quote);
+        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
         _revertIfPriceIsZero(price);
 
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
@@ -103,7 +103,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         delete l.baseReserved[strike][maturity];
 
         IERC20(l.base).approve(address(l.paymentSplitter), baseReserved);
-        IPaymentSplitter(l.paymentSplitter).pay(baseReserved, 0);
+        l.paymentSplitter.pay(baseReserved, 0);
 
         emit RewardsNotClaimedReleased(strike, maturity, l.fromTokenDecimals(baseReserved, true));
     }
@@ -116,7 +116,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         SettleVarsInternal memory vars;
 
         {
-            UD60x18 price = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, maturity);
+            UD60x18 price = l.oracleAdapter.getPriceAt(l.base, l.quote, maturity);
             _revertIfPriceIsZero(price);
             vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
             vars.rewardPerContract = vars.intrinsicValuePerContract * (ONE - l.penalty);
@@ -170,7 +170,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         }
         IERC20(l.base).approve(address(l.paymentSplitter), baseAmountToPay);
 
-        IPaymentSplitter(l.paymentSplitter).pay(baseAmountToPay, quoteAmount - vars.fee);
+        l.paymentSplitter.pay(baseAmountToPay, quoteAmount - vars.fee);
 
         emit Settled(
             strike,
