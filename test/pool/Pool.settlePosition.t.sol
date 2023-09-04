@@ -49,12 +49,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         uint256 protocolFees = pool.protocolFees();
 
-        UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setPriceAt(settlementPrice);
-
         vm.warp(poolKey.maturity);
-        vm.prank(posKey.operator);
+        UD60x18 settlementPrice = getSettlementPrice(isITM);
+        oracleAdapter.setPriceAt(poolKey.maturity, settlementPrice);
 
+        vm.prank(posKey.operator);
         pool.settlePosition(posKey);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
@@ -101,12 +100,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
             assertTrue(data.lastDeposit != 0);
         }
 
-        UD60x18 settlementPrice = getSettlementPrice(true);
-        oracleAdapter.setPriceAt(settlementPrice);
-
         vm.warp(poolKey.maturity);
-        vm.prank(posKey.operator);
+        UD60x18 settlementPrice = getSettlementPrice(true);
+        oracleAdapter.setPriceAt(poolKey.maturity, settlementPrice);
 
+        vm.prank(posKey.operator);
         pool.settlePosition(posKey);
 
         {
@@ -155,11 +153,6 @@ abstract contract PoolSettlePositionTest is DeployTest {
     }
 
     function _test_settlePositionFor_Buy100Options(bool isITM) internal {
-        UD60x18 settlementPrice = getSettlementPrice(isITM);
-        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setPrice(price);
-        oracleAdapter.setPriceAt(settlementPrice);
-
         Position.Key memory posKey2 = Position.Key({
             owner: users.otherLP,
             operator: users.otherLP,
@@ -168,7 +161,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             orderType: Position.OrderType.CS
         });
 
-        UD60x18 authorizedCost = ud(0.1e18);
+        UD60x18 authorizedCost = isCallTest ? ud(0.01e18) : ud(10e18); // 0.01 ETH or 10 USDC
         enableExerciseSettleAuthorization(posKey.operator, authorizedCost);
         enableExerciseSettleAuthorization(posKey2.operator, authorizedCost);
 
@@ -179,7 +172,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
+
         vm.warp(poolKey.maturity);
+        UD60x18 settlementPrice = getSettlementPrice(isITM);
+        oracleAdapter.setPrice(settlementPrice);
+        oracleAdapter.setPriceAt(poolKey.maturity, settlementPrice);
 
         Position.Key[] memory p = new Position.Key[](2);
         p[0] = posKey;
@@ -230,22 +227,20 @@ abstract contract PoolSettlePositionTest is DeployTest {
     }
 
     function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue() public {
-        UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setPrice(price);
-        oracleAdapter.setPriceAt(settlementPrice);
-
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
+        UD60x18 settlementPrice = getSettlementPrice(false);
         UD60x18 payoff = getExerciseValue(false, ONE, settlementPrice);
         UD60x18 collateral = fromTokenDecimals(
             trade.initialCollateral + trade.totalPremium - toTokenDecimals(trade.size * payoff) - pool.protocolFees()
         );
 
         UD60x18 cost = collateral + ONE;
-        enableExerciseSettleAuthorization(posKey.operator, isCallTest ? cost : cost * price);
+        enableExerciseSettleAuthorization(posKey.operator, cost);
 
         vm.warp(poolKey.maturity);
+        oracleAdapter.setPrice(settlementPrice);
+        oracleAdapter.setPriceAt(poolKey.maturity, settlementPrice);
 
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
@@ -274,18 +269,26 @@ abstract contract PoolSettlePositionTest is DeployTest {
     }
 
     function test_settlePositionFor_RevertIf_CostNotAuthorized() public {
+        vm.warp(poolKey.maturity);
         UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setPrice(price);
+        oracleAdapter.setPrice(settlementPrice);
 
         setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
-        UD60x18 cost = ud(0.1e18);
+        UD60x18 cost = isCallTest ? ud(0.01e18) : ud(10e18); // 0.01 ETH or 10 USDC
 
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
         uint256 _cost = toTokenDecimals(cost);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * price, ZERO));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__CostNotAuthorized.selector,
+                cost / (isCallTest ? ONE : settlementPrice),
+                ZERO
+            )
+        );
+
         vm.prank(users.operator);
         pool.settlePositionFor(p, _cost);
     }
