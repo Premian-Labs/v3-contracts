@@ -7,8 +7,9 @@ import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {ProxyUpgradeableOwnableStorage} from "./ProxyUpgradeableOwnableStorage.sol";
+import {IProxyUpgradeableOwnable} from "./IProxyUpgradeableOwnable.sol";
 
-contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
+contract ProxyUpgradeableOwnable is IProxyUpgradeableOwnable, Proxy, SafeOwnable {
     using AddressUtils for address;
 
     event ImplementationSet(address implementation);
@@ -27,8 +28,7 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
         return ProxyUpgradeableOwnableStorage.layout().implementation;
     }
 
-    /// @notice get address of implementation contract
-    /// @return implementation address
+    /// @inheritdoc IProxyUpgradeableOwnable
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }

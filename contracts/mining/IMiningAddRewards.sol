@@ -3,5 +3,6 @@
 pragma solidity ^0.8.19;
 
 interface IMiningAddRewards {
+    /// @notice Add rewards to the mining contract
     function addRewards(uint256 amount) external;
 }
