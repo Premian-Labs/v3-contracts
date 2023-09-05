@@ -32,24 +32,12 @@ abstract contract Vault is IVault, SolidStateERC4626 {
 
         if (from != address(0)) {
             newFromShares -= amount;
-            IVaultMining(VAULT_MINING).updateUser(
-                from,
-                address(this),
-                ud(newFromShares),
-                ud(newTotalShares),
-                newUtilisation
-            );
+            IVaultMining(VAULT_MINING).updateUser(from, ud(newFromShares), ud(newTotalShares), newUtilisation);
         }
 
         if (to != address(0)) {
             newToShares += amount;
-            IVaultMining(VAULT_MINING).updateUser(
-                to,
-                address(this),
-                ud(newToShares),
-                ud(newTotalShares),
-                newUtilisation
-            );
+            IVaultMining(VAULT_MINING).updateUser(to, ud(newToShares), ud(newTotalShares), newUtilisation);
         }
     }
 

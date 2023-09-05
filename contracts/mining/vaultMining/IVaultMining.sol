@@ -82,17 +82,10 @@ interface IVaultMining {
     /// This needs to be called by the vault, anytime the user's shares change
     /// Can only be called by a vault registered on the VaultRegistry
     /// @param user The user to update
-    /// @param vault The vault for which to update
     /// @param newUserShares The new amount of shares for the user
     /// @param newTotalShares The new amount of total shares for the vault
     /// @param utilisationRate The new utilisation rate for the vault
-    function updateUser(
-        address user,
-        address vault,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) external;
+    function updateUser(address user, UD60x18 newUserShares, UD60x18 newTotalShares, UD60x18 utilisationRate) external;
 
     /// @notice Trigger an update for a vault
     function updateVault(address vault) external;

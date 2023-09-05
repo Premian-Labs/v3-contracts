@@ -167,14 +167,12 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     /// @inheritdoc IVaultMining
     function updateUser(
         address user,
-        address vault,
         UD60x18 newUserShares,
         UD60x18 newTotalShares,
         UD60x18 utilisationRate
     ) external nonReentrant {
         _revertIfNotVault(msg.sender);
-        _revertIfNotVault(vault);
-        _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
+        _updateUser(user, msg.sender, newUserShares, newTotalShares, utilisationRate);
     }
 
     /// @inheritdoc IVaultMining

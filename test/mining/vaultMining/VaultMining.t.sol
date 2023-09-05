@@ -193,7 +193,7 @@ contract VaultMiningTest is Test, Assertions {
     function test_updateUser_RevertIf_NotRegisteredVault() public {
         vm.expectRevert(abi.encodeWithSelector(IVaultMining.VaultMining__NotVault.selector, bob));
         vm.prank(bob);
-        vaultMining.updateUser(address(alice), alice, ud(1000e18), ud(1000e18), ud(1e18));
+        vaultMining.updateUser(address(alice), ud(1000e18), ud(1000e18), ud(1e18));
     }
 
     function test_vaultMining_DistributeRewardsCorrectly() public {
