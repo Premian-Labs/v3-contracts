@@ -71,8 +71,8 @@ jobs:
         uses: 'actions/cache/save@v3'
         with:
           path: |
-            'out'
-            'cache'
+            out
+            cache
           key: 'foundry-build-${{ github.sha }}'
 
       - name: 'Add build summary'
@@ -107,8 +107,8 @@ jobs:
           fail-on-cache-miss: true
           key: 'foundry-build-${{ github.sha }}'
           path: |
-            'out'
-            'cache'
+            out
+            cache
 
       - name: 'Run tests'
         run: 'yarn run test'
