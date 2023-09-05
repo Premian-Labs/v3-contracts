@@ -5,7 +5,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
-contract OracleAdapterMock {
+contract OracleAdapterMock is IOracleAdapter {
     address internal immutable BASE;
     address internal immutable QUOTE;
 
@@ -63,5 +63,10 @@ contract OracleAdapterMock {
 
         decimals = new uint8[](1);
         decimals[0] = 18;
+    }
+
+    // Not used, but implemented to be able to inherit from interface
+    function isPairSupported(address, address) external pure returns (bool isCached, bool hasPath) {
+        return (false, false);
     }
 }

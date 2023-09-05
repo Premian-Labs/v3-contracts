@@ -9,6 +9,8 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 library OptionRewardStorage {
@@ -24,8 +26,8 @@ library OptionRewardStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        address oracleAdapter;
-        address paymentSplitter;
+        IOracleAdapter oracleAdapter;
+        IPaymentSplitter paymentSplitter;
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;
         // percentage of the intrinsic value that is reduced after lockup period (ie 80% penalty (0.80e18), means the
@@ -47,6 +49,8 @@ library OptionRewardStorage {
         uint256 totalBaseReserved;
         // Amount of base tokens reserved for a strike/maturity
         mapping(UD60x18 strike => mapping(uint64 maturity => uint256 amount)) baseReserved;
+        UD60x18 fee;
+        address feeReceiver;
     }
 
     function layout() internal pure returns (Layout storage l) {

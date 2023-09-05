@@ -12,14 +12,11 @@ import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 
-import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
-
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
-import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionReward is IOptionReward, ReentrancyGuard {
     using OptionRewardStorage for IERC20;
@@ -32,14 +29,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
     address internal constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
-    address public immutable FEE_RECEIVER;
-    UD60x18 public immutable FEE;
-
-    constructor(address feeReceiver, UD60x18 fee) {
-        FEE_RECEIVER = feeReceiver;
-        FEE = fee;
-    }
-
     /// @inheritdoc IOptionReward
     function underwrite(address longReceiver, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
@@ -51,7 +40,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         // Calculates the maturity starting from the 8AM UTC timestamp of the current day
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
 
-        UD60x18 price = IOracleAdapter(l.oracleAdapter).getPrice(l.base, l.quote);
+        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
         _revertIfPriceIsZero(price);
 
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
@@ -110,8 +99,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.totalBaseReserved -= baseReserved;
         delete l.baseReserved[strike][maturity];
 
-        IERC20(l.base).approve(l.paymentSplitter, baseReserved);
-        IPaymentSplitter(l.paymentSplitter).pay(baseReserved, 0);
+        IERC20(l.base).approve(address(l.paymentSplitter), baseReserved);
+        l.paymentSplitter.pay(baseReserved, 0);
 
         emit RewardsNotClaimedReleased(strike, maturity, l.fromTokenDecimals(baseReserved, true));
     }
@@ -124,7 +113,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         SettleVarsInternal memory vars;
 
         {
-            UD60x18 price = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, maturity);
+            UD60x18 price = l.oracleAdapter.getPriceAt(l.base, l.quote, maturity);
             _revertIfPriceIsZero(price);
             vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
             vars.rewardPerContract = vars.intrinsicValuePerContract * (ONE - l.penalty);
@@ -147,9 +136,10 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
         (, uint256 quoteAmount) = l.option.settle(strike, maturity, vars.totalUnderwritten);
 
-        vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * FEE, false);
-        IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
-        IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - vars.fee);
+        vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * l.fee, false);
+
+        if (vars.fee > 0) IERC20(l.quote).safeTransfer(l.feeReceiver, vars.fee);
+        IERC20(l.quote).approve(address(l.paymentSplitter), quoteAmount - vars.fee);
 
         // There is a possible scenario where, if other underwriters have underwritten the same strike/maturity,
         // directly on optionPS, and most of the long holders who purchased from other holder exercised, that settlement
@@ -175,9 +165,9 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
                 baseAmountToPay = baseBalance - l.totalBaseReserved;
             }
         }
-        IERC20(l.base).approve(l.paymentSplitter, baseAmountToPay);
+        IERC20(l.base).approve(address(l.paymentSplitter), baseAmountToPay);
 
-        IPaymentSplitter(l.paymentSplitter).pay(baseAmountToPay, quoteAmount - vars.fee);
+        l.paymentSplitter.pay(baseAmountToPay, quoteAmount - vars.fee);
 
         emit Settled(
             strike,

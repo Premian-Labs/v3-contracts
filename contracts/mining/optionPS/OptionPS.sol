@@ -38,11 +38,13 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         FEE_RECEIVER = feeReceiver;
     }
 
+    /// @inheritdoc IOptionPS
     function getSettings() external view returns (address base, address quote, bool isCall) {
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         return (l.base, l.quote, l.isCall);
     }
 
+    /// @inheritdoc IOptionPS
     function getExerciseDuration() external pure returns (uint256) {
         return EXERCISE_DURATION;
     }
