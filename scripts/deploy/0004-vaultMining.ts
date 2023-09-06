@@ -8,12 +8,11 @@ import {
   initialize,
   updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
+import { parseEther } from 'ethers/lib/utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
   const { deployment } = await initialize(deployer);
-
-  // ToDo : Deploy OptionReward contract
 
   //////////////////////////
 
@@ -44,7 +43,7 @@ async function main() {
 
   //////////////////////////
 
-  const rewardsPerYear = 0; // ToDo : Set
+  const rewardsPerYear = parseEther('1800000');
 
   const vaultMiningProxyArgs = [
     vaultMiningImplementation.address,
