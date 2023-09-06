@@ -442,6 +442,16 @@
       "block": 119998289,
       "timestamp": 1691662250,
       "owner": ""
+    },
+    "treasury": {
+      "address": "0x8734b3ba671Fb69B84533219B673b752B25F336a",
+      "block": 128591445,
+      "commitHash": "7102f5f318cd1f1da55918d6d9deefb3b4de65bc",
+      "contractType": "Proxy",
+      "deploymentArgs": ["0x1998be0De9b7ed93e5F8fA44c49E68912fCAe28B"],
+      "timestamp": 1694008191,
+      "txHash": "0xbca8f6f12d0e4bb9f73b3aba10548f8574d9932e9360bd6eddc1b066cc0eaa18",
+      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
     }
   },
   "optionPS": {

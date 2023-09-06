@@ -5,6 +5,7 @@ export interface DeploymentMetadata {
   feeConverter: {
     main: ContractDeploymentMetadata;
     insuranceFund: ContractDeploymentMetadata;
+    treasury: ContractDeploymentMetadata;
   };
   core: { [key in ContractKey]: ContractDeploymentMetadata };
   optionPS: { [name: string]: ContractDeploymentMetadata };
