@@ -2,6 +2,7 @@
   "addresses": {
     "treasury": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
     "insuranceFund": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+    "dao": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
     "lzEndpoint": "0x0000000000000000000000000000000000000000"
   },
   "tokens": {
@@ -442,6 +443,16 @@
       "deploymentArgs": ["0xCCd7769D2f327e3EF7d39151a9139Fad5a93EEfE"],
       "timestamp": 1694011328,
       "txHash": "0xd91e2a0570e423150d2d3bd2a3106cca34fd6b00c23b896bd38dcd03d3584894",
+      "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
+    },
+    "dao": {
+      "address": "0x34c5fE19348B564Ef4550a8885986089d8B6804C",
+      "block": 39616736,
+      "commitHash": "9f39a3c4963d4065be53c1ac4b6ff869bc2127d5",
+      "contractType": "Proxy",
+      "deploymentArgs": ["0xCCd7769D2f327e3EF7d39151a9139Fad5a93EEfE"],
+      "timestamp": 1694020140,
+      "txHash": "0x2248fb8f77a63592ef61eaef980b761f9b1c7be5071e48e55063a5e780f5d14c",
       "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     }
   },

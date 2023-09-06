@@ -2,6 +2,7 @@
   "addresses": {
     "treasury": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469",
     "insuranceFund": "0xa0C49ae8C749A53e9881B226fC0Fa5E570754393",
+    "dao": "0x8Fb7A635164fb693350AaB6dF8f53d82Df7AABA0",
     "lzEndpoint": "0x3c2269811836af69497E5F486A85D7316753cf62"
   },
   "tokens": {
@@ -455,18 +456,33 @@
       "timestamp": 1694008191,
       "txHash": "0xbca8f6f12d0e4bb9f73b3aba10548f8574d9932e9360bd6eddc1b066cc0eaa18",
       "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+    },
+    "dao": {
+      "address": "0xAa9889881507D103e764B4bE6409217631FAf9B1",
+      "block": 128635864,
+      "commitHash": "9f39a3c4963d4065be53c1ac4b6ff869bc2127d5",
+      "contractType": "Proxy",
+      "deploymentArgs": ["0x1998be0De9b7ed93e5F8fA44c49E68912fCAe28B"],
+      "timestamp": 1694020199,
+      "txHash": "0xb147643f88db556e0daf17cf399f5f46061d488e3c208e178ea68a8a3d8b6596",
+      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
     }
   },
   "optionPS": {
     "PREMIA/USDC-C": {
-      "address": "",
+      "address": "0x4763281bEEd8f4F1130C8B29D16ba09516e17e99",
       "contractType": "Proxy",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
-      "owner": ""
+      "deploymentArgs": [
+        "0xE2F4371DE551a7F796a30F814f77f629589741A6",
+        "0x51fC0f6660482Ea73330E414eFd7808811a57Fa2",
+        "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+        "true"
+      ],
+      "commitHash": "9f39a3c4963d4065be53c1ac4b6ff869bc2127d5",
+      "txHash": "0xfa757ec3b0dd6a422be8854baed7b94e63bb913ea27e4735fc0d240c83c140ce",
+      "block": 128617415,
+      "timestamp": 1694015033,
+      "owner": "0x4763281bEEd8f4F1130C8B29D16ba09516e17e99"
     }
   },
   "optionReward": {

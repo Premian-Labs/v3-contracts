@@ -10,7 +10,7 @@ import {
   DeploymentMetadata,
   DeploymentPath,
 } from './types';
-import { Provider } from '@ethersproject/providers';
+import { Provider, TransactionReceipt } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { ethers, run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -24,6 +24,7 @@ interface UpdateDeploymentMetadataOptions {
   logTxUrl?: boolean;
   skipWriteFile?: boolean;
   verification?: VerificationOptions;
+  txReceipt?: TransactionReceipt;
 }
 
 interface VerificationOptions {
@@ -64,7 +65,7 @@ export async function updateDeploymentMetadata(
   providerOrSigner: Provider | SignerWithAddress,
   objectPath: ContractKey | string,
   contractType: ContractType,
-  deployedContract: BaseContract,
+  deployedContract: BaseContract | string,
   deploymentArgs: string[],
   options: UpdateDeploymentMetadataOptions = {},
 ) {
@@ -81,22 +82,33 @@ export async function updateDeploymentMetadata(
     fs.readFileSync(metadataJsonPath).toString(),
   ) as DeploymentMetadata;
 
-  const txReceipt = await deployedContract.deployTransaction.wait();
+  let txReceipt = options.txReceipt;
+  if (!txReceipt && typeof deployedContract !== 'string') {
+    txReceipt = await deployedContract.deployTransaction.wait();
+  }
+
+  const contractAddress =
+    typeof deployedContract === 'string'
+      ? deployedContract
+      : deployedContract.address;
+
   let owner = '';
 
   try {
-    const owned = IOwnable__factory.connect(deployedContract.address, provider);
+    const owned = IOwnable__factory.connect(contractAddress, provider);
     owner = await owned.owner();
   } catch (e) {}
 
   _.set(data, objectPath, {
-    address: deployedContract.address,
-    block: txReceipt.blockNumber,
+    address: contractAddress,
+    block: txReceipt?.blockNumber,
     commitHash: getCommitHash(),
     contractType,
     deploymentArgs,
-    timestamp: await getBlockTimestamp(provider, txReceipt.blockNumber),
-    txHash: txReceipt.transactionHash,
+    timestamp: txReceipt
+      ? await getBlockTimestamp(provider, txReceipt.blockNumber)
+      : undefined,
+    txHash: txReceipt?.transactionHash,
     owner: owner,
   });
 
@@ -105,19 +117,14 @@ export async function updateDeploymentMetadata(
   }
 
   if (options.logTxUrl) {
-    const addressUrl = await getAddressUrl(
-      deployedContract.address,
-      providerOrSigner,
-    );
+    const addressUrl = await getAddressUrl(contractAddress, providerOrSigner);
 
-    console.log(
-      `${objectPath} deployed: ${deployedContract.address} (${addressUrl})`,
-    );
+    console.log(`${objectPath} deployed: ${contractAddress} (${addressUrl})`);
   }
 
   if (options.verification?.enableVerification) {
     await verifyContractsOnEtherscan(
-      deployedContract.address,
+      contractAddress,
       deploymentArgs,
       options.verification?.libraries ?? {},
       options.verification?.contract,
