@@ -222,8 +222,9 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 settlementPrice = getSettlementPrice(false);
         oracleAdapter.setPrice(settlementPrice);
 
-        setActionAuthorization(users.trader, IUserSettings.Action.Settle, true);
         UD60x18 cost = isCallTest ? ud(0.01e18) : ud(10e18); // 0.01 ETH or 10 USDC
+        UD60x18 authorizedCost = isCallTest ? cost - ud(1) : (cost / settlementPrice) - ud(1);
+        enableExerciseSettleAuthorization(users.trader, authorizedCost);
 
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
@@ -234,7 +235,7 @@ abstract contract PoolSettleTest is DeployTest {
             abi.encodeWithSelector(
                 IPoolInternal.Pool__CostNotAuthorized.selector,
                 cost / (isCallTest ? ONE : settlementPrice),
-                ZERO
+                authorizedCost
             )
         );
 
