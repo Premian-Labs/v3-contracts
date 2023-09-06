@@ -12,7 +12,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Integration_Test {
     IPoolFactory.PoolKey internal poolKey;
     uint256 internal maturity = 1682668800;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         Integration_Test.setUp();
 
         poolKey = IPoolFactory.PoolKey({
