@@ -46,7 +46,7 @@ async function main() {
     ContractKey.OptionPSFactoryProxy,
     ContractType.Proxy,
     optionPSFactoryProxy,
-    [],
+    optionPSFactoryProxyArgs,
     { logTxUrl: true },
   );
 
@@ -75,16 +75,21 @@ async function main() {
   //////////////////////
 
   // OptionRewardFactory Implementation
+  const optionRewardFactoryImplArgs = [
+    defaultOptionRewardFee.toString(),
+    feeReceiver,
+  ];
+
   const optionRewardFactoryImpl = await new OptionRewardFactory__factory(
     deployer,
-  ).deploy(defaultOptionRewardFee, feeReceiver);
+  ).deploy(optionRewardFactoryImplArgs[0], optionRewardFactoryImplArgs[1]);
 
   await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionRewardFactoryImplementation,
     ContractType.Implementation,
     optionRewardFactoryImpl,
-    [],
+    optionRewardFactoryImplArgs,
     { logTxUrl: true },
   );
 

@@ -45,10 +45,10 @@ async function main() {
         'contracts/mining/vaultMining/VaultMiningProxy.sol:VaultMiningProxy';
     } else if (contract === ContractKey.OptionPSFactoryProxy) {
       contractPath =
-        'contracts/mining/optionPS/OptionPSFactory.sol:OptionPSFactory';
+        'contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable';
     } else if (contract === ContractKey.OptionRewardFactoryProxy) {
       contractPath =
-        'contracts/mining/optionReward/OptionRewardFactory.sol:OptionRewardFactory.sol';
+        'contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable';
     }
 
     await verifyContractsOnEtherscan(
