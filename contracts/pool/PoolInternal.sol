@@ -2125,19 +2125,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__ActionNotAuthorized(holder, msg.sender, action);
     }
 
-    /// @notice Revert if `cost` is not authorized by `holder`
-    function _revertIfCostNotAuthorized(address holder, UD60x18 costPerHolder) internal view {
+    /// @notice Revert if cost in wrapped native token is not authorized by `holder`
+    function _revertIfCostNotAuthorized(address holder, UD60x18 costInPoolToken) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
         address poolToken = l.getPoolToken();
 
-        UD60x18 wrappedNativePoolTokenSpotPrice = poolToken == WRAPPED_NATIVE_TOKEN
+        UD60x18 poolTokensPerWrappedNativeToken = poolToken == WRAPPED_NATIVE_TOKEN
             ? ONE
             : IOracleAdapter(l.oracleAdapter).getPrice(WRAPPED_NATIVE_TOKEN, poolToken);
 
-        UD60x18 costInWrappedNative = costPerHolder * wrappedNativePoolTokenSpotPrice;
-        UD60x18 authorizedCost = IUserSettings(SETTINGS).getAuthorizedCost(holder);
+        // ex: 10 USDC / (800 USDC / ETH) = 0.0125 ETH
+        UD60x18 costInWrappedNative = costInPoolToken / poolTokensPerWrappedNativeToken;
+        UD60x18 authorizedCostInWrappedNative = IUserSettings(SETTINGS).getAuthorizedCost(holder);
 
-        if (costInWrappedNative > authorizedCost) revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
+        if (costInWrappedNative > authorizedCostInWrappedNative)
+            revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCostInWrappedNative);
     }
 
     /// @notice Revert if `cost` exceeds `payout`
