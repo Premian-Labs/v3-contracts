@@ -26,4 +26,19 @@ abstract contract PoolFactory_Integration_Shared_Test is Integration_Test {
 
         vm.warp(1679758940);
     }
+
+    modifier givenCallOrPut() {
+        emit log("givenCall");
+
+        uint256 snapshot = vm.snapshot();
+
+        poolKey.isCallPool = true;
+        _;
+
+        vm.revertTo(snapshot);
+
+        emit log("givenPut");
+        poolKey.isCallPool = false;
+        _;
+    }
 }
