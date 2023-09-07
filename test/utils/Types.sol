@@ -26,4 +26,6 @@ struct Users {
     address payable underwriter;
     // Default for user that has no funds (meaning no base or quote)
     address payable broke;
+    // Relayer
+    address payable relayer;
 }

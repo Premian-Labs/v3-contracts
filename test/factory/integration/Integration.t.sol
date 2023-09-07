@@ -9,12 +9,6 @@ abstract contract Integration_Test is Base_Test {
     function setUp() public virtual override {
         Base_Test.setUp();
 
-        // Deploy V3 Core
-        deployCore();
-
-        // Make the Admin the default caller in this test suite
-        vm.startPrank({msgSender: users.deployer});
-
         // Approve V3 Core to spend assets from the users
         approveProtocol();
     }

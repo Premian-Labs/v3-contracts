@@ -57,6 +57,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
                                      VARIABLES
     //////////////////////////////////////////////////////////////////////////*/
     Users internal users;
+    uint256 internal mainnetFork;
 
     bytes4[] internal poolBaseSelectors;
     bytes4[] internal poolCoreMockSelectors;
@@ -88,6 +89,17 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     //////////////////////////////////////////////////////////////////////////*/
 
     function setUp() public virtual {
+        // If this is a fork test then, fork before deploying contracts
+        if (isForkTest()) {
+            // Fork mainnet
+            string memory ETH_RPC_URL = string.concat(
+                "https://eth-mainnet.alchemyapi.io/v2/",
+                vm.envString("API_KEY_ALCHEMY")
+            );
+            mainnetFork = vm.createFork(ETH_RPC_URL, getStartBlock());
+            vm.selectFork(mainnetFork);
+        }
+
         // Deploy the base test contracts.
         base = new ERC20Mock("BASE", 18);
         quote = new ERC20Mock("QUOTE", 6);
@@ -111,7 +123,8 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
             caller: createUser("Caller"),
             receiver: createUser("Receiver"),
             underwriter: createUser("Underwriter"),
-            broke: payable(makeAddr("Broke"))
+            broke: payable(makeAddr("Broke")),
+            relayer: createUser("Relayer")
         });
 
         // Deploy the defaults contract.
@@ -120,13 +133,35 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
         defaults.setQuote(IERC20(address(quote)));
         defaults.setUsers(users);
 
-        // Warp to May 1, 2023 at 00:00 GMT to provide a more realistic testing environment.
-        vm.warp(MAY_1_2023);
+        vm.warp(getStartTimestamp());
+
+        // Deploy the contracts
+        vm.startPrank(users.deployer);
+        deploy();
+
+        // Label contracts
+        labelContracts();
     }
 
     /*//////////////////////////////////////////////////////////////////////////
                                       HELPERS
     //////////////////////////////////////////////////////////////////////////*/
+
+    // @dev Whether or not the test is a fork test.
+    function isForkTest() internal virtual returns (bool) {
+        return false;
+    }
+
+    // @dev Gets the starting block for the fork test.
+    function getStartBlock() internal virtual returns (uint256) {
+        return 16_126_000;
+    }
+
+    /// @dev Gets the start timestamp for the test.
+    function getStartTimestamp() internal virtual returns (uint256) {
+        // Warp to May 1, 2023 at 00:00 GMT to provide a more realistic testing environment.
+        return MAY_1_2023;
+    }
 
     /// @dev Approves a contract to spend base and quote for a user.
     function approve(address contractAddress) internal {
@@ -165,7 +200,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     }
 
     /// @dev Deploys the V3 Core contracts.
-    function deployCore() internal {
+    function deploy() internal virtual {
         UD60x18 settlementPrice = ud(1000 ether);
         oracleAdapter = new OracleAdapterMock(address(base), address(quote), settlementPrice, settlementPrice);
 
@@ -385,7 +420,10 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
         );
 
         diamond.diamondCut(facetCuts, address(0), "");
+    }
 
+    /// @dev Labels the deployed contracts.
+    function labelContracts() internal {
         // Label contracts
         vm.label({account: address(oracleAdapter), newLabel: "OracleAdapter"});
         vm.label({account: address(factory), newLabel: "PoolFactory"});

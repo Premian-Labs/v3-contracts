@@ -23,7 +23,9 @@ abstract contract PoolFactory_Integration_Shared_Test is Integration_Test {
             maturity: maturity,
             isCallPool: true
         });
+    }
 
-        vm.warp(1679758940);
+    function getStartTimestamp() internal virtual override returns (uint256) {
+        return 1_679_758_940;
     }
 }
