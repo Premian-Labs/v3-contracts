@@ -8,7 +8,7 @@ import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {OptionMathMock} from "contracts/test/libraries/OptionMathMock.sol";
 import {Base_Test} from "../Base.t.sol";
 
-contract Option_Math_Concrete_Test is Base_Test {
+contract OptionMath_Unit_Concrete_Test is Base_Test {
     // Test contracts
     OptionMathMock internal optionMath;
 

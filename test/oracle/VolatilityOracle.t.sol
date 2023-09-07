@@ -4,26 +4,18 @@ pragma solidity ^0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
-
-import {Assertions} from "../Assertions.sol";
-
-import {Pricing} from "contracts/libraries/Pricing.sol";
-import {IPricing} from "contracts/libraries/IPricing.sol";
-
 import {IVolatilityOracle} from "contracts/oracle/IVolatilityOracle.sol";
 
 import {VolatilityOracleMock} from "contracts/test/oracle/VolatilityOracleMock.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract VolatilityOracleTest is Test, Assertions {
-    VolatilityOracleMock oracle;
-    address relayer;
-    address token = address(1);
+contract VolatilityOracle_Unit_Concrete_test is Base_Test {
+    // Variables
+    VolatilityOracleMock internal oracle;
+    address internal token = address(1);
 
-    bytes32 constant paramsFormatted = 0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8;
-
-    int256[5] params = [
+    int256[5] internal params = [
         int256(839159148341),
         int256(-59574226567),
         int256(20047063855),
@@ -31,28 +23,18 @@ contract VolatilityOracleTest is Test, Assertions {
         int256(34026549310)
     ];
 
-    SD59x18[5] values = [
-        SD59x18.wrap(0.00273972602739726e18),
-        SD59x18.wrap(0.03561643835616438e18),
-        SD59x18.wrap(0.09315068493150686e18),
-        SD59x18.wrap(0.16986301369863013e18),
-        SD59x18.wrap(0.4191780821917808e18)
+    SD59x18[5] internal values = [
+        sd(0.00273972602739726e18),
+        sd(0.03561643835616438e18),
+        sd(0.09315068493150686e18),
+        sd(0.16986301369863013e18),
+        sd(0.4191780821917808e18)
     ];
 
-    function setUp() public {
-        VolatilityOracleMock impl = new VolatilityOracleMock();
-        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
-        oracle = VolatilityOracleMock(address(proxy));
-
-        relayer = vm.addr(10);
-        address[] memory relayers = new address[](1);
-        relayers[0] = relayer;
-
-        oracle.addWhitelistedRelayers(relayers);
-    }
-
     // prettier-ignore
-    function _updateParams() internal {
+    function setUp() public virtual override {
+        Base_Test.setUp();
+
         int256[5] memory tau =   [ int256(2739726027),  int256(35616438356), int256(93150684931),  int256(169863013698), int256(419178082191) ];
         int256[5] memory theta = [ int256(1769240990),  int256(19167659692), int256(50651452629),  int256(101097155795), int256(270899488797) ];
         int256[5] memory psi =   [ int256(37206384846), int256(91562361472), int256(161073555196), int256(282476089989), int256(357980351179) ];
@@ -70,11 +52,25 @@ contract VolatilityOracleTest is Test, Assertions {
         psiHex[0] = oracle.formatParams(psi);
         rhoHex[0] = oracle.formatParams(rho);
 
-        vm.prank(relayer);
+        changePrank({msgSender: users.relayer});
+
         oracle.updateParams(tokens, tauHex, thetaHex, psiHex, rhoHex, ud(0.01e18));
     }
 
+    function deploy() internal virtual override {
+        VolatilityOracleMock impl = new VolatilityOracleMock();
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
+        oracle = VolatilityOracleMock(address(proxy));
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.relayer;
+
+        oracle.addWhitelistedRelayers(relayers);
+    }
+
     function test_formatParams_CorrectlyFormatParameters() public {
+        bytes32 paramsFormatted = 0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8;
+
         int256[5] memory _params = oracle.parseParams(paramsFormatted);
         assertEq(oracle.formatParams(_params), paramsFormatted);
     }
@@ -102,8 +98,6 @@ contract VolatilityOracleTest is Test, Assertions {
     }
 
     function test_getVolatility_PerformExtrapolation_ShortTerm() public {
-        _updateParams();
-
         UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(3500e18), ud(0.001e18));
 
         uint256 expected = 1.3682433159664105e18;
@@ -111,8 +105,6 @@ contract VolatilityOracleTest is Test, Assertions {
     }
 
     function test_getVolatility_PerformInterpolation_OnFirstInterval() public {
-        _updateParams();
-
         UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(3500e18), ud(0.02e18));
 
         uint256 expected = 0.8541332587538256e18;
@@ -120,8 +112,6 @@ contract VolatilityOracleTest is Test, Assertions {
     }
 
     function test_getVolatility_PerformInterpolation_OnLastInterval() public {
-        _updateParams();
-
         UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(5000e18), ud(0.3e18));
 
         uint256 expected = 0.8715627609068288e18;
@@ -129,8 +119,6 @@ contract VolatilityOracleTest is Test, Assertions {
     }
 
     function test_getVolatility_PerformInterpolation_LongTerm() public {
-        _updateParams();
-
         UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(7000e18), ud(0.5e18));
 
         uint256 expected = 0.88798013e18;
