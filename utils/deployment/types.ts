@@ -54,6 +54,8 @@ export enum ContractKey {
   OptionRewardFactoryProxy = 'OptionRewardFactoryProxy',
   OptionRewardImplementation = 'OptionRewardImplementation',
   FeeConverterImplementation = 'FeeConverterImplementation',
+  PaymentSplitterImplementation = 'PaymentSplitterImplementation',
+  PaymentSplitterProxy = 'PaymentSplitterProxy',
 }
 
 export interface ContractDeploymentMetadata {
