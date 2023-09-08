@@ -18,7 +18,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__ActionNotAuthorized(address user, address sender, IUserSettings.Action action);
     error Pool__AgentNotAuthorized();
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
-    error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCost);
+    error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCostInWrappedNative);
     error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
