@@ -8,6 +8,10 @@ struct Users {
     address payable admin;
     // Impartial user.
     address payable alice;
+    // Impartial user.
+    address payable bob;
+    // Impartial user.
+    address payable charles;
     // Malicious user.
     address payable eve;
     // Default trader.

@@ -2,16 +2,61 @@
 pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {IPool} from "contracts/pool/IPool.sol";
+
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+import {IPool} from "contracts/pool/IPool.sol";
 
-import {PoolFactory_Integration_Shared_Test} from "../shared/PoolFactory.t.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract PoolFactory_DeployPool_Concrete_Test is PoolFactory_Integration_Shared_Test {
+contract PoolFactory_Integration_Concrete_Test is Base_Test {
+    // Variables
+    IPoolFactory.PoolKey internal poolKey;
+    uint256 internal maturity = 1_682_668_800;
+
     function setUp() public virtual override {
-        PoolFactory_Integration_Shared_Test.setUp();
+        Base_Test.setUp();
+
+        // Approve V3 Core to spend assets from the users
+        approveProtocol();
+
+        poolKey = IPoolFactory.PoolKey({
+            base: address(base),
+            quote: address(quote),
+            oracleAdapter: address(oracleAdapter),
+            strike: ud(1000 ether),
+            maturity: maturity,
+            isCallPool: true
+        });
+
         changePrank({msgSender: users.lp});
     }
+
+    function getStartTimestamp() internal virtual override returns (uint256) {
+        return 1_679_758_940;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////////////////*/
+
+    modifier givenCallOrPut() {
+        emit log("givenCall");
+
+        uint256 snapshot = vm.snapshot();
+
+        poolKey.isCallPool = true;
+        _;
+
+        vm.revertTo(snapshot);
+
+        emit log("givenPut");
+        poolKey.isCallPool = false;
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                                  deployPool
+    //////////////////////////////////////////////////////////////////////////*/
 
     function test_deployPool_DeployPool() public givenCallOrPut {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
@@ -200,5 +245,24 @@ contract PoolFactory_DeployPool_Concrete_Test is PoolFactory_Integration_Shared_
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                              getPoolAddress
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function test_getPoolAddress_ReturnIsDeployedFalse() public givenCallOrPut {
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+
+        assertNotEq(pool, address(0));
+        assertFalse(isDeployed);
+    }
+
+    function test_getPoolAddress_ReturnIsDeployedTrue() public givenCallOrPut {
+        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
+
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+        assertEq(pool, poolAddress);
+        assertTrue(isDeployed);
     }
 }

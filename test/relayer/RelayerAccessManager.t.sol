@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.19;
 
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
@@ -8,31 +7,35 @@ import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {RelayerAccessManagerMock} from "contracts/test/relayer/RelayerAccessManagerMock.sol";
 
-import {DeployTest} from "../Deploy.t.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract RelayerAccessManagerTest is DeployTest {
-    RelayerAccessManagerMock relayerAccessManager;
+contract RelayerAccessManager_Unit_Concrete_Test is Base_Test {
+    // Test contracts
+    RelayerAccessManagerMock internal relayerAccessManager;
 
-    address relayer;
-    address alice;
-    address bob;
-    address charles;
+    // Variables
+    address internal relayer;
+    address internal alice;
+    address internal bob;
+    address internal charles;
 
     function setUp() public override {
-        super.setUp();
+        Base_Test.setUp();
 
         relayer = vm.addr(1);
         alice = vm.addr(2);
         bob = vm.addr(3);
         charles = vm.addr(4);
 
-        RelayerAccessManagerMock implementation = new RelayerAccessManagerMock();
-        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
-        relayerAccessManager = RelayerAccessManagerMock(address(proxy));
-
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
         relayerAccessManager.addWhitelistedRelayers(relayers);
+    }
+
+    function deploy() internal virtual override {
+        RelayerAccessManagerMock implementation = new RelayerAccessManagerMock();
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
+        relayerAccessManager = RelayerAccessManagerMock(address(proxy));
     }
 
     function _addWhitelistedRelayers() internal {
@@ -62,7 +65,7 @@ contract RelayerAccessManagerTest is DeployTest {
 
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
 
-        vm.prank(bob);
+        changePrank(bob);
         relayerAccessManager.addWhitelistedRelayers(relayers);
     }
 
@@ -115,7 +118,7 @@ contract RelayerAccessManagerTest is DeployTest {
 
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
 
-        vm.prank(bob);
+        changePrank(bob);
         relayerAccessManager.removeWhitelistedRelayers(relayers);
     }
 

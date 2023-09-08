@@ -73,16 +73,16 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     ERC20Mock internal premia;
     Defaults internal defaults;
 
-    OracleAdapterMock oracleAdapter;
-    PoolFactory factory;
-    Premia diamond;
-    ERC20Router router;
-    ExchangeHelper exchangeHelper;
-    IReferralMock referral;
-    IUserSettings userSettings;
-    IVxPremia vxPremia;
-    VaultRegistry vaultRegistry;
-    FlashLoanMock flashLoanMock;
+    OracleAdapterMock internal oracleAdapter;
+    PoolFactory internal factory;
+    Premia internal diamond;
+    ERC20Router internal router;
+    ExchangeHelper internal exchangeHelper;
+    IReferralMock internal referral;
+    IUserSettings internal userSettings;
+    IVxPremia internal vxPremia;
+    VaultRegistry internal vaultRegistry;
+    FlashLoanMock internal flashLoanMock;
 
     /*//////////////////////////////////////////////////////////////////////////
                                   SET-UP FUNCTION
@@ -115,6 +115,8 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
             deployer: createUser("Deployer"),
             admin: createUser("Admin"),
             alice: createUser("Alice"),
+            bob: createUser("Bob"),
+            charles: createUser("Charles"),
             eve: createUser("Eve"),
             trader: createUser("Trader"),
             lp: createUser("LP"),
@@ -173,6 +175,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     function approveProtocolForUser(address user) internal {
         changePrank({msgSender: user});
         approve(address(router));
+        approve(address(referral));
     }
 
     /// @dev Approves all core contracts to spend base and quote from select users.
