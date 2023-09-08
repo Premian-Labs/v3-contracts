@@ -52,13 +52,14 @@ abstract contract PoolTradeTest is DeployTest {
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
 
         (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(users.trader, tradeSize, true);
+        uint256 protocolFee = takerFee / 2;
 
         uint256 totalRebate;
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(takerFee);
-            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(takerFee);
+            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(protocolFee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(protocolFee);
 
             uint256 primaryRebate = toTokenDecimals(_primaryRebate);
             uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
@@ -188,13 +189,14 @@ abstract contract PoolTradeTest is DeployTest {
         uint256 collateral = toTokenDecimals(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(users.trader, tradeSize, false);
+        uint256 protocolFee = takerFee / 2;
 
         uint256 totalRebate;
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(takerFee);
-            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(takerFee);
+            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(protocolFee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(protocolFee);
 
             uint256 primaryRebate = toTokenDecimals(_primaryRebate);
             uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
