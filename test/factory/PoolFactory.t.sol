@@ -60,15 +60,20 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
 
     function test_deployPool_DeployPool() public givenCallOrPut {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
-        (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool) = IPool(
-            pool
-        ).getPoolSettings();
+        (
+            address base,
+            address quote,
+            address oracleAdapter,
+            UD60x18 strike,
+            uint256 maturity_,
+            bool isCallPool
+        ) = IPool(pool).getPoolSettings();
 
         assertEq(base, poolKey.base);
         assertEq(quote, poolKey.quote);
         assertEq(oracleAdapter, poolKey.oracleAdapter);
         assertEq(strike, poolKey.strike);
-        assertEq(maturity, poolKey.maturity);
+        assertEq(maturity_, poolKey.maturity);
         assertEq(isCallPool, poolKey.isCallPool);
     }
 
