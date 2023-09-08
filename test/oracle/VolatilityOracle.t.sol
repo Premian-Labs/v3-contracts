@@ -11,8 +11,10 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 import {Base_Test} from "../Base.t.sol";
 
 contract VolatilityOracle_Unit_Concrete_test is Base_Test {
-    // Variables
+    // Test contracts
     VolatilityOracleMock internal oracle;
+
+    // Variables
     address internal token = address(1);
 
     int256[5] internal params = [

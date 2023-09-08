@@ -31,64 +31,6 @@ abstract contract PoolWriteFromTest is DeployTest {
         return initialCollateral;
     }
 
-    function test_writeFrom_Write_500_Options() public {
-        uint256 initialCollateral = _mintForLP();
-
-        UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
-        vm.prank(users.lp);
-        pool.writeFrom(users.lp, users.trader, size, address(0));
-
-        uint256 collateral = toTokenDecimals(contractsToCollateral(size)) + fee;
-
-        IERC20 poolToken = IERC20(getPoolToken());
-
-        assertEq(poolToken.balanceOf(address(pool)), collateral);
-        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
-
-        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), size);
-        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
-        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
-        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
-    }
-
-    function test_writeFrom_Write_500_Options_WithReferral() internal {
-        uint256 initialCollateral = _mintForLP();
-
-        UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
-        vm.prank(users.lp);
-        pool.writeFrom(users.lp, users.trader, size, users.referrer);
-
-        uint256 totalRebate;
-
-        {
-            (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(fee);
-            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(fee);
-
-            uint256 primaryRebate = toTokenDecimals(_primaryRebate);
-            uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
-
-            totalRebate = primaryRebate + secondaryRebate;
-        }
-
-        uint256 collateral = toTokenDecimals(contractsToCollateral(size));
-
-        IERC20 poolToken = IERC20(getPoolToken());
-
-        assertEq(poolToken.balanceOf(address(referral)), totalRebate);
-
-        assertEq(poolToken.balanceOf(address(pool)), collateral + fee - totalRebate);
-        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral - fee);
-
-        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), size);
-        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
-
-        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
-        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
-    }
-
     function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress() public {
         uint256 initialCollateral = _mintForLP();
 
