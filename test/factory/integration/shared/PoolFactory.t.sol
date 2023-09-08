@@ -28,4 +28,19 @@ abstract contract PoolFactory_Integration_Shared_Test is Integration_Test {
     function getStartTimestamp() internal virtual override returns (uint256) {
         return 1_679_758_940;
     }
+
+    modifier givenCallOrPut() {
+        emit log("givenCall");
+
+        uint256 snapshot = vm.snapshot();
+
+        poolKey.isCallPool = true;
+        _;
+
+        vm.revertTo(snapshot);
+
+        emit log("givenPut");
+        poolKey.isCallPool = false;
+        _;
+    }
 }
