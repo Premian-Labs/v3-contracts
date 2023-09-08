@@ -182,7 +182,12 @@ abstract contract PoolClaimTest is DeployTest {
             totalClaimableFees += pool.claim(key);
         }
 
-        assertApproxEqAbs(totalClaimableFees, protocolFees, 10);
+        assertApproxEqAbs(
+            totalClaimableFees,
+            // makerRebate = protocolFee + totalReferralRebate
+            toTokenDecimals((fromTokenDecimals(protocolFees) / ud(0.95e18))), // We divide by 0.95, to cancel the 5% taken as referral rebate.
+            10
+        );
     }
 
     function test_getClaimableFees_ReturnExpectedValue() public {
@@ -222,7 +227,12 @@ abstract contract PoolClaimTest is DeployTest {
             totalClaimableFees += pool.getClaimableFees(key);
         }
 
-        assertApproxEqAbs(totalClaimableFees, pool.protocolFees(), 10);
+        assertApproxEqAbs(
+            totalClaimableFees,
+            // makerRebate = protocolFee + totalReferralRebate
+            toTokenDecimals((fromTokenDecimals(pool.protocolFees()) / ud(0.95e18))), // We divide by 0.95, to cancel the 5% taken as referral rebate
+            10
+        );
     }
 
     function test_claim_RevertIf_OperatorNotAuthorized() public {
