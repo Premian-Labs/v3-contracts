@@ -22,7 +22,7 @@ import { ONE_DAY } from '../../utils/time';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const { deployment } = await initialize(deployer);
+  let { deployment } = await initialize(deployer);
 
   //////////////////////////
 
@@ -34,7 +34,7 @@ async function main() {
     deployer,
   ).deploy();
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionPSFactoryImplementation,
     ContractType.Implementation,
@@ -50,7 +50,7 @@ async function main() {
     deployer,
   ).deploy(optionPSFactoryProxyArgs[0]);
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionPSFactoryProxy,
     ContractType.Proxy,
@@ -66,7 +66,7 @@ async function main() {
     optionPSImplementationArgs[0],
   );
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionPSImplementation,
     ContractType.Implementation,
@@ -93,7 +93,7 @@ async function main() {
     deployer,
   ).deploy(optionRewardFactoryImplArgs[0], optionRewardFactoryImplArgs[1]);
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionRewardFactoryImplementation,
     ContractType.Implementation,
@@ -109,7 +109,7 @@ async function main() {
     deployer,
   ).deploy(optionRewardFactoryProxyArgs[0]);
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionRewardFactoryProxy,
     ContractType.Proxy,
@@ -123,7 +123,7 @@ async function main() {
     deployer,
   ).deploy();
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionRewardImplementation,
     ContractType.Implementation,
@@ -148,7 +148,7 @@ async function main() {
     vaultMiningProxyArgs[0],
     vaultMiningProxyArgs[1],
   );
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningProxy,
     ContractType.Proxy,
@@ -176,7 +176,7 @@ async function main() {
     paymentSplitterImplArgs[3],
   );
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.PaymentSplitterImplementation,
     ContractType.Implementation,
@@ -192,7 +192,7 @@ async function main() {
     deployer,
   ).deploy(paymentSplitterProxyArgs[0]);
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.PaymentSplitterProxy,
     ContractType.Proxy,
@@ -240,7 +240,7 @@ async function main() {
 
   const optionPSName = `${name}-${isCall ? 'C' : 'P'}`;
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     `optionPS.${optionPSName}`,
     ContractType.Proxy,
@@ -289,7 +289,7 @@ async function main() {
     optionRewardKey.feeReceiver,
   ];
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     `optionReward.${name}`,
     ContractType.Proxy,
@@ -318,7 +318,7 @@ async function main() {
     vaultMiningImplementationArgs[3],
   );
 
-  await updateDeploymentMetadata(
+  deployment = await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningImplementation,
     ContractType.Implementation,
