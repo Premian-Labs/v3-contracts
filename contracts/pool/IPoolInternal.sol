@@ -193,7 +193,6 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 premium;
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
-        UD60x18 premiumMaker;
         ReferralVarsInternal referral;
     }
 

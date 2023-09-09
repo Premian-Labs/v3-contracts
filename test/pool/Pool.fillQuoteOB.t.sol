@@ -69,13 +69,13 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
 
         uint256 initialCollateral = getInitialCollateral();
 
-        assertEq(
-            IERC20(poolToken).balanceOf(users.lp),
-            initialCollateral - collateral + premium - protocolFee,
-            "poolToken lp"
-        );
+        assertEq(IERC20(poolToken).balanceOf(users.lp), initialCollateral - collateral + premium, "poolToken lp");
 
-        assertEq(IERC20(poolToken).balanceOf(users.trader), initialCollateral - premium, "poolToken trader");
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            initialCollateral - premium - protocolFee,
+            "poolToken trader"
+        );
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0, "short trader");
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), quoteOB.size, "long trader");
@@ -112,17 +112,11 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
         if (isBuy) {
             assertEq(IERC20(token).balanceOf(users.lp), initialCollateral - premium);
 
-            assertEq(
-                IERC20(token).balanceOf(users.trader),
-                initialCollateral + premium + totalRebate - collateral - protocolFee
-            );
+            assertEq(IERC20(token).balanceOf(users.trader), initialCollateral + premium - collateral - protocolFee);
         } else {
-            assertEq(
-                IERC20(token).balanceOf(users.lp),
-                initialCollateral + premium + totalRebate - collateral - protocolFee
-            );
+            assertEq(IERC20(token).balanceOf(users.lp), initialCollateral + premium - collateral);
 
-            assertEq(IERC20(token).balanceOf(users.trader), initialCollateral - premium);
+            assertEq(IERC20(token).balanceOf(users.trader), initialCollateral - premium - protocolFee);
         }
 
         assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
