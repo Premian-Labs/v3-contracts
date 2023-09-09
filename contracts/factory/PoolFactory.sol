@@ -199,11 +199,11 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
-        if (ttm >= 3 days && ttm <= 30 days) {
+        if (ttm >= 3 days && ttm <= 35 days) {
             if (!OptionMath.isFriday(maturity)) revert PoolFactory__OptionMaturityNotFriday(maturity);
         }
 
-        if (ttm > 30 days) {
+        if (ttm > 35 days) {
             if (!OptionMath.isLastFriday(maturity)) revert PoolFactory__OptionMaturityNotLastFriday(maturity);
         }
 
