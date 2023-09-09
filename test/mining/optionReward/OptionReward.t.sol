@@ -67,6 +67,7 @@ contract OptionRewardTest is Assertions, Test {
     OracleAdapterMock internal oracleAdapter;
     OptionPSFactory internal optionPSFactory;
     OptionReward internal optionReward;
+    OptionRewardFactory optionRewardFactory;
     VxPremia internal vxPremia;
     OptionPS internal option;
     address internal mining;
@@ -136,7 +137,7 @@ contract OptionRewardTest is Assertions, Test {
         OptionReward optionRewardImplementation = new OptionReward();
         address optionRewardFactoryImpl = address(new OptionRewardFactory(fee, feeReceiverOptionReward));
         ProxyUpgradeableOwnable optionRewardFactoryProxy = new ProxyUpgradeableOwnable(optionRewardFactoryImpl);
-        OptionRewardFactory optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
+        optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
         optionRewardFactory.setManagedProxyImplementation(address(optionRewardImplementation));
 
         option = OptionPS(
@@ -197,6 +198,29 @@ contract OptionRewardTest is Assertions, Test {
 
     function _shortTokenId() internal view returns (uint256) {
         return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, ud(0.55e18));
+    }
+
+    function test_deployProxy_RevertIf_ProxyAlreadyDeployed() public {
+        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
+            option: option,
+            oracleAdapter: oracleAdapter,
+            paymentSplitter: paymentSplitter,
+            discount: discount,
+            penalty: penalty,
+            optionDuration: optionDuration,
+            lockupDuration: lockupDuration,
+            claimDuration: claimDuration,
+            fee: fee,
+            feeReceiver: feeReceiverOptionReward
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionRewardFactory.OptionRewardFactory__ProxyAlreadyDeployed.selector,
+                address(optionReward)
+            )
+        );
+        optionReward = OptionReward(optionRewardFactory.deployProxy(key));
     }
 
     function test_underwrite_Success() public {

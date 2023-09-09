@@ -72,6 +72,12 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
     }
 
     function _deployProxy(OptionRewardKey memory key) internal returns (address proxy) {
+        OptionRewardFactoryStorage.Layout storage l = OptionRewardFactoryStorage.layout();
+
+        bytes32 keyHash = key.keyHash();
+        if (l.proxyByKey[keyHash] != address(0))
+            revert OptionRewardFactory__ProxyAlreadyDeployed(l.proxyByKey[keyHash]);
+
         proxy = address(
             new OptionRewardProxy(
                 IProxyManager(address(this)),
@@ -88,9 +94,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
             )
         );
 
-        OptionRewardFactoryStorage.Layout storage l = OptionRewardFactoryStorage.layout();
-
-        l.proxyByKey[key.keyHash()] = proxy;
+        l.proxyByKey[keyHash] = proxy;
         l.isProxyDeployed[proxy] = true;
 
         emit ProxyDeployed(
