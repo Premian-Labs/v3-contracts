@@ -31,6 +31,7 @@ interface IVaultMining {
     struct UserInfo {
         // User shares
         UD60x18 shares;
+        UD60x18 __deprecated_reward;
         // Reward debt. See explanation below
         UD60x18 rewardDebt;
         //   pending reward = (user.shares * vault.accPremiaPerShare) - user.rewardDebt
