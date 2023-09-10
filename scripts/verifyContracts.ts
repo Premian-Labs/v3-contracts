@@ -49,6 +49,9 @@ async function main() {
     } else if (contract === ContractKey.OptionRewardFactoryProxy) {
       contractPath =
         'contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable';
+    } else if (contract === ContractKey.PaymentSplitterProxy) {
+      contractPath =
+        'contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable';
     }
 
     await verifyContractsOnEtherscan(
