@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -7,66 +6,90 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {IPool} from "contracts/pool/IPool.sol";
 
-import {DeployTest} from "../Deploy.t.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract PoolFactoryTest is DeployTest {
-    function setUp() public override {
-        super.setUp();
-        vm.warp(1679758940);
+contract PoolFactory_Integration_Concrete_Test is Base_Test {
+    // Variables
+    IPoolFactory.PoolKey internal poolKey;
+    uint256 internal maturity = 1_682_668_800;
+
+    function setUp() public virtual override {
+        Base_Test.setUp();
+
+        // Approve V3 Core to spend assets from the users
+        approveProtocol();
+
+        poolKey = IPoolFactory.PoolKey({
+            base: address(base),
+            quote: address(quote),
+            oracleAdapter: address(oracleAdapter),
+            strike: ud(1000 ether),
+            maturity: maturity,
+            isCallPool: true
+        });
+
+        changePrank({msgSender: users.lp});
     }
 
-    function test_getPoolAddress_ReturnIsDeployedFalse() public {
-        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
-
-        assert(pool != address(0));
-        assertFalse(isDeployed);
+    function getStartTimestamp() internal virtual override returns (uint256) {
+        return 1_679_758_940;
     }
 
-    function test_getPoolAddress_ReturnIsDeployedTrue() public {
-        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
+    /*//////////////////////////////////////////////////////////////////////////
+                              Modifiers
+    //////////////////////////////////////////////////////////////////////////*/
 
-        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
-        assertEq(pool, poolAddress);
-        assertTrue(isDeployed);
+    modifier givenCallOrPut() {
+        emit log("givenCall");
+
+        uint256 snapshot = vm.snapshot();
+
+        poolKey.isCallPool = true;
+        _;
+
+        vm.revertTo(snapshot);
+
+        emit log("givenPut");
+        poolKey.isCallPool = false;
+        _;
     }
 
-    function test_deployPool_DeployPool() public {
+    /*//////////////////////////////////////////////////////////////////////////
+                                  deployPool
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function test_deployPool_DeployPool() public givenCallOrPut {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
-
-        (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool) = IPool(
-            pool
-        ).getPoolSettings();
+        (
+            address base,
+            address quote,
+            address oracleAdapter,
+            UD60x18 strike,
+            uint256 maturity_,
+            bool isCallPool
+        ) = IPool(pool).getPoolSettings();
 
         assertEq(base, poolKey.base);
         assertEq(quote, poolKey.quote);
         assertEq(oracleAdapter, poolKey.oracleAdapter);
         assertEq(strike, poolKey.strike);
-        assertEq(maturity, poolKey.maturity);
+        assertEq(maturity_, poolKey.maturity);
         assertEq(isCallPool, poolKey.isCallPool);
     }
 
-    function test_deployPool_NoRefund() public {
-        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+    function test_deployPool_NoRefund() public givenCallOrPut {
+        maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
-        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
-            base: base,
-            quote: quote,
-            oracleAdapter: address(oracleAdapter),
-            strike: ud(2000 ether), // OTM
-            maturity: maturity + 24 hours,
-            isCallPool: true
-        });
+        poolKey.strike = ud(2000 ether);
+        poolKey.maturity = maturity + 24 hours;
 
         uint256 fee = factory.initializationFee(poolKey).unwrap();
 
         assertEq(fee, 109188259456203059);
         assertEq(address(factory).balance, 0);
 
-        vm.deal(users.lp, 1 ether);
         uint256 lpBalanceBefore = users.lp.balance;
-
-        vm.prank(users.lp);
         factory.deployPool{value: fee}(poolKey);
 
         assertEq(users.lp.balance, lpBalanceBefore - fee);
@@ -74,28 +97,19 @@ contract PoolFactoryTest is DeployTest {
         assertEq(address(factory).balance, 0);
     }
 
-    function test_deployPool_PartialRefund() public {
-        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+    function test_deployPool_PartialRefund() public givenCallOrPut {
+        maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
-        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
-            base: base,
-            quote: quote,
-            oracleAdapter: address(oracleAdapter),
-            strike: ud(2000 ether), // OTM
-            maturity: maturity + 24 hours,
-            isCallPool: true
-        });
+        poolKey.strike = ud(2000 ether);
+        poolKey.maturity = maturity + 24 hours;
 
         uint256 fee = factory.initializationFee(poolKey).unwrap();
 
         assertEq(fee, 109188259456203059);
         assertEq(address(factory).balance, 0);
 
-        vm.deal(users.lp, 1 ether);
         uint256 lpBalanceBefore = users.lp.balance;
-
-        vm.prank(users.lp);
         factory.deployPool{value: 1 ether}(poolKey);
 
         assertEq(users.lp.balance, lpBalanceBefore - fee);
@@ -103,42 +117,34 @@ contract PoolFactoryTest is DeployTest {
         assertEq(address(factory).balance, 0);
     }
 
-    function test_deployPool_RevertIf_InitializationFeeRequired() public {
-        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+    function test_deployPool_RevertIf_InitializationFeeRequired() public givenCallOrPut {
+        maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
-        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
-            base: base,
-            quote: quote,
-            oracleAdapter: address(oracleAdapter),
-            strike: ud(2000 ether), // OTM
-            maturity: maturity + 24 hours,
-            isCallPool: true
-        });
+        poolKey.strike = ud(2000 ether);
+        poolKey.maturity = maturity + 24 hours;
 
         uint256 fee = factory.initializationFee(poolKey).unwrap();
 
-        vm.deal(users.lp, 1 ether);
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__InitializationFeeRequired.selector, 0, fee));
-        vm.prank(users.lp);
         factory.deployPool{value: 0}(poolKey);
     }
 
-    function test_deployPool_RevertIf_BaseAndQuoteEqual() public {
+    function test_deployPool_RevertIf_BaseAndQuoteEqual() public givenCallOrPut {
         vm.expectRevert(IPoolFactory.PoolFactory__IdenticalAddresses.selector);
 
         poolKey.base = poolKey.quote;
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_QuoteZeroAddress() public {
+    function test_deployPool_RevertIf_QuoteZeroAddress() public givenCallOrPut {
         poolKey.quote = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_BaseZeroAddress() public {
+    function test_deployPool_RevertIf_BaseZeroAddress() public givenCallOrPut {
         poolKey.base = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
@@ -146,7 +152,7 @@ contract PoolFactoryTest is DeployTest {
     }
 
     // Note, this test is temporary and should be removed when the factory is updated to support multiple adapters
-    function test_deployPool_RevertIf_InvalidOracleAdapter() public {
+    function test_deployPool_RevertIf_InvalidOracleAdapter() public givenCallOrPut {
         poolKey.oracleAdapter = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__InvalidOracleAdapter.selector);
@@ -160,21 +166,21 @@ contract PoolFactoryTest is DeployTest {
     //        factory.deployPool{value: 1 ether}(poolKey);
     //    }
 
-    function test_deployPool_RevertIf_StrikeIsZero() public {
+    function test_deployPool_RevertIf_StrikeIsZero() public givenCallOrPut {
         poolKey.strike = ud(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_AlreadyDeployed() public {
+    function test_deployPool_RevertIf_AlreadyDeployed() public givenCallOrPut {
         address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector, poolAddress));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
+    function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public givenCallOrPut {
         uint256[4] memory strike = [uint256(99999 ether), uint256(1050 ether), uint256(960 ether), uint256(11.1 ether)];
         uint256[4] memory interval = [uint256(5000 ether), uint256(100 ether), uint256(50 ether), uint256(1 ether)];
 
@@ -189,14 +195,14 @@ contract PoolFactoryTest is DeployTest {
         }
     }
 
-    function test_deployPool_RevertIf_MaturityExpired() public {
+    function test_deployPool_RevertIf_MaturityExpired() public givenCallOrPut {
         poolKey.maturity = 1679758930;
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionExpired.selector, poolKey.maturity));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityNot8UTC() public {
+    function test_deployPool_RevertIf_MaturityNot8UTC() public givenCallOrPut {
         poolKey.maturity = 1679768950;
 
         vm.expectRevert(
@@ -219,7 +225,7 @@ contract PoolFactoryTest is DeployTest {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public {
+    function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public givenCallOrPut {
         poolKey.maturity = 1680163200;
 
         vm.expectRevert(
@@ -228,7 +234,7 @@ contract PoolFactoryTest is DeployTest {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityMonthlyNotLastFriday() public {
+    function test_deployPool_RevertIf_MaturityMonthlyNotLastFriday() public givenCallOrPut {
         poolKey.maturity = 1683878400;
 
         vm.expectRevert(
@@ -237,12 +243,31 @@ contract PoolFactoryTest is DeployTest {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityExceedsOneYear() public {
+    function test_deployPool_RevertIf_MaturityExceedsOneYear() public givenCallOrPut {
         poolKey.maturity = 1714118400;
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
+    }
+
+    /*//////////////////////////////////////////////////////////////////////////
+                              getPoolAddress
+    //////////////////////////////////////////////////////////////////////////*/
+
+    function test_getPoolAddress_ReturnIsDeployedFalse() public givenCallOrPut {
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+
+        assertNotEq(pool, address(0));
+        assertFalse(isDeployed);
+    }
+
+    function test_getPoolAddress_ReturnIsDeployedTrue() public givenCallOrPut {
+        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
+
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+        assertEq(pool, poolAddress);
+        assertTrue(isDeployed);
     }
 }

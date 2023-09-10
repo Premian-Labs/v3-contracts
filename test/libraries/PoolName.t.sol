@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol";
 import {PoolName} from "contracts/libraries/PoolName.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolNameMock} from "contracts/test/libraries/PoolNameMock.sol";
 
-contract PoolNameTest is Test {
+import {Base_Test} from "../Base.t.sol";
+
+contract PoolName_Unit_Concrete_Test is Base_Test {
+    // Test contracts
     PoolNameMock internal poolName;
 
+    // Variables
     address internal weth;
     address internal wbtc;
     address internal usdc;
     address internal dai;
 
-    function setUp() public {
+    function deploy() internal virtual override {
         poolName = new PoolNameMock();
 
         weth = address(new ERC20Mock("WETH", 18));

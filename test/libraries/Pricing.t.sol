@@ -4,25 +4,27 @@ pragma solidity ^0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
-
-import {Assertions} from "../Assertions.sol";
-
 import {Pricing} from "contracts/libraries/Pricing.sol";
 import {IPricing} from "contracts/libraries/IPricing.sol";
 import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 import {PricingMock} from "contracts/test/libraries/PricingMock.sol";
 
-contract PricingTest is Test, Assertions {
+import {Base_Test} from "../Base.t.sol";
+
+contract Pricing_Unit_Concrete_Test is Base_Test {
     using Pricing for Pricing.Args;
     using PRBMathExtra for UD60x18;
 
+    // Test contracts
     PricingMock internal pricing;
+
+    // Variables
     Pricing.Args internal args;
 
-    function setUp() public {
-        pricing = new PricingMock();
+    function setUp() public virtual override {
+        Base_Test.setUp();
+
         args = Pricing.Args({
             liquidityRate: ud50x28(1e28),
             marketPrice: ud50x28(0.25e28),
@@ -30,6 +32,10 @@ contract PricingTest is Test, Assertions {
             upper: ud(0.75e18),
             isBuy: true
         });
+    }
+
+    function deploy() internal virtual override {
+        pricing = new PricingMock();
     }
 
     function test_proportion_ReturnExpectedValue() public {

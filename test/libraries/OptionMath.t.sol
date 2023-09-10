@@ -4,19 +4,15 @@ pragma solidity ^0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
-
-import {Assertions} from "../Assertions.sol";
-
-import {ZERO} from "contracts/libraries/Constants.sol";
-
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {OptionMathMock} from "contracts/test/libraries/OptionMathMock.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract OptionMathTest is Test, Assertions {
+contract OptionMath_Unit_Concrete_Test is Base_Test {
+    // Test contracts
     OptionMathMock internal optionMath;
 
-    function setUp() public {
+    function deploy() internal virtual override {
         optionMath = new OptionMathMock();
     }
 

@@ -1,36 +1,31 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.19;
-
-import {Test} from "forge-std/Test.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
 
-import {Assertions} from "../Assertions.sol";
+import {Base_Test} from "../Base.t.sol";
 
-contract UserSettingsTest is Test, Assertions {
-    IUserSettings settings;
+contract UserSettings_Unit_Concrete_Test is Base_Test {
+    // Test Contracts
+    IUserSettings internal settings;
 
-    Users users;
+    // Variables
+    address internal otherOperator = vm.addr(1);
 
-    struct Users {
-        address alice;
-        address bob;
-        address operator;
-        address otherOperator;
+    function setUp() public virtual override {
+        Base_Test.setUp();
+
+        vm.stopPrank();
     }
 
-    function setUp() public {
-        users = Users({alice: vm.addr(1), bob: vm.addr(2), operator: vm.addr(3), otherOperator: vm.addr(4)});
-
-        UserSettings userSettingsImpl = new UserSettings();
-        ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(address(userSettingsImpl));
-        settings = IUserSettings(address(userSettingsProxy));
+    function deploy() internal virtual override {
+        UserSettings impl = new UserSettings();
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
+        settings = IUserSettings(address(proxy));
     }
 
     function _assertActionsMatchExpected(IUserSettings.Action[] memory actions) internal {
@@ -154,18 +149,16 @@ contract UserSettingsTest is Test, Assertions {
             authorization[3] = true;
 
             vm.prank(users.alice);
-            settings.setActionAuthorization(users.otherOperator, actions, authorization);
+            settings.setActionAuthorization(otherOperator, actions, authorization);
 
-            assertTrue(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.Annihilate));
+            assertTrue(settings.isActionAuthorized(users.alice, otherOperator, IUserSettings.Action.Annihilate));
 
-            assertTrue(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.Exercise));
-            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.Settle));
+            assertTrue(settings.isActionAuthorized(users.alice, otherOperator, IUserSettings.Action.Exercise));
+            assertFalse(settings.isActionAuthorized(users.alice, otherOperator, IUserSettings.Action.Settle));
 
-            assertFalse(
-                settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.SettlePosition)
-            );
+            assertFalse(settings.isActionAuthorized(users.alice, otherOperator, IUserSettings.Action.SettlePosition));
 
-            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.WriteFrom));
+            assertFalse(settings.isActionAuthorized(users.alice, otherOperator, IUserSettings.Action.WriteFrom));
         }
 
         {
@@ -203,7 +196,7 @@ contract UserSettingsTest is Test, Assertions {
         {
             (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
                 users.alice,
-                users.otherOperator
+                otherOperator
             );
 
             _assertActionsMatchExpected(actions);
@@ -218,7 +211,7 @@ contract UserSettingsTest is Test, Assertions {
 
         _disableAllAuthorization(users.alice, users.operator);
         _disableAllAuthorization(users.bob, users.operator);
-        _disableAllAuthorization(users.alice, users.otherOperator);
+        _disableAllAuthorization(users.alice, otherOperator);
     }
 
     function test_setActionAuthorization_RevertIf_InvalidArrayLength() public {
