@@ -919,30 +919,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool, true);
+        UD60x18 takerFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool, true);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
             taker,
             referrer,
-            r.protocolFee
+            takerFee
         );
 
         r.referral.totalRebate = primaryReferralRebate + secondaryReferralRebate;
         r.referral.primaryRebate = primaryReferralRebate;
         r.referral.secondaryRebate = secondaryReferralRebate;
 
-        r.protocolFee = r.protocolFee - r.referral.totalRebate;
+        r.protocolFee = takerFee - r.referral.totalRebate;
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(r.premium, l.strike, l.isCallPool);
 
-        r.premiumMaker = isBuy
-            ? r.premium // Maker buying
-            : r.premium - r.protocolFee; // Maker selling
-
         r.premiumTaker = !isBuy
-            ? r.premium // Taker buying
-            : r.premium - r.protocolFee; // Taker selling
+            ? r.premium + takerFee // Taker buying
+            : r.premium - takerFee; // Taker selling
 
         return r;
     }
@@ -1008,7 +1004,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaMaker = _calculateAndUpdateUserAssets(
                 l,
                 quoteOB.provider,
-                premiumAndFee.premiumMaker,
+                premiumAndFee.premium,
                 args.size,
                 quoteOB.isBuy,
                 true
@@ -2070,22 +2066,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteOBArgsInternal memory args,
         QuoteOB memory quoteOB
     ) internal view returns (bool, InvalidQuoteOBError) {
-        PremiumAndFeeInternal memory premiumAndFee = _calculateQuoteOBPremiumAndFee(
-            l,
-            args.user,
-            address(0),
-            args.size,
-            quoteOB.price,
-            quoteOB.isBuy
-        );
+        UD60x18 premium = Position.contractsToCollateral(quoteOB.price * args.size, l.strike, l.isCallPool);
 
-        Position.Delta memory delta = _calculateAssetsUpdate(
-            l,
-            args.user,
-            premiumAndFee.premium,
-            args.size,
-            quoteOB.isBuy
-        );
+        Position.Delta memory delta = _calculateAssetsUpdate(l, quoteOB.provider, premium, args.size, quoteOB.isBuy);
 
         if (
             (delta.longs == iZERO && delta.shorts == iZERO) ||
@@ -2095,20 +2078,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (delta.collateral < iZERO) {
             IERC20 token = IERC20(l.getPoolToken());
-            if (token.allowance(args.user, ROUTER) < l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())) {
+            if (token.allowance(quoteOB.provider, ROUTER) < l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())) {
                 return (false, InvalidQuoteOBError.InsufficientCollateralAllowance);
             }
 
-            if (token.balanceOf(args.user) < l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())) {
+            if (token.balanceOf(quoteOB.provider) < l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())) {
                 return (false, InvalidQuoteOBError.InsufficientCollateralBalance);
             }
         }
 
-        if (delta.longs < iZERO && _balanceOf(args.user, PoolStorage.LONG) < (-delta.longs).intoUD60x18().unwrap()) {
+        if (
+            delta.longs < iZERO &&
+            _balanceOf(quoteOB.provider, PoolStorage.LONG) < (-delta.longs).intoUD60x18().unwrap()
+        ) {
             return (false, InvalidQuoteOBError.InsufficientLongBalance);
         }
 
-        if (delta.shorts < iZERO && _balanceOf(args.user, PoolStorage.SHORT) < (-delta.shorts).intoUD60x18().unwrap()) {
+        if (
+            delta.shorts < iZERO &&
+            _balanceOf(quoteOB.provider, PoolStorage.SHORT) < (-delta.shorts).intoUD60x18().unwrap()
+        ) {
             return (false, InvalidQuoteOBError.InsufficientShortBalance);
         }
 
