@@ -713,22 +713,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     // Update price and liquidity variables
                     {
+                        UD60x18 protocolFee = takerFee * PROTOCOL_FEE_PERCENTAGE;
+
                         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL)
-                            .getRebateAmounts(args.user, args.referrer, takerFee);
+                            .getRebateAmounts(args.user, args.referrer, protocolFee);
 
                         UD60x18 totalReferralRebate = primaryReferralRebate + secondaryReferralRebate;
                         vars.referral.totalRebate = vars.referral.totalRebate + totalReferralRebate;
                         vars.referral.primaryRebate = vars.referral.primaryRebate + primaryReferralRebate;
                         vars.referral.secondaryRebate = vars.referral.secondaryRebate + secondaryReferralRebate;
 
-                        UD60x18 takerFeeSansRebate = takerFee - totalReferralRebate;
-                        UD60x18 protocolFee = takerFeeSansRebate * PROTOCOL_FEE_PERCENTAGE;
-                        UD60x18 makerRebate = takerFeeSansRebate - protocolFee;
-
+                        UD60x18 makerRebate = takerFee - protocolFee;
                         _updateGlobalFeeRate(l, makerRebate);
 
-                        vars.totalProtocolFees = vars.totalProtocolFees + protocolFee;
-                        l.protocolFees = l.protocolFees + protocolFee;
+                        UD60x18 protocolFeeSansRebate = protocolFee - totalReferralRebate;
+
+                        vars.totalProtocolFees = vars.totalProtocolFees + protocolFeeSansRebate;
+                        l.protocolFees = l.protocolFees + protocolFeeSansRebate;
                     }
 
                     // is_buy: taker has to pay premium + fees
@@ -2125,19 +2126,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__ActionNotAuthorized(holder, msg.sender, action);
     }
 
-    /// @notice Revert if `cost` is not authorized by `holder`
-    function _revertIfCostNotAuthorized(address holder, UD60x18 costPerHolder) internal view {
+    /// @notice Revert if cost in wrapped native token is not authorized by `holder`
+    function _revertIfCostNotAuthorized(address holder, UD60x18 costInPoolToken) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
         address poolToken = l.getPoolToken();
 
-        UD60x18 wrappedNativePoolTokenSpotPrice = poolToken == WRAPPED_NATIVE_TOKEN
+        UD60x18 poolTokensPerWrappedNativeToken = poolToken == WRAPPED_NATIVE_TOKEN
             ? ONE
             : IOracleAdapter(l.oracleAdapter).getPrice(WRAPPED_NATIVE_TOKEN, poolToken);
 
-        UD60x18 costInWrappedNative = costPerHolder * wrappedNativePoolTokenSpotPrice;
-        UD60x18 authorizedCost = IUserSettings(SETTINGS).getAuthorizedCost(holder);
+        // ex: 10 USDC / (800 USDC / ETH) = 0.0125 ETH
+        UD60x18 costInWrappedNative = costInPoolToken / poolTokensPerWrappedNativeToken;
+        UD60x18 authorizedCostInWrappedNative = IUserSettings(SETTINGS).getAuthorizedCost(holder);
 
-        if (costInWrappedNative > authorizedCost) revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
+        if (costInWrappedNative > authorizedCostInWrappedNative)
+            revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCostInWrappedNative);
     }
 
     /// @notice Revert if `cost` exceeds `payout`
