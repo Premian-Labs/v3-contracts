@@ -317,86 +317,94 @@
       "owner": ""
     },
     "VaultMiningImplementation": {
-      "address": "0x561f1661Fc8a679c6989B00B96960516267f830e",
+      "address": "0xB06Fbe2E58C98D4035733684A4c198d79e846AD5",
+      "block": 40447137,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Implementation",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
+      "deploymentArgs": [
+        "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
+        "0xC0A4ae47Aad883AAc349C15E6451BF767E7a775c",
+        "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8",
+        "0x0F0569935A6bE2Ed5a4EBbA3909D3996fb8faAf8"
+      ],
+      "timestamp": 1694305186,
+      "txHash": "0xf024bc6abbf410dc4c4d4bb8376885f5fae1a0740d13d2b69427959981f1d858",
       "owner": ""
     },
     "VaultMiningProxy": {
-      "address": "0x27b6dBB912Cd8eDf578e57A09198e59877a27F66",
+      "address": "0xe7ff52Fc96ec9505d56698eaA8Bc5B1aF22EBF1c",
+      "block": 40447102,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Proxy",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
-      "owner": ""
+      "deploymentArgs": [
+        "0x498F098d4AbC9d7cff508715cd8160a1DA362e30",
+        "1800000000000000000000000"
+      ],
+      "timestamp": 1694305168,
+      "txHash": "0x0f83cf21d619760e4f820b511e0bcd865c54081bbd058d66d511541291b7ad22",
+      "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     },
     "OptionPSFactoryImplementation": {
-      "address": "0xcB210b832697c75A3E50c429C268541c98FDAC2c",
-      "block": 39591359,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0x52bDe018385d7bDdf14B7e455CB8a622006eEF18",
+      "block": 40447051,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Implementation",
       "deploymentArgs": [],
-      "timestamp": 1694011365,
-      "txHash": "0x912a1d816bf80f830be6b10f513df532781cd3a1047e0b674b5f89660dee8638",
+      "timestamp": 1694305145,
+      "txHash": "0x03832e48016c94b68ce5d764f1091165bbf9bb82140e4fed4209dc9ff5484baf",
       "owner": ""
     },
     "OptionPSFactoryProxy": {
-      "address": "0x4497ECBC256a1D79d89E4769e16eec6F2A446870",
-      "block": 39591370,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0x6134EC0585f84d7d490141282099a79025eCeE64",
+      "block": 40447058,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Proxy",
-      "deploymentArgs": ["0xcB210b832697c75A3E50c429C268541c98FDAC2c"],
-      "timestamp": 1694011368,
-      "txHash": "0x108d40816c07b31b47bd6f133517abc7ec463e6d6dc811b3c7060f4f8723e12e",
+      "deploymentArgs": ["0x52bDe018385d7bDdf14B7e455CB8a622006eEF18"],
+      "timestamp": 1694305148,
+      "txHash": "0xace15f13f94dd20f3ac2ab46a84d0a7867b1941c029bcd119e95a5dc4e28c90a",
       "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     },
     "OptionPSImplementation": {
-      "address": "0xA99325c1d4A7f983fE3Db11ADa27E46820f549Cc",
-      "block": 39591375,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0x6f736caa0b342da62Be045a5ec574fE1609aEF9b",
+      "block": 40447063,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Implementation",
       "deploymentArgs": ["0x1B8A7fc9c65d9fBF441d953025e322b11D441169"],
-      "timestamp": 1694011370,
-      "txHash": "0xb94aab12694e991890c40c106150d7961256c02db7f161299694a83868aeba36",
+      "timestamp": 1694305151,
+      "txHash": "0xc09f005bde8350db6c7f4477d0754a8c443b189bcce01579c1a172c71ffaaf15",
       "owner": ""
     },
     "OptionRewardFactoryImplementation": {
-      "address": "0x8699Dd5d8719947CF92567E072d348437045730e",
-      "block": 39591384,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0xB903E1D008BcB90e1Eb8C1BABd16f3a653259c7e",
+      "block": 40447074,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Implementation",
       "deploymentArgs": [
         "50000000000000000",
         "0x1B8A7fc9c65d9fBF441d953025e322b11D441169"
       ],
-      "timestamp": 1694011374,
-      "txHash": "0x0165d4734460c11c9d63af0f09da9c0dd40b88d0e10940e0cb8eb1105849a5df",
+      "timestamp": 1694305155,
+      "txHash": "0x1760d2fe11d962e9c5b5c4d403b0d11993081f0637b63be0c38074640cb39853",
       "owner": ""
     },
     "OptionRewardFactoryProxy": {
-      "address": "0x2640adbA67ff4915a598D06ca0944e5BC0C082f8",
-      "block": 39591394,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0x827baeCF86897a6E5C9Ce936366E8Ee92a5230fD",
+      "block": 40447078,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Proxy",
-      "deploymentArgs": ["0x8699Dd5d8719947CF92567E072d348437045730e"],
-      "timestamp": 1694011377,
-      "txHash": "0x141187f0f118b2bc4eded4b919fde7b69d93c28cd462a5cbbf931e7c71d27ecb",
+      "deploymentArgs": ["0xB903E1D008BcB90e1Eb8C1BABd16f3a653259c7e"],
+      "timestamp": 1694305157,
+      "txHash": "0xe62adb4e6a67041b8c9f9e852d5d47299991281bbda3eeb2568feeff204d7525",
       "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     },
     "OptionRewardImplementation": {
-      "address": "0xDA2C50207c44c01CA0Fcb259F1D0F64660d61A72",
-      "block": 39591402,
-      "commitHash": "4ece65aeaee326597caf87c79205bad76b994030",
+      "address": "0xb4C521246f5B2EcbA8791eb12c8914DA35cd5345",
+      "block": 40447081,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Implementation",
       "deploymentArgs": [],
-      "timestamp": 1694011379,
-      "txHash": "0x249a06e7421c5be365e35e835f92c7a02d4ffb0c4dad3f01182be3a622720825",
+      "timestamp": 1694305160,
+      "txHash": "0xb0b2939fb1c4f465058d4086a8f9a5c862b2e2de8cde773f121a2af68c4dd38d",
       "owner": ""
     },
     "FeeConverterImplementation": {
@@ -412,6 +420,31 @@
       "timestamp": 1694011326,
       "txHash": "0x4c8d0d427b112db0f6d11042cb5ae9b7ba9c1f4295bfecb016d1ee186004b780",
       "owner": ""
+    },
+    "PaymentSplitterImplementation": {
+      "address": "0xC571256CA7e0E0bDad3d1c54922e95aBFd91621b",
+      "block": 40447112,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
+      "contractType": "Implementation",
+      "deploymentArgs": [
+        "0xC0A4ae47Aad883AAc349C15E6451BF767E7a775c",
+        "0x53421DB1f41368E028A4239954feB5033C7B3729",
+        "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8",
+        "0xe7ff52Fc96ec9505d56698eaA8Bc5B1aF22EBF1c"
+      ],
+      "timestamp": 1694305171,
+      "txHash": "0x74dd5e01f8058e58d7a8f23b314c9e088b44a9b3e58c75784cf8fb0fc8cd0eae",
+      "owner": ""
+    },
+    "PaymentSplitterProxy": {
+      "address": "0x21Eb07DF4eF2a90769c0D4CeCC4400717Fa8b5A3",
+      "block": 40447117,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
+      "contractType": "Proxy",
+      "deploymentArgs": ["0xC571256CA7e0E0bDad3d1c54922e95aBFd91621b"],
+      "timestamp": 1694305174,
+      "txHash": "0xb5f4600c93337d64d17482eddb6d6ab84af06ec8bd33a7cba1704cf4fbf33f87",
+      "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     }
   },
   "feeConverter": {
@@ -458,25 +491,42 @@
   },
   "optionPS": {
     "PREMIA/USDC-C": {
-      "address": "",
+      "address": "0x9E8C11eAe5b5F3C3ac35118034D9E785faE98D48",
+      "block": 40447121,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Proxy",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
+      "deploymentArgs": [
+        "0x6134EC0585f84d7d490141282099a79025eCeE64",
+        "0xC0A4ae47Aad883AAc349C15E6451BF767E7a775c",
+        "0x53421DB1f41368E028A4239954feB5033C7B3729",
+        "true"
+      ],
+      "timestamp": 1694305177,
+      "txHash": "0x03a38a6d559bce65e4ef8754ef23d0b48aaed507a931545b5de3eb9706f2f719",
       "owner": ""
     }
   },
   "optionReward": {
     "PREMIA/USDC": {
-      "address": "0x0000000000000000000000000000000000000000",
+      "address": "0x0F0569935A6bE2Ed5a4EBbA3909D3996fb8faAf8",
+      "block": 40447131,
+      "commitHash": "497cf5673d0644e2737979c94e73c0eac257db9d",
       "contractType": "Proxy",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
+      "deploymentArgs": [
+        "0x827baeCF86897a6E5C9Ce936366E8Ee92a5230fD",
+        "0x9E8C11eAe5b5F3C3ac35118034D9E785faE98D48",
+        "0xDc0405ed974AD4cA7f18eE395De627c2C467B1b5",
+        "0x21Eb07DF4eF2a90769c0D4CeCC4400717Fa8b5A3",
+        "550000000000000000",
+        "750000000000000000",
+        "2592000",
+        "31536000",
+        "31536000",
+        "100000000000000000",
+        "0x34c5fE19348B564Ef4550a8885986089d8B6804C"
+      ],
+      "timestamp": 1694305183,
+      "txHash": "0xb791fc8a6ad7ad14d3aaaf3f51a03ffb17c0ea400589a5b3e9109ad0a7b5bc73",
       "owner": ""
     }
   },
