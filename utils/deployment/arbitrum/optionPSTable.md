@@ -2,4 +2,4 @@
 
 | Contract        | Description | Address                                      |                                                                              |
 | --------------- | ----------- | -------------------------------------------- | ---------------------------------------------------------------------------- |
-| `PREMIA/USDC-C` |             | `0x4763281bEEd8f4F1130C8B29D16ba09516e17e99` | [🔗](https://arbiscan.io/address/0x4763281bEEd8f4F1130C8B29D16ba09516e17e99) |
+| `PREMIA/USDC-C` |             | `0x42E03D97641d16faa97A8a054B373b4C85775CF1` | [🔗](https://arbiscan.io/address/0x42E03D97641d16faa97A8a054B373b4C85775CF1) |
