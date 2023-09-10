@@ -23,7 +23,7 @@ interface IReferral {
         address indexed primaryReferrer,
         address indexed secondaryReferrer,
         address token,
-        UD60x18 tier,
+        UD60x18 primaryRebatePercent,
         UD60x18 primaryRebate,
         UD60x18 secondaryRebate
     );
