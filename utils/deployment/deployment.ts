@@ -43,7 +43,7 @@ export async function initialize(
 
   if (network.chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    proposeToMultiSig = true;
+    proposeToMultiSig = false;
   } else if (network.chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
     proposeToMultiSig = false;
