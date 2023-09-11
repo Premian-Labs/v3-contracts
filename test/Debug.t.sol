@@ -340,8 +340,6 @@ contract Debug_Test is Base_Test {
         );
         vaultRegistry.setImplementation(vaultType, address(vaultImpl));
 
-        // Exchange Helper
-
         // Label Contracts
         vm.label({account: address(oracleAdapter), newLabel: "ChainlinkAdapter"});
         vm.label({account: address(volatilityOracle), newLabel: "VolatilityOracle"});
@@ -356,8 +354,8 @@ contract Debug_Test is Base_Test {
         vm.label({account: address(mining), newLabel: "VaultMining"});
     }
 
-    function test_debug_system() public {
-        // Enter code for debugging here, e.g.
+    function test_debug_system_skip() public {
+        // Enter code for debugging here, e.g. (remove skip)
         // address vaultAddr = getVaultAddress("pSV-WETH/USDCe-C");
         // IVault vault = IVault(vaultAddr);
         // uint256 totalAssets = vault.totalAssets();
