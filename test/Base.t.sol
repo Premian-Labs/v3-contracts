@@ -91,13 +91,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     function setUp() public virtual {
         // If this is a fork test then, fork before deploying contracts
         if (isForkTest()) {
-            // Fork mainnet
-            string memory ETH_RPC_URL = string.concat(
-                "https://eth-mainnet.alchemyapi.io/v2/",
-                vm.envString("API_KEY_ALCHEMY")
-            );
-            mainnetFork = vm.createFork(ETH_RPC_URL, getStartBlock());
-            vm.selectFork(mainnetFork);
+            vm.createSelectFork({blockNumber: getStartBlock(), urlOrAlias: getNetwork()});
         }
 
         // Deploy the base test contracts.
@@ -152,6 +146,11 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     // @dev Whether or not the test is a fork test.
     function isForkTest() internal virtual returns (bool) {
         return false;
+    }
+
+    /// @dev Gets the network to fork.
+    function getNetwork() internal virtual returns (string memory) {
+        return "mainnet";
     }
 
     // @dev Gets the starting block for the fork test.

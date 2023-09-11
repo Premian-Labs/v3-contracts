@@ -6,8 +6,10 @@ out = 'out'
 libs = ['lib', 'node_modules']
 test = 'test'
 fork_block_number = 16597500
+fs_permissions = [{ access = "read", path = "./"}]
 
 [rpc_endpoints]
-mainnet = "${ETH_RPC_URL}"
+mainnet = "https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}"
+arbitrum_one = "https://arb-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
