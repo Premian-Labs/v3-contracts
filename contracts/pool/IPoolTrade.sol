@@ -64,6 +64,7 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     function cancelQuotesOB(bytes32[] calldata hashes) external;
 
     /// @notice Returns whether or not an OB quote is valid, given a fill size
+    /// @dev The taker address for the check will default to msg.sender.
     /// @param quoteOB The OB quote to check
     /// @param size Size to fill from the OB quote (18 decimals)
     /// @param sig secp256k1 Signature
@@ -71,6 +72,18 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
+    ) external view returns (bool, InvalidQuoteOBError);
+
+    /// @notice Returns whether or not an OB quote is valid, given a fill size
+    /// @param quoteOB The OB quote to check
+    /// @param size Size to fill from the OB quote (18 decimals)
+    /// @param sig secp256k1 Signature
+    /// @param taker The address of the taker (zero address if no specified taker)
+    function isQuoteOBValid(
+        QuoteOB calldata quoteOB,
+        UD60x18 size,
+        Signature calldata sig,
+        address taker
     ) external view returns (bool, InvalidQuoteOBError);
 
     /// @notice Returns the size already filled for a given OB quote
