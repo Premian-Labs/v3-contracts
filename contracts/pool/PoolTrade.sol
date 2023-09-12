@@ -79,12 +79,22 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         Signature calldata sig
     ) external view returns (bool, InvalidQuoteOBError) {
+        isQuoteOBValid(quoteOB, size, sig, msg.sender);
+    }
+
+    /// @inheritdoc IPoolTrade
+    function isQuoteOBValid(
+        QuoteOB calldata quoteOB,
+        UD60x18 size,
+        Signature calldata sig,
+        address taker
+    ) public view returns (bool, InvalidQuoteOBError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteOBHash = _quoteOBHash(quoteOB);
         return
             _areQuoteOBAndBalanceValid(
                 l,
-                FillQuoteOBArgsInternal(msg.sender, address(0), size, sig, true),
+                FillQuoteOBArgsInternal(taker, address(0), size, sig, true),
                 quoteOB,
                 quoteOBHash
             );
