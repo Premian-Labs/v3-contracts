@@ -48,7 +48,7 @@ function displayFilePathUrl() {
     (this.commitHash.length > 0 || this.commitHash !== '') &&
     (this.filePath.length > 0 || this.filePath !== '')
   ) {
-    return `[📁](https://github.com/Premian-Labs/premia-v3-contracts-private/blob/${this.commitHash}/${this.filePath})`;
+    return `[📁](https://github.com/Premian-Labs/v3-contracts/blob/${this.commitHash}/${this.filePath})`;
   } else return '';
 }
 
