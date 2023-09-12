@@ -5,6 +5,8 @@ pragma solidity ^0.8.19;
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 
 interface IOptionPSFactory is IProxyManager {
+    error OptionPSFactory__ProxyAlreadyDeployed(address proxy);
+
     event ProxyDeployed(address indexed base, address indexed quote, bool isCall, address proxy);
 
     struct OptionPSArgs {

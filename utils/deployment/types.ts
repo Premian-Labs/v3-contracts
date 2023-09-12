@@ -1,10 +1,17 @@
 export interface DeploymentMetadata {
-  addresses: { treasury: string; insuranceFund: string; lzEndpoint: string };
+  addresses: {
+    treasury: string;
+    insuranceFund: string;
+    dao: string;
+    lzEndpoint: string;
+  };
   tokens: { [symbol: string]: string };
 
   feeConverter: {
     main: ContractDeploymentMetadata;
     insuranceFund: ContractDeploymentMetadata;
+    treasury: ContractDeploymentMetadata;
+    dao: ContractDeploymentMetadata;
   };
   core: { [key in ContractKey]: ContractDeploymentMetadata };
   optionPS: { [name: string]: ContractDeploymentMetadata };
@@ -47,6 +54,8 @@ export enum ContractKey {
   OptionRewardFactoryProxy = 'OptionRewardFactoryProxy',
   OptionRewardImplementation = 'OptionRewardImplementation',
   FeeConverterImplementation = 'FeeConverterImplementation',
+  PaymentSplitterImplementation = 'PaymentSplitterImplementation',
+  PaymentSplitterProxy = 'PaymentSplitterProxy',
 }
 
 export interface ContractDeploymentMetadata {
