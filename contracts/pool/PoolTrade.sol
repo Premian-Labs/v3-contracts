@@ -79,7 +79,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
-    ) public view returns (bool, InvalidQuoteOBError) {
+    ) external view returns (bool, InvalidQuoteOBError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteOBHash = _quoteOBHash(quoteOB);
         return
