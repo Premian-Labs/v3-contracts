@@ -249,11 +249,6 @@ export const arbitrumFeeds = [
     feed: '0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB',
   },
   {
-    token: arbitrum.tokens.LINK,
-    denomination: CHAINLINK_ETH,
-    feed: '0xb7c8Fb1dB45007F98A68Da0588e1AA524C317f27',
-  },
-  {
     token: arbitrum.tokens.JOE,
     denomination: CHAINLINK_USD,
     feed: '0x04180965a782E487d0632013ABa488A472243542',
