@@ -235,6 +235,11 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         UD60x18 rewards = (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
 
+        if (uInfo.__deprecated_reward > ZERO) {
+            rewards = rewards + uInfo.__deprecated_reward;
+            uInfo.__deprecated_reward = ZERO;
+        }
+
         if (rewards > ZERO) {
             l.userRewards[user] = l.userRewards[user] + rewards;
             emit AllocateRewards(user, vault, rewards);
