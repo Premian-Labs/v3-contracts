@@ -48,9 +48,9 @@
       "owner": ""
     },
     "PoolFactoryImplementation": {
-      "address": "0x8fEBb4de85Bb694C54A743c2ff93A93334357084",
-      "block": 33787716,
-      "commitHash": "8bcc458ae330debbfc8ddcb8d60b96340f642be1",
+      "address": "0xb016e33feD5C7C5F648d0C5C5048d9cFee078BBE",
+      "block": 40844829,
+      "commitHash": "04fedbb679f1c9abecb36946075f7b3a1bd2e2f9",
       "contractType": "Implementation",
       "deploymentArgs": [
         "0x558A90f1D04DFF85BfBEAA3c1300fb2E9CF25f60",
@@ -58,8 +58,8 @@
         "0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999",
         "0x3a76de95F6cDa68eD9f0aef1bae6ec11FEDf25a5"
       ],
-      "timestamp": 1691659936,
-      "txHash": "0xf58c850fec935fd58a2a98b77df61f7e25bf470c60096138e7517a3b234e55e0",
+      "timestamp": 1694478364,
+      "txHash": "0xb316681c220818ff3c69f88d67bb5efb9f136d2007128f35adcdb9ec25b0ea6c",
       "owner": ""
     },
     "PoolFactoryProxy": {
