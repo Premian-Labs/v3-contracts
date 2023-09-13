@@ -171,19 +171,19 @@
       "owner": ""
     },
     "PoolBase": {
-      "address": "0x82ba288321491b1D759917EB5174C96e719Ed065",
-      "block": 40512597,
-      "commitHash": "98989dc09a9b4e4374093d080f70663016763f77",
+      "address": "0xA6F066F22eff46F0911561496aBfe5fb19035b1e",
+      "block": 41059846,
+      "commitHash": "6953cac92d7f553f926138126242ce699d9abbec",
       "contractType": "DiamondFacet",
       "deploymentArgs": [],
-      "timestamp": 1694340357,
-      "txHash": "0xa7d6fd05ef0ad7a291e561f9957bcc0dc8c279ebb3f048f708c06441075e67a6",
+      "timestamp": 1694562405,
+      "txHash": "0xd9114c6a9b557bcbb3223ffa38a3e819f2808052e21062d85e2798228a481ce0",
       "owner": ""
     },
     "PoolCore": {
-      "address": "0x7036EFE90E1b090B120dE741Be0ac1Db40221C3B",
-      "block": 40512784,
-      "commitHash": "98989dc09a9b4e4374093d080f70663016763f77",
+      "address": "0xe22218AEac7bf1f69917bC7Bb81517576195332b",
+      "block": 41059996,
+      "commitHash": "6953cac92d7f553f926138126242ce699d9abbec",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -195,14 +195,14 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1694340432,
-      "txHash": "0xe7113a2ed3bf2b22341128bfba2c1aee3d550e7b78dfcb5268957350130c0abe",
+      "timestamp": 1694562472,
+      "txHash": "0xaeca790229e1c3ffd261bd328fc2fbe45e3b0e7337c0c2046ba037da03029b55",
       "owner": ""
     },
     "PoolDepositWithdraw": {
-      "address": "0x55F8e82b797877A78230205fAd67571B4eF9DDEA",
-      "block": 40512960,
-      "commitHash": "98989dc09a9b4e4374093d080f70663016763f77",
+      "address": "0x8ffecDbD48d8Ef9F7B9E0F4f9e858295936e2Ee0",
+      "block": 41060157,
+      "commitHash": "6953cac92d7f553f926138126242ce699d9abbec",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -214,14 +214,14 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1694340510,
-      "txHash": "0xb91a11bf815cd58c6b04f11cf3b25f10e2a7c7c05cbb9bf2fab6eae3c7b98e84",
+      "timestamp": 1694562544,
+      "txHash": "0x6b0894abad793cb87a92bd775829f9352b5176d36faa43193a24fdaa461d74ab",
       "owner": ""
     },
     "PoolTrade": {
-      "address": "0x8F29ee41cfcA84D331d4F04b27ff373f7DBb787f",
-      "block": 40513150,
-      "commitHash": "98989dc09a9b4e4374093d080f70663016763f77",
+      "address": "0xBdF46B334fC8c5db8dc39797ccf3BfdE54AC54c5",
+      "block": 41060308,
+      "commitHash": "6953cac92d7f553f926138126242ce699d9abbec",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -233,8 +233,8 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1694340592,
-      "txHash": "0xc30ad60f4009f49d31a27050a0e59dcdce6b073cfcbaff6b1f0c42d58eff5d6c",
+      "timestamp": 1694562614,
+      "txHash": "0xdf2e2983d49c635ed248dbaf92a9d12553bb8ef920cf848069481038e09f010f",
       "owner": ""
     },
     "OrderbookStream": {
