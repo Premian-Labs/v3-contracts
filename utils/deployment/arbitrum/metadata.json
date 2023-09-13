@@ -72,7 +72,7 @@
       "deploymentArgs": ["0x6d4Ec320FC9af8B5A7C8a9935dF9c6c8996546bb"],
       "timestamp": 1691662407,
       "txHash": "0xb2d0c817612b97862ecbe88b12231a064572a141e6694dafcf471ae8e00a5d90",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "PremiaDiamond": {
       "address": "0x2eA42642D1B951f18eA7FbCE495Bea9E517b198F",
@@ -82,7 +82,7 @@
       "deploymentArgs": [],
       "timestamp": 1691662411,
       "txHash": "0x632f7bd073cba5656aa1461f6e9b680d141590227441370e75dff8285f8332af",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "PoolFactoryImplementation": {
       "address": "0x580A2Fa0c92072534798639E8F9D307c56bdBe0d",
@@ -111,7 +111,7 @@
       ],
       "timestamp": 1691662415,
       "txHash": "0x97ba232f826df8ccc192e14fc6beec304aa8492f6918e6afabd471ca09e0673a",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "PoolFactoryDeployer": {
       "address": "0xAB98Ae6288eD240187207C09C1d728575Dd71543",
@@ -144,7 +144,7 @@
       "deploymentArgs": ["0xbBC38B9d364148f3bcd2844242560F8EB233DB64"],
       "timestamp": 1691662427,
       "txHash": "0x03914015ffe32fcca3b2c0fda6b1f75f984aae04249cfcdc796ec01b5452c612",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "ExchangeHelper": {
       "address": "0x0E8a8BB8f951bD1e3294a900b88A4ebf7180179A",
@@ -174,7 +174,7 @@
       "deploymentArgs": ["0x7BFAFcE5aB5E1448B94BB88e60e93D9426467f54"],
       "timestamp": 1691662436,
       "txHash": "0x2b32651fe78d2ed2a1c28b2f1fbd1ec7d3417b34ce75cda4195f8e0411dae0a6",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "VxPremiaImplementation": {
       "address": "0x3e85E29b822C68bf97b3F5E91EC7C01fe0F4a5b7",
@@ -201,7 +201,7 @@
       "txHash": "",
       "block": 0,
       "timestamp": 0,
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "ERC20Router": {
       "address": "0xDEfBBAc44F2088a70b648E1231b2cA9683774c48",
@@ -318,7 +318,7 @@
       "deploymentArgs": ["0xDf0077A5f82e7e4E774F35dfeD04Ef65E414a76D"],
       "timestamp": 1691662432,
       "txHash": "0x358e356cc12f210925974cde17cefe3830d0d76bfdf8337b751edcd6868b55ab",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "VolatilityOracleImplementation": {
       "address": "0xfd295A55AA3c8Cb74cAda46029225FD758E1Ff98",
@@ -338,7 +338,7 @@
       "deploymentArgs": ["0xfd295A55AA3c8Cb74cAda46029225FD758E1Ff98"],
       "timestamp": 1691662885,
       "txHash": "0x90453aa8c309a7c18dbe4fdafc8160fae513faa349f8b913835f6eac844f95ab",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "UnderwriterVaultImplementation": {
       "address": "0xe47969AeCAb75b8638371EBB98bAd8a264281493",
@@ -382,7 +382,7 @@
       "deploymentArgs": ["0x32e41Cf7137f80c34C9A85a7F496B6e7bf2bE53C", "0"],
       "timestamp": 1691662926,
       "txHash": "0x313bd7fb8abd01142a3e44e85dd6bf0340f51306babec20ce4dcce072f1917b9",
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "OptionPSFactoryImplementation": {
       "address": "0xc59A62Fcf0444E601269Be8cFabc65a7555Cc080",
@@ -402,7 +402,7 @@
       "deploymentArgs": ["0xc59A62Fcf0444E601269Be8cFabc65a7555Cc080"],
       "timestamp": 1694297716,
       "txHash": "0x3d0448da55057580747990fcf366fd8d0dd6030f21ab7d1b93bdef70044313d6",
-      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "OptionPSImplementation": {
       "address": "0x02Bf75A00De4F3a1D218B21cAB82A834490CBd4d",
@@ -435,7 +435,7 @@
       "deploymentArgs": ["0xB05336fE0419DD47b1df6Ac0B1A775AADBd9026F"],
       "timestamp": 1694297725,
       "txHash": "0xfe707fa1be3d8bd579624332398db944efb0fdf0d391a9e1db3ef496e030bcc6",
-      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "OptionRewardImplementation": {
       "address": "0x6cf13Ff170A31151E44aF622fe74C530c77Fb5d8",
@@ -484,7 +484,7 @@
       "deploymentArgs": ["0x363B5B3e390F23B87fa5E90B431bC64Ca0E3eAAc"],
       "timestamp": 1694297734,
       "txHash": "0x20c6f394c9923e2d3930c4b8e03565681c1bea1f9d06e530df6f1ded0c56e649",
-      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     }
   },
   "feeConverter": {
@@ -496,7 +496,7 @@
       "txHash": "0x4d3d2bcf43fc50d1efb10e8cac7d1e1da528a24b6ae29f035bf3fddb4274f459",
       "block": 3303331,
       "timestamp": 1637774105,
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "insuranceFund": {
       "address": "0xF6d13aD5d5315751093D1d248688cD8a0c08B5d4",
@@ -506,7 +506,7 @@
       "txHash": "0x11951800945f026abdcc6458f44ce0a548deb70263fc816c885ee488e60d2ba0",
       "block": 119998289,
       "timestamp": 1691662250,
-      "owner": ""
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "treasury": {
       "address": "0x8734b3ba671Fb69B84533219B673b752B25F336a",
@@ -516,7 +516,7 @@
       "deploymentArgs": ["0x1998be0De9b7ed93e5F8fA44c49E68912fCAe28B"],
       "timestamp": 1694008191,
       "txHash": "0xbca8f6f12d0e4bb9f73b3aba10548f8574d9932e9360bd6eddc1b066cc0eaa18",
-      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "dao": {
       "address": "0xAa9889881507D103e764B4bE6409217631FAf9B1",
@@ -526,7 +526,7 @@
       "deploymentArgs": ["0x1998be0De9b7ed93e5F8fA44c49E68912fCAe28B"],
       "timestamp": 1694020199,
       "txHash": "0xb147643f88db556e0daf17cf399f5f46061d488e3c208e178ea68a8a3d8b6596",
-      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+      "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     }
   },
   "optionPS": {
