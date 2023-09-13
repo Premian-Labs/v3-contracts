@@ -142,6 +142,8 @@ interface IPoolInternal is IPosition, IPricing {
         UD50x28 longDelta;
         UD50x28 shortDelta;
         ReferralVarsInternal referral;
+        UD60x18 totalMintBurn;
+        UD60x18 offset;
     }
 
     struct DepositArgsInternal {
