@@ -8,6 +8,9 @@ import {IPool} from "contracts/pool/IPool.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+                      Shared Tests
+//////////////////////////////////////////////////////////////////////////*/
 abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     // Variables
     IPoolFactory.PoolKey internal poolKey;
@@ -245,6 +248,9 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     }
 }
 
+/*//////////////////////////////////////////////////////////////////////////
+                      Integration Tests
+//////////////////////////////////////////////////////////////////////////*/
 contract PoolFactory_Call_Integration_Concrete_Test is PoolFactory_Integration_Shared_Test {
     function setUp() public override {
         super.setUp();
