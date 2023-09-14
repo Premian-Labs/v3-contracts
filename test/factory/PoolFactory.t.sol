@@ -38,18 +38,19 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
     /*//////////////////////////////////////////////////////////////////////////
                               Modifiers
     //////////////////////////////////////////////////////////////////////////*/
-
     modifier givenCallOrPut() {
-        emit log("givenCall");
-
+        string memory ctx = ctxMsg;
         uint256 snapshot = vm.snapshot();
 
+        // Call
+        ctxMsg = string.concat(ctx, ".givenCall");
         poolKey.isCallPool = true;
         _;
 
         vm.revertTo(snapshot);
 
-        emit log("givenPut");
+        // Put
+        ctxMsg = string.concat(ctx, ".givenPut");
         poolKey.isCallPool = false;
         _;
     }
@@ -151,20 +152,12 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    // Note, this test is temporary and should be removed when the factory is updated to support multiple adapters
-    function test_deployPool_RevertIf_InvalidOracleAdapter() public givenCallOrPut {
+    function test_deployPool_RevertIf_OracleAddress() public givenCallOrPut {
         poolKey.oracleAdapter = address(0);
 
-        vm.expectRevert(IPoolFactory.PoolFactory__InvalidOracleAdapter.selector);
+        vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
-
-    //    function test_deployPool_RevertIf_OracleAddress() public {
-    //        poolKey.oracleAdapter = address(0);
-    //
-    //        vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
-    //        factory.deployPool{value: 1 ether}(poolKey);
-    //    }
 
     function test_deployPool_RevertIf_StrikeIsZero() public givenCallOrPut {
         poolKey.strike = ud(0);

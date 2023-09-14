@@ -294,7 +294,6 @@ contract Debug_Test is Base_Test {
         poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteOBFilledAmount.selector);
-        poolTradeSelectors.push(poolTradeImpl.isQuoteOBValid.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
 
         IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](4);
@@ -354,7 +353,7 @@ contract Debug_Test is Base_Test {
         vm.label({account: address(mining), newLabel: "VaultMining"});
     }
 
-    function test_debug_system_skip() public {
+    function test_debug_system() public {
         // Enter code for debugging here, e.g. (remove skip)
         // address vaultAddr = getVaultAddress("pSV-WETH/USDCe-C");
         // IVault vault = IVault(vaultAddr);

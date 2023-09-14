@@ -56,6 +56,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     /*//////////////////////////////////////////////////////////////////////////
                                      VARIABLES
     //////////////////////////////////////////////////////////////////////////*/
+    string internal ctxMsg = "";
     Users internal users;
     uint256 internal mainnetFork;
 
@@ -142,6 +143,13 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     /*//////////////////////////////////////////////////////////////////////////
                                       HELPERS
     //////////////////////////////////////////////////////////////////////////*/
+    modifier logContext() {
+        _;
+
+        if (failed()) {
+            emit log(ctxMsg);
+        }
+    }
 
     // @dev Whether or not the test is a fork test.
     function isForkTest() internal virtual returns (bool) {

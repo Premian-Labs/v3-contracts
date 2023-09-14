@@ -93,6 +93,216 @@ export const arbitrumFeeds = [
     denomination: CHAINLINK_USD,
     feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
   },
+  {
+    token: arbitrum.tokens.APE,
+    denomination: CHAINLINK_USD,
+    feed: '0x221912ce795669f628c51c69b7d0873eDA9C03bB',
+  },
+  {
+    token: arbitrum.tokens.MIM,
+    denomination: CHAINLINK_USD,
+    feed: '0x87121F6c9A9F6E90E59591E4Cf4804873f54A95b',
+  },
+  {
+    token: arbitrum.tokens.WSTETH,
+    denomination: CHAINLINK_ETH,
+    feed: '0xb523AE262D20A936BC152e6023996e46FDC2A95D',
+  },
+  {
+    token: arbitrum.tokens.WBTC,
+    denomination: CHAINLINK_BTC,
+    feed: '0x0017abAc5b6f291F9164e35B1234CA1D697f9CF4',
+  },
+  {
+    token: arbitrum.tokens.KNC,
+    denomination: CHAINLINK_USD,
+    feed: '0xbF539d4c2106dd4D9AB6D56aed3d9023529Db145',
+  },
+  {
+    token: arbitrum.tokens.LUSD,
+    denomination: CHAINLINK_USD,
+    feed: '0x0411D28c94d85A36bC72Cb0f875dfA8371D8fFfF',
+  },
+  {
+    token: arbitrum.tokens.DPX,
+    denomination: CHAINLINK_USD,
+    feed: '0xc373B9DB0707fD451Bc56bA5E9b029ba26629DF0',
+  },
+  {
+    token: arbitrum.tokens.USDC,
+    denomination: CHAINLINK_USD,
+    feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
+  },
+  {
+    token: arbitrum.tokens.SNX,
+    denomination: CHAINLINK_USD,
+    feed: '0x054296f0D036b95531B4E14aFB578B80CFb41252',
+  },
+  {
+    token: arbitrum.tokens.AAVE,
+    denomination: CHAINLINK_USD,
+    feed: '0xaD1d5344AaDE45F43E596773Bcc4c423EAbdD034',
+  },
+  {
+    token: arbitrum.tokens.CVX,
+    denomination: CHAINLINK_USD,
+    feed: '0x851175a919f36c8e30197c09a9A49dA932c2CC00',
+  },
+  {
+    token: arbitrum.tokens.RPL,
+    denomination: CHAINLINK_USD,
+    feed: '0xF0b7159BbFc341Cc41E7Cb182216F62c6d40533D',
+  },
+  {
+    token: arbitrum.tokens.ARB,
+    denomination: CHAINLINK_USD,
+    feed: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
+  },
+  {
+    token: arbitrum.tokens.GNS,
+    denomination: CHAINLINK_USD,
+    feed: '0xE89E98CE4E19071E59Ed4780E0598b541CE76486',
+  },
+  {
+    token: arbitrum.tokens.COMP,
+    denomination: CHAINLINK_USD,
+    feed: '0xe7C53FFd03Eb6ceF7d208bC4C13446c76d1E5884',
+  },
+  {
+    token: arbitrum.tokens.BAL,
+    denomination: CHAINLINK_USD,
+    feed: '0xBE5eA816870D11239c543F84b71439511D70B94f',
+  },
+  {
+    token: arbitrum.tokens.MKR,
+    denomination: CHAINLINK_USD,
+    feed: '0xdE9f0894670c4EFcacF370426F10C3AD2Cdf147e',
+  },
+  {
+    token: arbitrum.tokens.FRAX,
+    denomination: CHAINLINK_USD,
+    feed: '0x0809E3d38d1B4214958faf06D8b1B1a2b73f2ab8',
+  },
+  {
+    token: arbitrum.tokens.MAGIC,
+    denomination: CHAINLINK_USD,
+    feed: '0x47E55cCec6582838E173f252D08Afd8116c2202d',
+  },
+  {
+    token: arbitrum.tokens.YFI,
+    denomination: CHAINLINK_USD,
+    feed: '0x745Ab5b69E01E2BE1104Ca84937Bb71f96f5fB21',
+  },
+  {
+    token: arbitrum.tokens.BUSD,
+    denomination: CHAINLINK_USD,
+    feed: '0x8FCb0F3715A82D83270777b3a5f3a7CF95Ce8Eec',
+  },
+  {
+    token: arbitrum.tokens.WFTM,
+    denomination: CHAINLINK_USD,
+    feed: '0xFeaC1A3936514746e70170c0f539e70b23d36F19',
+  },
+  {
+    token: arbitrum.tokens.CRV,
+    denomination: CHAINLINK_USD,
+    feed: '0xaebDA2c976cfd1eE1977Eac079B4382acb849325',
+  },
+  {
+    token: arbitrum.tokens.RDNT,
+    denomination: CHAINLINK_USD,
+    feed: '0x20d0Fcab0ECFD078B036b6CAf1FaC69A6453b352',
+  },
+  {
+    token: arbitrum.tokens.LINK,
+    denomination: CHAINLINK_USD,
+    feed: '0x86E53CF1B870786351Da77A57575e79CB55812CB',
+  },
+  {
+    token: arbitrum.tokens.WBNB,
+    denomination: CHAINLINK_USD,
+    feed: '0x6970460aabF80C5BE983C6b74e5D06dEDCA95D4A',
+  },
+  {
+    token: arbitrum.tokens.AXS,
+    denomination: CHAINLINK_USD,
+    feed: '0x5B58aA6E0651Ae311864876A55411F481aD86080',
+  },
+  {
+    token: arbitrum.tokens.USDT,
+    denomination: CHAINLINK_USD,
+    feed: '0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7',
+  },
+  {
+    token: arbitrum.tokens.TUSD,
+    denomination: CHAINLINK_USD,
+    feed: '0x6fAbee62266Da6686EE2744C6f15bb8352d2f28D',
+  },
+  {
+    token: arbitrum.tokens.GMX,
+    denomination: CHAINLINK_USD,
+    feed: '0xDB98056FecFff59D032aB628337A4887110df3dB',
+  },
+  {
+    token: arbitrum.tokens.DAI,
+    denomination: CHAINLINK_USD,
+    feed: '0xc5C8E77B397E531B8EC06BFb0048328B30E9eCfB',
+  },
+  {
+    token: arbitrum.tokens.JOE,
+    denomination: CHAINLINK_USD,
+    feed: '0x04180965a782E487d0632013ABa488A472243542',
+  },
+  {
+    token: arbitrum.tokens['1INCH'],
+    denomination: CHAINLINK_USD,
+    feed: '0x4bC735Ef24bf286983024CAd5D03f0738865Aaef',
+  },
+  {
+    token: arbitrum.tokens.WBTC,
+    denomination: CHAINLINK_USD,
+    feed: '0xd0C7101eACbB49F3deCcCc166d238410D6D46d57',
+  },
+  {
+    token: arbitrum.tokens.CBETH,
+    denomination: CHAINLINK_ETH,
+    feed: '0xa668682974E3f121185a3cD94f00322beC674275',
+  },
+  {
+    token: arbitrum.tokens.DODO,
+    denomination: CHAINLINK_USD,
+    feed: '0xA33a06c119EC08F92735F9ccA37e07Af08C4f281',
+  },
+  {
+    token: arbitrum.tokens.MIMATIC,
+    denomination: CHAINLINK_USD,
+    feed: '0x59644ec622243878d1464A9504F9e9a31294128a',
+  },
+  {
+    token: arbitrum.tokens.USDD,
+    denomination: CHAINLINK_USD,
+    feed: '0x4Ee1f9ec1048979930aC832a3C1d18a0b4955a02',
+  },
+  {
+    token: arbitrum.tokens.SUSHI,
+    denomination: CHAINLINK_USD,
+    feed: '0xb2A8BA74cbca38508BA1632761b56C897060147C',
+  },
+  {
+    token: arbitrum.tokens.UNI,
+    denomination: CHAINLINK_USD,
+    feed: '0x9C917083fDb403ab5ADbEC26Ee294f6EcAda2720',
+  },
+  {
+    token: arbitrum.tokens.SPELL,
+    denomination: CHAINLINK_USD,
+    feed: '0x383b3624478124697BEF675F07cA37570b73992f',
+  },
+  {
+    token: arbitrum.tokens.FXS,
+    denomination: CHAINLINK_USD,
+    feed: '0x36a121448D74Fa81450c992A1a44B9b7377CD3a5',
+  },
 ];
 
 export const arbitrumGoerliFeeds = [

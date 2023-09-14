@@ -28,11 +28,14 @@ contract OptionPSFactory is IOptionPSFactory, ProxyManager, ReentrancyGuard {
 
     /// @inheritdoc IOptionPSFactory
     function deployProxy(OptionPSArgs calldata args) external nonReentrant returns (address proxy) {
-        proxy = address(new OptionPSProxy(IProxyManager(address(this)), args.base, args.quote, args.isCall));
-
         OptionPSFactoryStorage.Layout storage l = OptionPSFactoryStorage.layout();
 
-        l.proxyByKey[args.keyHash()] = proxy;
+        bytes32 keyHash = args.keyHash();
+        if (l.proxyByKey[keyHash] != address(0)) revert OptionPSFactory__ProxyAlreadyDeployed(l.proxyByKey[keyHash]);
+
+        proxy = address(new OptionPSProxy(IProxyManager(address(this)), args.base, args.quote, args.isCall));
+
+        l.proxyByKey[keyHash] = proxy;
         l.isProxyDeployed[proxy] = true;
 
         emit ProxyDeployed(args.base, args.quote, args.isCall, proxy);

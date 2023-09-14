@@ -10,6 +10,8 @@ import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 interface IOptionRewardFactory is IProxyManager {
+    error OptionRewardFactory__ProxyAlreadyDeployed(address proxy);
+
     event ProxyDeployed(
         IOptionPS indexed option,
         IOracleAdapter oracleAdapter,

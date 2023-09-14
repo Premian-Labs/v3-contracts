@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";
 import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.sol";
@@ -19,6 +21,8 @@ import {Base_Test} from "../Base.t.sol";
                       Shared Tests
 //////////////////////////////////////////////////////////////////////////*/
 abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
+    using UintUtils for uint256;
+
     // Structs
     struct Path {
         IChainlinkAdapter.PricingPath path;
@@ -231,6 +235,8 @@ abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
     modifier givenPaths() {
         uint256 snapshot = vm.snapshot();
 
+        string memory ctx = ctxMsg;
+
         for (uint256 i = 0; i < paths.length; i++) {
             caseId = i;
             p = paths[i];
@@ -238,10 +244,7 @@ abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
             addWBTCUSD(p.path);
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            emit log_named_uint("Case Id     ", i);
-            emit log_named_uint("Pricing Path", uint256(p.path));
-            emit log_named_address("Token In    ", p.tokenIn);
-            emit log_named_address("Token Out   ", p.tokenOut);
+            ctxMsg = string.concat(ctx, ".caseId(", (caseId).toString(), ")");
 
             _;
 
