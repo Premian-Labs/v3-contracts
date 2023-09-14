@@ -8,7 +8,7 @@ import {IPool} from "contracts/pool/IPool.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-contract PoolFactory_Integration_Concrete_Test is Base_Test {
+abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     // Variables
     IPoolFactory.PoolKey internal poolKey;
     uint256 internal maturity = 1_682_668_800;
@@ -36,30 +36,10 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
     }
 
     /*//////////////////////////////////////////////////////////////////////////
-                              Modifiers
-    //////////////////////////////////////////////////////////////////////////*/
-    modifier givenCallOrPut() {
-        string memory ctx = ctxMsg;
-        uint256 snapshot = vm.snapshot();
-
-        // Call
-        ctxMsg = string.concat(ctx, ".givenCall");
-        poolKey.isCallPool = true;
-        _;
-
-        vm.revertTo(snapshot);
-
-        // Put
-        ctxMsg = string.concat(ctx, ".givenPut");
-        poolKey.isCallPool = false;
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////////////////
                                   deployPool
     //////////////////////////////////////////////////////////////////////////*/
 
-    function test_deployPool_DeployPool() public givenCallOrPut {
+    function test_deployPool_DeployPool() public {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
         (
             address base,
@@ -78,7 +58,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         assertEq(isCallPool, poolKey.isCallPool);
     }
 
-    function test_deployPool_NoRefund() public givenCallOrPut {
+    function test_deployPool_NoRefund() public {
         maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
@@ -98,7 +78,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         assertEq(address(factory).balance, 0);
     }
 
-    function test_deployPool_PartialRefund() public givenCallOrPut {
+    function test_deployPool_PartialRefund() public {
         maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
@@ -118,7 +98,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         assertEq(address(factory).balance, 0);
     }
 
-    function test_deployPool_RevertIf_InitializationFeeRequired() public givenCallOrPut {
+    function test_deployPool_RevertIf_InitializationFeeRequired() public {
         maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
@@ -131,49 +111,49 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         factory.deployPool{value: 0}(poolKey);
     }
 
-    function test_deployPool_RevertIf_BaseAndQuoteEqual() public givenCallOrPut {
+    function test_deployPool_RevertIf_BaseAndQuoteEqual() public {
         vm.expectRevert(IPoolFactory.PoolFactory__IdenticalAddresses.selector);
 
         poolKey.base = poolKey.quote;
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_QuoteZeroAddress() public givenCallOrPut {
+    function test_deployPool_RevertIf_QuoteZeroAddress() public {
         poolKey.quote = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_BaseZeroAddress() public givenCallOrPut {
+    function test_deployPool_RevertIf_BaseZeroAddress() public {
         poolKey.base = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_OracleAddress() public givenCallOrPut {
+    function test_deployPool_RevertIf_OracleAddress() public {
         poolKey.oracleAdapter = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_StrikeIsZero() public givenCallOrPut {
+    function test_deployPool_RevertIf_StrikeIsZero() public {
         poolKey.strike = ud(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_AlreadyDeployed() public givenCallOrPut {
+    function test_deployPool_RevertIf_AlreadyDeployed() public {
         address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector, poolAddress));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public givenCallOrPut {
+    function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
         uint256[4] memory strike = [uint256(99999 ether), uint256(1050 ether), uint256(960 ether), uint256(11.1 ether)];
         uint256[4] memory interval = [uint256(5000 ether), uint256(100 ether), uint256(50 ether), uint256(1 ether)];
 
@@ -188,14 +168,14 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         }
     }
 
-    function test_deployPool_RevertIf_MaturityExpired() public givenCallOrPut {
+    function test_deployPool_RevertIf_MaturityExpired() public {
         poolKey.maturity = 1679758930;
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionExpired.selector, poolKey.maturity));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityNot8UTC() public givenCallOrPut {
+    function test_deployPool_RevertIf_MaturityNot8UTC() public {
         poolKey.maturity = 1679768950;
 
         vm.expectRevert(
@@ -218,7 +198,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public givenCallOrPut {
+    function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public {
         poolKey.maturity = 1680163200;
 
         vm.expectRevert(
@@ -227,7 +207,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityMonthlyNotLastFriday() public givenCallOrPut {
+    function test_deployPool_RevertIf_MaturityMonthlyNotLastFriday() public {
         poolKey.maturity = 1683878400;
 
         vm.expectRevert(
@@ -236,7 +216,7 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_MaturityExceedsOneYear() public givenCallOrPut {
+    function test_deployPool_RevertIf_MaturityExceedsOneYear() public {
         poolKey.maturity = 1714118400;
 
         vm.expectRevert(
@@ -249,18 +229,34 @@ contract PoolFactory_Integration_Concrete_Test is Base_Test {
                               getPoolAddress
     //////////////////////////////////////////////////////////////////////////*/
 
-    function test_getPoolAddress_ReturnIsDeployedFalse() public givenCallOrPut {
+    function test_getPoolAddress_ReturnIsDeployedFalse() public {
         (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
 
         assertNotEq(pool, address(0));
         assertFalse(isDeployed);
     }
 
-    function test_getPoolAddress_ReturnIsDeployedTrue() public givenCallOrPut {
+    function test_getPoolAddress_ReturnIsDeployedTrue() public {
         address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
         (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
         assertEq(pool, poolAddress);
         assertTrue(isDeployed);
+    }
+}
+
+contract PoolFactory_Call_Integration_Concrete_Test is PoolFactory_Integration_Shared_Test {
+    function setUp() public override {
+        super.setUp();
+
+        poolKey.isCallPool = true;
+    }
+}
+
+contract PoolFactory_Put_Integration_Concrete_Test is PoolFactory_Integration_Shared_Test {
+    function setUp() public override {
+        super.setUp();
+
+        poolKey.isCallPool = false;
     }
 }
