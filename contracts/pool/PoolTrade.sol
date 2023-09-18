@@ -75,6 +75,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolTrade
     function isQuoteOBValid(
+        address user,
         QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
@@ -84,7 +85,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteOBAndBalanceValid(
                 l,
-                FillQuoteOBArgsInternal(msg.sender, address(0), size, sig, true),
+                FillQuoteOBArgsInternal(user, address(0), size, sig, true),
                 quoteOB,
                 quoteOBHash
             );
