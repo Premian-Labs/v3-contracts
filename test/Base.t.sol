@@ -137,7 +137,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
         deploy();
 
         // Label contracts
-        labelContracts();
+        label();
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -170,34 +170,6 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     function getStartTimestamp() internal virtual returns (uint256) {
         // Warp to May 1, 2023 at 00:00 GMT to provide a more realistic testing environment.
         return MAY_1_2023;
-    }
-
-    /// @dev Approves a contract to spend base and quote for a user.
-    function approve(address contractAddress) internal {
-        base.approve({spender: contractAddress, amount: MAX_UINT256});
-        quote.approve({spender: contractAddress, amount: MAX_UINT256});
-    }
-
-    /// @dev Approves all core contracts to spend base and quote from a user.
-    function approveProtocolForUser(address user) internal {
-        changePrank({msgSender: user});
-        approve(address(router));
-        approve(address(referral));
-    }
-
-    /// @dev Approves all core contracts to spend base and quote from select users.
-    function approveProtocol() internal {
-        // Approve protocol for users
-        approveProtocolForUser(users.alice);
-        approveProtocolForUser(users.eve);
-        approveProtocolForUser(users.trader);
-        approveProtocolForUser(users.lp);
-        approveProtocolForUser(users.operator);
-        approveProtocolForUser(users.caller);
-        approveProtocolForUser(users.receiver);
-
-        // Finally, change the active prank back to the Admin.
-        changePrank({msgSender: users.admin});
     }
 
     /// @dev Generates a user, labels its address, and funds it with test assets.
@@ -433,7 +405,7 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
     }
 
     /// @dev Labels the deployed contracts.
-    function labelContracts() internal {
+    function label() internal virtual {
         // Label contracts
         vm.label({account: address(oracleAdapter), newLabel: "OracleAdapter"});
         vm.label({account: address(factory), newLabel: "PoolFactory"});
@@ -445,5 +417,33 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
         vm.label({account: address(vxPremia), newLabel: "VxPremia"});
         vm.label({account: address(vaultRegistry), newLabel: "VaultRegistry"});
         vm.label({account: address(flashLoanMock), newLabel: "FlashLoan"});
+    }
+
+    /// @dev Approves a contract to spend base and quote for a user.
+    function approveContract(address contractAddress) internal {
+        base.approve({spender: contractAddress, amount: MAX_UINT256});
+        quote.approve({spender: contractAddress, amount: MAX_UINT256});
+    }
+
+    /// @dev Approves all core contracts to spend base and quote from a user.
+    function approveProtocolForUser(address user) internal {
+        changePrank({msgSender: user});
+        approveContract(address(router));
+        approveContract(address(referral));
+    }
+
+    /// @dev Approves all core contracts to spend base and quote from select users.
+    function approve() internal virtual {
+        // Approve protocol for users
+        approveProtocolForUser(users.alice);
+        approveProtocolForUser(users.eve);
+        approveProtocolForUser(users.trader);
+        approveProtocolForUser(users.lp);
+        approveProtocolForUser(users.operator);
+        approveProtocolForUser(users.caller);
+        approveProtocolForUser(users.receiver);
+
+        // Finally, change the active prank back to the Admin.
+        changePrank({msgSender: users.admin});
     }
 }

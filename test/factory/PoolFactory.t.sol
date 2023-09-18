@@ -20,7 +20,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         Base_Test.setUp();
 
         // Approve V3 Core to spend assets from the users
-        approveProtocol();
+        approve();
 
         poolKey = IPoolFactory.PoolKey({
             base: address(base),
