@@ -12,6 +12,7 @@ import {OptionRewardFactoryStorage} from "./OptionRewardFactoryStorage.sol";
 
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {ProxyManager} from "../../proxy/ProxyManager.sol";
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
 contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGuard {
     using OptionRewardFactoryStorage for OptionRewardKey;
@@ -110,5 +111,31 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
             key.feeReceiver,
             proxy
         );
+
+        {
+            (address base, address quote, ) = key.option.getSettings();
+
+            (
+                IOracleAdapter.AdapterType baseAdapterType,
+                address[][] memory basePath,
+                uint8[] memory basePathDecimals
+            ) = IOracleAdapter(key.oracleAdapter).describePricingPath(base);
+
+            (
+                IOracleAdapter.AdapterType quoteAdapterType,
+                address[][] memory quotePath,
+                uint8[] memory quotePathDecimals
+            ) = IOracleAdapter(key.oracleAdapter).describePricingPath(quote);
+
+            emit PricingPath(
+                proxy,
+                basePath,
+                basePathDecimals,
+                baseAdapterType,
+                quotePath,
+                quotePathDecimals,
+                quoteAdapterType
+            );
+        }
     }
 }

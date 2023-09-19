@@ -26,6 +26,16 @@ interface IOptionRewardFactory is IProxyManager {
         address proxy
     );
 
+    event PricingPath(
+        address pool,
+        address[][] basePath,
+        uint8[] basePathDecimals,
+        IOracleAdapter.AdapterType baseAdapterType,
+        address[][] quotePath,
+        uint8[] quotePathDecimals,
+        IOracleAdapter.AdapterType quoteAdapterType
+    );
+
     struct OptionRewardArgs {
         IOptionPS option;
         IOracleAdapter oracleAdapter;
