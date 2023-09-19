@@ -9,7 +9,7 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {Assertions} from "../../Assertions.sol";
-import {OptionPSFactory} from "contracts/mining/optionPS/OptionPSFactory.sol";
+import {OptionPSFactory, IOptionPSFactory} from "contracts/mining/optionPS/OptionPSFactory.sol";
 import {IOptionPS} from "contracts/mining/optionPS/IOptionPS.sol";
 import {OptionPS} from "contracts/mining/optionPS/OptionPS.sol";
 import {OptionPSStorage} from "contracts/mining/optionPS/OptionPSStorage.sol";
@@ -79,6 +79,15 @@ abstract contract OptionPSTest is Assertions, Test {
 
     function _shortTokenId() internal view returns (uint256) {
         return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, strike);
+    }
+
+    function test_deployProxy_RevertIf_ProxyAlreadyDeployed() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionPSFactory.OptionPSFactory__ProxyAlreadyDeployed.selector, address(option))
+        );
+        optionPSFactory.deployProxy(
+            IOptionPSFactory.OptionPSArgs({base: address(base), quote: address(quote), isCall: isCall})
+        );
     }
 
     function test_getSettings_ReturnExpectedValue() public {

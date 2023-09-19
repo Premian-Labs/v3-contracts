@@ -81,8 +81,6 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolFactory
     function deployPool(PoolKey calldata k) external payable nonReentrant returns (address poolAddress) {
-        if (k.oracleAdapter != CHAINLINK_ADAPTER) revert PoolFactory__InvalidOracleAdapter();
-
         _revertIfAddressInvalid(k);
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
@@ -199,11 +197,11 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
-        if (ttm >= 3 days && ttm <= 30 days) {
+        if (ttm >= 3 days && ttm <= 35 days) {
             if (!OptionMath.isFriday(maturity)) revert PoolFactory__OptionMaturityNotFriday(maturity);
         }
 
-        if (ttm > 30 days) {
+        if (ttm > 35 days) {
             if (!OptionMath.isLastFriday(maturity)) revert PoolFactory__OptionMaturityNotLastFriday(maturity);
         }
 

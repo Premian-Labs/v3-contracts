@@ -83,6 +83,7 @@ export const NameOverride: { [key: string]: string } = {
   VaultRegistryProxy: 'ProxyUpgradeableOwnable',
   VolatilityOracleProxy: 'ProxyUpgradeableOwnable',
   OptionRewardFactoryProxy: 'ProxyUpgradeableOwnable',
+  PaymentSplitterProxy: 'ProxyUpgradeableOwnable',
 };
 
 export const DescriptionOverride: { [key: string]: string } = {
@@ -93,4 +94,5 @@ export const DescriptionOverride: { [key: string]: string } = {
   OptionPSFactoryImplementation:
     'Option Physically Settled Factory Implementation',
   OptionPSFactoryProxy: 'Option Physically Settled Factory Proxy',
+  PaymentSplitterProxy: 'Payment Splitter Proxy',
 };
