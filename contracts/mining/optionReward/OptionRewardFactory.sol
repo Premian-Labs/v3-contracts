@@ -128,7 +128,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
             ) = IOracleAdapter(key.oracleAdapter).describePricingPath(quote);
 
             emit PricingPath(
-                proxy,
+                address(key.option),
                 basePath,
                 basePathDecimals,
                 baseAdapterType,
