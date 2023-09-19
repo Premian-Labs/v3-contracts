@@ -27,7 +27,7 @@ interface IOptionRewardFactory is IProxyManager {
     );
 
     event PricingPath(
-        address pool,
+        address option,
         address[][] basePath,
         uint8[] basePathDecimals,
         IOracleAdapter.AdapterType baseAdapterType,
