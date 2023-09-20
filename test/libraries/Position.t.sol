@@ -23,7 +23,7 @@ contract Position_Unit_Concrete_Test is Base_Test {
     Position.KeyInternal internal key;
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         key = Position.KeyInternal({
             owner: users.lp,

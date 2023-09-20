@@ -17,7 +17,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     uint256 internal maturity = 1_682_668_800;
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         // Approve V3 Core to spend assets from the users
         approve();

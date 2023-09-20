@@ -17,7 +17,7 @@ contract UserSettings_Unit_Concrete_Test is Base_Test {
     address internal otherOperator = vm.addr(1);
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         vm.stopPrank();
     }

@@ -23,7 +23,7 @@ contract Pricing_Unit_Concrete_Test is Base_Test {
     Pricing.Args internal args;
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         args = Pricing.Args({
             liquidityRate: ud50x28(1e28),

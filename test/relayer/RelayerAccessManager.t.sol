@@ -20,7 +20,7 @@ contract RelayerAccessManager_Unit_Concrete_Test is Base_Test {
     address internal charles;
 
     function setUp() public override {
-        Base_Test.setUp();
+        super.setUp();
 
         relayer = vm.addr(1);
         alice = vm.addr(2);

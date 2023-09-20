@@ -35,7 +35,7 @@ contract VolatilityOracle_Unit_Concrete_test is Base_Test {
 
     // prettier-ignore
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         int256[5] memory tau =   [ int256(2739726027),  int256(35616438356), int256(93150684931),  int256(169863013698), int256(419178082191) ];
         int256[5] memory theta = [ int256(1769240990),  int256(19167659692), int256(50651452629),  int256(101097155795), int256(270899488797) ];
