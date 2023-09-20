@@ -33,7 +33,7 @@ abstract contract Referral_Integration_Shared_Test is Base_Test {
     address internal constant secondaryReferrer = address(0x999);
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         poolKey = IPoolFactory.PoolKey({
             base: address(base),
