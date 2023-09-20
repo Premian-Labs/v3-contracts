@@ -9,7 +9,7 @@ import {RelayerAccessManagerMock} from "contracts/test/relayer/RelayerAccessMana
 
 import {Base_Test} from "../Base.t.sol";
 
-contract RelayerAccessManager_Unit_Concrete_Test is Base_Test {
+contract RelayerAccessManager_Unit_Test is Base_Test {
     // Test contracts
     RelayerAccessManagerMock internal relayerAccessManager;
 
