@@ -8,7 +8,7 @@ import {PoolNameMock} from "contracts/test/libraries/PoolNameMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-contract PoolName_Unit_Concrete_Test is Base_Test {
+contract PoolName_Unit_Test is Base_Test {
     // Test contracts
     PoolNameMock internal poolName;
 

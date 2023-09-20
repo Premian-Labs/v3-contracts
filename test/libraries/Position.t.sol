@@ -12,7 +12,7 @@ import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-contract Position_Unit_Concrete_Test is Base_Test {
+contract Position_Unit_Test is Base_Test {
     using Position for Position.KeyInternal;
     using PRBMathExtra for UD60x18;
 

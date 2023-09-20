@@ -257,7 +257,7 @@ abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
 /*//////////////////////////////////////////////////////////////////////////
                       Unit Tests
 //////////////////////////////////////////////////////////////////////////*/
-contract ChainlinkAdapter_Unit_Concrete_Test is ChainlinkAdapter_Shared_Test {
+contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
     /*//////////////////////////////////////////////////////////////////////////
                           upsertPair
     //////////////////////////////////////////////////////////////////////////*/
@@ -433,7 +433,7 @@ contract ChainlinkAdapter_Unit_Concrete_Test is ChainlinkAdapter_Shared_Test {
 /*//////////////////////////////////////////////////////////////////////////
                       Fork Tests
 //////////////////////////////////////////////////////////////////////////*/
-contract ChainlinkAdapter_Fork_Concrete_Test is ChainlinkAdapter_Shared_Test {
+contract ChainlinkAdapter_Fork_Test is ChainlinkAdapter_Shared_Test {
     /// @dev Overrides base to make this a fork test.
     function isForkTest() internal virtual override returns (bool) {
         return true;

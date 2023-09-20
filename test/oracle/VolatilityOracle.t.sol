@@ -10,7 +10,7 @@ import {VolatilityOracleMock} from "contracts/test/oracle/VolatilityOracleMock.s
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {Base_Test} from "../Base.t.sol";
 
-contract VolatilityOracle_Unit_Concrete_test is Base_Test {
+contract VolatilityOracle_Unit_Test is Base_Test {
     // Test contracts
     VolatilityOracleMock internal oracle;
 

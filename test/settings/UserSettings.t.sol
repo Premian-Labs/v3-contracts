@@ -9,7 +9,7 @@ import {UserSettings} from "contracts/settings/UserSettings.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-contract UserSettings_Unit_Concrete_Test is Base_Test {
+contract UserSettings_Unit_Test is Base_Test {
     // Test Contracts
     IUserSettings internal settings;
 

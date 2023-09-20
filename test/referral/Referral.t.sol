@@ -70,7 +70,7 @@ abstract contract Referral_Integration_Shared_Test is Base_Test {
 /*//////////////////////////////////////////////////////////////////////////
                   Integration Tests
 //////////////////////////////////////////////////////////////////////////*/
-contract Referral_Integration_Concrete_Test is Referral_Integration_Shared_Test {
+contract Referral_Integration_Test is Referral_Integration_Shared_Test {
     /*//////////////////////////////////////////////////////////////////////////
                           setPrimaryRebatePercent
     //////////////////////////////////////////////////////////////////////////*/
@@ -229,7 +229,7 @@ contract Referral_Integration_Concrete_Test is Referral_Integration_Shared_Test 
     }
 }
 
-contract Referral_UseReferral_Integration_Concrete_Test is Referral_Integration_Shared_Test {
+contract Referral_UseReferral_Integration_Test is Referral_Integration_Shared_Test {
     // Test contracts
     ERC20Mock internal fake;
 

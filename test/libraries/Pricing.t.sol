@@ -12,7 +12,7 @@ import {PricingMock} from "contracts/test/libraries/PricingMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-contract Pricing_Unit_Concrete_Test is Base_Test {
+contract Pricing_Unit_Test is Base_Test {
     using Pricing for Pricing.Args;
     using PRBMathExtra for UD60x18;
 

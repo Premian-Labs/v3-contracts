@@ -251,7 +251,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
 /*//////////////////////////////////////////////////////////////////////////
                       Integration Tests
 //////////////////////////////////////////////////////////////////////////*/
-contract PoolFactory_Call_Integration_Concrete_Test is PoolFactory_Integration_Shared_Test {
+contract PoolFactory_Call_Integration_Test is PoolFactory_Integration_Shared_Test {
     function setUp() public override {
         super.setUp();
 
@@ -259,7 +259,7 @@ contract PoolFactory_Call_Integration_Concrete_Test is PoolFactory_Integration_S
     }
 }
 
-contract PoolFactory_Put_Integration_Concrete_Test is PoolFactory_Integration_Shared_Test {
+contract PoolFactory_Put_Integration_Test is PoolFactory_Integration_Shared_Test {
     function setUp() public override {
         super.setUp();
 
