@@ -240,7 +240,7 @@ contract Referral_UseReferral_Integration_Concrete_Test is Referral_Integration_
     uint256 internal secondaryRebate1;
 
     function setUp() public virtual override {
-        Referral_Integration_Shared_Test.setUp();
+        super.setUp();
 
         // Mint fake token for referral contract
         fake = new ERC20Mock("MOCK", 18);
