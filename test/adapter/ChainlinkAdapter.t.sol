@@ -74,7 +74,7 @@ abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
     Path[] internal paths;
 
     function setUp() public virtual override {
-        Base_Test.setUp();
+        super.setUp();
 
         target = 1676016000;
 
