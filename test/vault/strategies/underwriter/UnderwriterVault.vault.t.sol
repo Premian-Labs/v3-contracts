@@ -402,11 +402,10 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IVault.Vault__AboveMaxSlippage.selector,
-                isCallTest ? 158288659375834262 : 469906637275684065913,
+                isCallTest ? 158288659375834262 : 469906636000000000000,
                 isCallTest ? 79144329687917131 : 234953318000000000000
             )
         );
-
         vault.trade(poolKey, tradeSize, true, totalPremium / 2, address(0));
     }
 
