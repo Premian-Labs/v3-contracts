@@ -719,7 +719,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         // Compute output variables
         quote.premium = vars.price * args.size;
-        quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
+        quote.spread = (vars.cLevel - ONE) * quote.premium;
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
         if (revertIfPoolNotDeployed && quote.pool == address(0)) revert Vault__OptionPoolNotListed();
