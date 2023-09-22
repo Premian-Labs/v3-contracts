@@ -167,6 +167,11 @@ interface IVaultRegistry {
     /// @param updatedSettings The updated settings for the vault type.
     function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external;
 
+    /// @notice Sets the settings for a specific vault.
+    /// @param vault The vault address.
+    /// @param updatedSettings The updated settings for the vault.
+    function updateVaultSettings(address vault, bytes memory updatedSettings) external;
+
     /// @notice Gets the implementation for the vaultType.
     /// @param vaultType The vault type.
     /// @return The implementation address.
