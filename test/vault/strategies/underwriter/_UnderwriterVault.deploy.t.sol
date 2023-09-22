@@ -72,7 +72,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
         settings[0] = 3e18;
         settings[1] = 0.005e18;
-        settings[2] = 1e18;
+        settings[2] = 1.05e18;
         settings[3] = 1.2e18;
         settings[4] = 3e18;
         settings[5] = 30e18;
