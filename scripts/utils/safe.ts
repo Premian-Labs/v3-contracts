@@ -85,14 +85,14 @@ export async function proposeSafeTransaction(
  *
  * @param propose - Whether to propose the transaction or send it directly
  * @param safeAddress - The Safe Multi-sig address
- * @param signer - The transaction signer
+ * @param proposerOrSigner - The Safe transaction proposer or transaction signer
  * @param transactions - The list of transactions to propose or send
  * @param logTxUrl - If true, log the Safe transaction queue or transaction URL
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
-  signer: SignerWithAddress,
+  proposerOrSigner: SignerWithAddress,
   transactions: PopulatedTransaction[],
   logTxUrl = false,
 ) {
@@ -108,17 +108,24 @@ export async function proposeOrSendTransaction(
       });
     }
 
-    await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
+    await proposeSafeTransaction(
+      safeAddress,
+      proposerOrSigner,
+      safeTransactionData,
+    );
   } else {
     let m = 1;
     const n = transactions.length;
 
     for (let transaction of transactions) {
-      const tx = await signer.sendTransaction(transaction);
+      const tx = await proposerOrSigner.sendTransaction(transaction);
       await tx.wait();
 
       if (logTxUrl) {
-        const transactionUrl = await getTransactionUrl(tx.hash, signer);
+        const transactionUrl = await getTransactionUrl(
+          tx.hash,
+          proposerOrSigner,
+        );
         console.log(
           n > 1
             ? `${m} of ${n} transactions executed: ${tx.hash} (${transactionUrl})`
