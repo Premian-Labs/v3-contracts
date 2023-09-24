@@ -94,11 +94,6 @@ export const arbitrumFeeds = [
     feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
   },
   {
-    token: arbitrum.tokens.APE,
-    denomination: CHAINLINK_USD,
-    feed: '0x221912ce795669f628c51c69b7d0873eDA9C03bB',
-  },
-  {
     token: arbitrum.tokens.MIM,
     denomination: CHAINLINK_USD,
     feed: '0x87121F6c9A9F6E90E59591E4Cf4804873f54A95b',
@@ -134,19 +129,9 @@ export const arbitrumFeeds = [
     feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
   },
   {
-    token: arbitrum.tokens.SNX,
-    denomination: CHAINLINK_USD,
-    feed: '0x054296f0D036b95531B4E14aFB578B80CFb41252',
-  },
-  {
     token: arbitrum.tokens.AAVE,
     denomination: CHAINLINK_USD,
     feed: '0xaD1d5344AaDE45F43E596773Bcc4c423EAbdD034',
-  },
-  {
-    token: arbitrum.tokens.CVX,
-    denomination: CHAINLINK_USD,
-    feed: '0x851175a919f36c8e30197c09a9A49dA932c2CC00',
   },
   {
     token: arbitrum.tokens.RPL,
@@ -194,16 +179,6 @@ export const arbitrumFeeds = [
     feed: '0x745Ab5b69E01E2BE1104Ca84937Bb71f96f5fB21',
   },
   {
-    token: arbitrum.tokens.BUSD,
-    denomination: CHAINLINK_USD,
-    feed: '0x8FCb0F3715A82D83270777b3a5f3a7CF95Ce8Eec',
-  },
-  {
-    token: arbitrum.tokens.WFTM,
-    denomination: CHAINLINK_USD,
-    feed: '0xFeaC1A3936514746e70170c0f539e70b23d36F19',
-  },
-  {
     token: arbitrum.tokens.CRV,
     denomination: CHAINLINK_USD,
     feed: '0xaebDA2c976cfd1eE1977Eac079B4382acb849325',
@@ -217,16 +192,6 @@ export const arbitrumFeeds = [
     token: arbitrum.tokens.LINK,
     denomination: CHAINLINK_USD,
     feed: '0x86E53CF1B870786351Da77A57575e79CB55812CB',
-  },
-  {
-    token: arbitrum.tokens.WBNB,
-    denomination: CHAINLINK_USD,
-    feed: '0x6970460aabF80C5BE983C6b74e5D06dEDCA95D4A',
-  },
-  {
-    token: arbitrum.tokens.AXS,
-    denomination: CHAINLINK_USD,
-    feed: '0x5B58aA6E0651Ae311864876A55411F481aD86080',
   },
   {
     token: arbitrum.tokens.USDT,
@@ -252,11 +217,6 @@ export const arbitrumFeeds = [
     token: arbitrum.tokens.JOE,
     denomination: CHAINLINK_USD,
     feed: '0x04180965a782E487d0632013ABa488A472243542',
-  },
-  {
-    token: arbitrum.tokens['1INCH'],
-    denomination: CHAINLINK_USD,
-    feed: '0x4bC735Ef24bf286983024CAd5D03f0738865Aaef',
   },
   {
     token: arbitrum.tokens.WBTC,
