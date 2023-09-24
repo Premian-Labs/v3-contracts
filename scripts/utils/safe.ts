@@ -38,9 +38,22 @@ export async function proposeSafeTransaction(
     safeAddress,
   });
 
+  // Initialize the Safe API Kit
+  const network = await getNetwork(proposer);
+  const txServiceUrl = `https://safe-transaction-${network.name}.safe.global`;
+
+  const safeService = new SafeApiKit({
+    txServiceUrl,
+    ethAdapter,
+  });
+
+  const nonce = await safeService.getNextNonce(safeAddress);
+  const options = { nonce };
+
   // Create a Safe transaction with the provided parameters
   const safeTransaction = await safeSdk.createTransaction({
     safeTransactionData,
+    options,
   });
 
   // Deterministic hash based on transaction parameters
@@ -48,13 +61,6 @@ export async function proposeSafeTransaction(
 
   // Sign transaction to verify that the transaction is coming from proposer
   const signature = await safeSdk.signTransactionHash(safeTxHash);
-
-  // Initialize the Safe API Kit
-  const network = await getNetwork(proposer);
-  const safeService = new SafeApiKit({
-    txServiceUrl: `https://safe-transaction-${network.name}.safe.global`,
-    ethAdapter,
-  });
 
   // Propose transaction hash
   await safeService.proposeTransaction({
