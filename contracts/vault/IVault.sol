@@ -42,45 +42,6 @@ interface IVault is ISolidStateERC4626 {
         UD60x18 vaultFee
     );
 
-    event Swap(
-        address indexed sender,
-        address recipient,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        UD60x18 amountIn,
-        UD60x18 amountOut,
-        UD60x18 takerFee,
-        UD60x18 makerRebate,
-        UD60x18 vaultFee
-    );
-
-    event Borrow(
-        bytes32 indexed borrowId,
-        address indexed from,
-        address indexed borrowToken,
-        address collateralToken,
-        UD60x18 sizeBorrowed,
-        UD60x18 collateralLocked,
-        UD60x18 borrowFee
-    );
-
-    event BorrowLiquidated(
-        bytes32 indexed borrowId,
-        address indexed from,
-        address indexed collateralToken,
-        UD60x18 collateralLiquidated
-    );
-
-    event RepayBorrow(
-        bytes32 indexed borrowId,
-        address indexed from,
-        address indexed borrowToken,
-        address collateralToken,
-        UD60x18 amountRepaid,
-        UD60x18 collateralUnlocked,
-        UD60x18 repayFee
-    );
-
     event ManagementFeePaid(address indexed recipient, uint256 managementFee);
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
