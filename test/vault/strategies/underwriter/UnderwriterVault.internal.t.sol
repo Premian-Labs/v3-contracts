@@ -17,7 +17,7 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
-    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged);
+    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged, UD60x18 pricePerShare);
 
     function setupSpreadVault() internal {
         startTime = 1678435200 + 500 * 7 days;
@@ -90,7 +90,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.setTimestamp(startTime + 1 days);
         vm.expectEmit();
-        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)), vault.getPricePerShare());
         vault.afterBuy(strike, t0, size, spread, premium);
 
         // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there

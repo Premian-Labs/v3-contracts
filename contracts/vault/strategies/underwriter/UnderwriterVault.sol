@@ -469,6 +469,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.totalAssets = l.totalAssets + l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
+        emit PricePerShareUpdated(_getPricePerShareUD60x18());
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -483,6 +484,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.totalAssets = l.totalAssets - l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
+        emit PricePerShareUpdated(_getPricePerShareUD60x18());
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -518,7 +520,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.lastTradeTimestamp = _getBlockTimestamp();
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
-        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol));
+        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol), _getPricePerShareUD60x18());
     }
 
     /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
@@ -818,10 +820,47 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         }
 
         // Emit trade event
-        emit Trade(msg.sender, quote.pool, size, true, totalPremium, quote.mintingFee, ZERO, quote.spread);
+        emit Trade(
+            msg.sender,
+            quote.pool,
+            size,
+            true,
+            totalPremium,
+            quote.mintingFee,
+            ZERO,
+            quote.spread,
+            _getPricePerShareUD60x18()
+        );
 
         // Emit event for updated quotes
         emit UpdateQuotes();
+    }
+
+    /// @notice Calculates the exercise value of a position
+    function _calculateExerciseValue(
+        UD60x18 settlementPrice,
+        UD60x18 strike,
+        bool isCall,
+        UD60x18 size
+    ) internal returns (UD60x18) {
+        if (size == ZERO) return ZERO;
+
+        UD60x18 intrinsicValue;
+        if (isCall && settlementPrice > strike) {
+            intrinsicValue = settlementPrice - strike;
+        } else if (!isCall && settlementPrice < strike) {
+            intrinsicValue = strike - settlementPrice;
+        } else {
+            return ZERO;
+        }
+
+        UD60x18 exerciseValue = size * intrinsicValue;
+
+        if (isCall) {
+            exerciseValue = exerciseValue / settlementPrice;
+        }
+
+        return exerciseValue;
     }
 
     /// @notice Settles all options that are on a single maturity
@@ -835,6 +874,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
+
+            UD60x18 settlementPrice = IPool(pool).getSettlementPrice();
+            UD60x18 exerciseValue = _calculateExerciseValue(settlementPrice, strike, l.isCall, positionSize);
+
+            emit Settle(pool, positionSize, exerciseValue, settlementPrice, ZERO, _getPricePerShareUD60x18());
         }
     }
 
@@ -906,10 +950,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (l.totalAssets > ZERO) {
             UD60x18 managementFeeInShares = _computeManagementFee(l, timestamp);
             _mint(FEE_RECEIVER, managementFeeInShares.unwrap());
-            emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap());
+            l.lastManagementFeeTimestamp = timestamp;
+            emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap(), _getPricePerShareUD60x18());
+        } else {
+            l.lastManagementFeeTimestamp = timestamp;
         }
-
-        l.lastManagementFeeTimestamp = timestamp;
     }
 
     /// @notice Transfers fees to the FEE_RECEIVER.
