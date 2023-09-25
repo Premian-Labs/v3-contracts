@@ -17,9 +17,6 @@ import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePr
 
 import {Base_Test} from "../Base.t.sol";
 
-/*//////////////////////////////////////////////////////////////////////////
-                      Shared Tests
-//////////////////////////////////////////////////////////////////////////*/
 abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
     using UintUtils for uint256;
 
@@ -254,13 +251,9 @@ abstract contract ChainlinkAdapter_Shared_Test is Base_Test {
     }
 }
 
-/*//////////////////////////////////////////////////////////////////////////
-                      Unit Tests
-//////////////////////////////////////////////////////////////////////////*/
 contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
-    /*//////////////////////////////////////////////////////////////////////////
-                          upsertPair
-    //////////////////////////////////////////////////////////////////////////*/
+    // upsertPair
+
     function test_upsertPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
         adapter.upsertPair(WETH, DAI);
         (bool isCached, ) = adapter.isPairSupported(WETH, DAI);
@@ -294,9 +287,7 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
         adapter.upsertPair(CRV, address(0));
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                          setTokenPriceAt
-    //////////////////////////////////////////////////////////////////////////*/
+    // setTokenPriceAt
     function test_setTokenPriceAt_Success() public {
         changePrank(users.relayer);
         adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
@@ -332,9 +323,8 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
         adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                              feed
-    //////////////////////////////////////////////////////////////////////////*/
+    // feed
+
     function test_feed_ReturnFeed() public {
         IFeedRegistry.FeedMappingArgs[] memory _feeds = feeds();
 
@@ -347,9 +337,8 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
         assertEq(adapter.feed(EUL, DAI), address(0));
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                          batchRegisterFeedMappings
-    //////////////////////////////////////////////////////////////////////////*/
+    // batchRegisterFeedMappings
+
     function test_batchRegisterFeedMappings_RevertIf_TokensAreSame() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));
@@ -386,9 +375,8 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
         adapter.batchRegisterFeedMappings(data);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                          isPairSupported
-    //////////////////////////////////////////////////////////////////////////*/
+    // isPairSupported
+
     function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists() public givenPaths {
         (bool isCached, bool hasPath) = adapter.isPairSupported(p.tokenIn, p.tokenOut);
         assertTrue(isCached);
@@ -418,9 +406,8 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
         adapter.isPairSupported(CRV, address(0));
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                          pricingPath
-    //////////////////////////////////////////////////////////////////////////*/
+    // pricingPath
+
     function test_pricingPath_ReturnPathForPair_New() public givenPaths {
         IChainlinkAdapter.PricingPath path1 = adapter.pricingPath(p.tokenIn, p.tokenOut);
         IChainlinkAdapter.PricingPath path2 = adapter.pricingPath(p.tokenOut, p.tokenIn);
@@ -430,18 +417,14 @@ contract ChainlinkAdapter_Unit_Test is ChainlinkAdapter_Shared_Test {
     }
 }
 
-/*//////////////////////////////////////////////////////////////////////////
-                      Fork Tests
-//////////////////////////////////////////////////////////////////////////*/
 contract ChainlinkAdapter_Fork_Test is ChainlinkAdapter_Shared_Test {
     /// @dev Overrides base to make this a fork test.
     function isForkTest() internal virtual override returns (bool) {
         return true;
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                      batchRegisterFeedMappings
-    //////////////////////////////////////////////////////////////////////////*/
+    // batchRegisterFeedMappings
+
     function test_batchRegisterFeedMappings_RemoveFeed() public {
         adapter.upsertPair(YFI, DAI);
         adapter.upsertPair(USDC, YFI);
@@ -525,9 +508,8 @@ contract ChainlinkAdapter_Fork_Test is ChainlinkAdapter_Shared_Test {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                      describePricingPath
-    //////////////////////////////////////////////////////////////////////////*/
+    // describePricingPath
+
     function test_describePricingPath_Success() public {
         {
             (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
@@ -580,9 +562,8 @@ contract ChainlinkAdapter_Fork_Test is ChainlinkAdapter_Shared_Test {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                      getPrice
-    //////////////////////////////////////////////////////////////////////////*/
+    // getPrice
+
     function test_getPrice_ReturnPriceForPair() public givenPaths {
         // Expected price values provided by DeFiLlama API (https://coins.llama.fi)
         uint80[39] memory expected = [
@@ -768,9 +749,8 @@ contract ChainlinkAdapter_Fork_Test is ChainlinkAdapter_Shared_Test {
         adapter.getPrice(stubCoin, CHAINLINK_USD);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                      getPriceAt
-    //////////////////////////////////////////////////////////////////////////*/
+    // getPriceAt
+
     function test_getPriceAt_ReturnPriceForPairFromTarget() public givenPaths {
         // Expected price values provided by DeFiLlama API (https://coins.llama.fi)
         uint80[39] memory expected = [

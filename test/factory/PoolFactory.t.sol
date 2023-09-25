@@ -8,9 +8,6 @@ import {IPool} from "contracts/pool/IPool.sol";
 
 import {Base_Test} from "../Base.t.sol";
 
-/*//////////////////////////////////////////////////////////////////////////
-                      Shared Tests
-//////////////////////////////////////////////////////////////////////////*/
 abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     // Variables
     IPoolFactory.PoolKey internal poolKey;
@@ -38,9 +35,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         return 1_679_758_940;
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                                  deployPool
-    //////////////////////////////////////////////////////////////////////////*/
+    // deployPool
 
     function test_deployPool_DeployPool() public {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
@@ -228,9 +223,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    /*//////////////////////////////////////////////////////////////////////////
-                              getPoolAddress
-    //////////////////////////////////////////////////////////////////////////*/
+    // getPoolAddress
 
     function test_getPoolAddress_ReturnIsDeployedFalse() public {
         (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
@@ -248,9 +241,6 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     }
 }
 
-/*//////////////////////////////////////////////////////////////////////////
-                      Integration Tests
-//////////////////////////////////////////////////////////////////////////*/
 contract PoolFactory_Call_Integration_Test is PoolFactory_Integration_Shared_Test {
     function setUp() public override {
         super.setUp();
