@@ -22,6 +22,7 @@ interface IPoolEvents {
     event Deposit(
         address indexed owner,
         uint256 indexed tokenId,
+        UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 longs,
         UD60x18 shorts,
@@ -35,6 +36,7 @@ interface IPoolEvents {
     event Withdrawal(
         address indexed owner,
         uint256 indexed tokenId,
+        UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 longs,
         UD60x18 shorts,
@@ -120,7 +122,13 @@ interface IPoolEvents {
         UD60x18 operatorCost
     );
 
-    event TransferPosition(address indexed owner, address indexed receiver, uint256 srcTokenId, uint256 destTokenId);
+    event TransferPosition(
+        address indexed owner,
+        address indexed receiver,
+        uint256 srcTokenId,
+        uint256 destTokenId,
+        UD60x18 contractSize
+    );
 
     event CancelQuoteOB(address indexed provider, bytes32 quoteOBHash);
 
