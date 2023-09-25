@@ -19,6 +19,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__AgentNotAuthorized();
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
     error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCostInWrappedNative);
+    error Pool__DifferenceOfSizeAndContractDeltaTooLarge(UD60x18 diff, UD60x18 size);
     error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
@@ -142,6 +143,8 @@ interface IPoolInternal is IPosition, IPricing {
         UD50x28 longDelta;
         UD50x28 shortDelta;
         ReferralVarsInternal referral;
+        UD60x18 totalMintBurn;
+        UD60x18 offset;
     }
 
     struct DepositArgsInternal {

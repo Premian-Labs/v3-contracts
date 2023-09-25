@@ -777,11 +777,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
+        vars.totalMintBurn = (vars.longDelta + vars.shortDelta).intoUD60x18();
+        vars.offset = PRBMathExtra.max(args.size.intoSD59x18() - vars.totalMintBurn.intoSD59x18(), iZERO).intoUD60x18();
+
+        _revertIfDifferenceOfSizeAndContractDeltaTooLarge(vars.offset, args.size);
+
         if (args.isBuy) {
-            if (vars.shortDelta > UD50_ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta.intoUD60x18());
+            if (vars.shortDelta > UD50_ZERO)
+                _mint(address(this), PoolStorage.SHORT, vars.offset + vars.shortDelta.intoUD60x18());
             if (vars.longDelta > UD50_ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta.intoUD60x18());
         } else {
-            if (vars.longDelta > UD50_ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta.intoUD60x18());
+            if (vars.longDelta > UD50_ZERO)
+                _mint(address(this), PoolStorage.LONG, vars.offset + vars.longDelta.intoUD60x18());
             if (vars.shortDelta > UD50_ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta.intoUD60x18());
         }
 
@@ -2135,6 +2142,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Revert if `cost` exceeds `payout`
     function _revertIfCostExceedsPayout(UD60x18 cost, UD60x18 payout) internal pure {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
+    }
+
+    function _revertIfDifferenceOfSizeAndContractDeltaTooLarge(UD60x18 offset, UD60x18 size) internal pure {
+        if ((offset / size) > ud(0.0001 ether)) revert Pool__DifferenceOfSizeAndContractDeltaTooLarge(offset, size);
     }
 
     /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
