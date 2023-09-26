@@ -5,7 +5,6 @@ pragma solidity =0.8.19;
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
-import {IVault} from "./IVault.sol";
 import {IVaultRegistry} from "./IVaultRegistry.sol";
 import {VaultRegistryStorage} from "./VaultRegistryStorage.sol";
 
