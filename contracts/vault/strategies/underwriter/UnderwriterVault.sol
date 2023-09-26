@@ -842,7 +842,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
 
-            emit Settle(pool, positionSize, exerciseValue, settlementPrice, ZERO);
+            emit Settle(pool, positionSize, ZERO);
         }
     }
 

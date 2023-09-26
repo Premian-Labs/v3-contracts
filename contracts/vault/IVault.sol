@@ -44,14 +44,6 @@ interface IVault is ISolidStateERC4626 {
         UD60x18 vaultFee
     );
 
-    event Exercise(
-        address indexed pool,
-        UD60x18 contractSize,
-        UD60x18 exerciseValue,
-        UD60x18 settlementPrice,
-        UD60x18 fee
-    );
-
     event Settle(address indexed pool, UD60x18 contractSize, UD60x18 fee);
 
     event ManagementFeePaid(address indexed recipient, uint256 managementFee);
