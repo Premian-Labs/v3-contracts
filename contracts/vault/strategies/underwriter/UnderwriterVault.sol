@@ -946,11 +946,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (l.totalAssets > ZERO) {
             UD60x18 managementFeeInShares = _computeManagementFee(l, timestamp);
             _mint(FEE_RECEIVER, managementFeeInShares.unwrap());
-            l.lastManagementFeeTimestamp = timestamp;
             emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap());
-        } else {
-            l.lastManagementFeeTimestamp = timestamp;
         }
+
+        l.lastManagementFeeTimestamp = timestamp;
     }
 
     /// @notice Transfers fees to the FEE_RECEIVER.
