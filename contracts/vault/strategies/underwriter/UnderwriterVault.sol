@@ -832,33 +832,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         emit UpdateQuotes();
     }
 
-    /// @notice Calculates the exercise value of a position
-    function _calculateExerciseValue(
-        UD60x18 settlementPrice,
-        UD60x18 strike,
-        bool isCall,
-        UD60x18 size
-    ) internal pure returns (UD60x18) {
-        if (size == ZERO) return ZERO;
-
-        UD60x18 intrinsicValue;
-        if (isCall && settlementPrice > strike) {
-            intrinsicValue = settlementPrice - strike;
-        } else if (!isCall && settlementPrice < strike) {
-            intrinsicValue = strike - settlementPrice;
-        } else {
-            return ZERO;
-        }
-
-        UD60x18 exerciseValue = size * intrinsicValue;
-
-        if (isCall) {
-            exerciseValue = exerciseValue / settlementPrice;
-        }
-
-        return exerciseValue;
-    }
-
     /// @notice Settles all options that are on a single maturity
     /// @param maturity The maturity that options will be settled for
     function _settleMaturity(UnderwriterVaultStorage.Layout storage l, uint256 maturity) internal {
@@ -870,9 +843,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
-
-            UD60x18 settlementPrice = IPool(pool).getSettlementPrice();
-            UD60x18 exerciseValue = _calculateExerciseValue(settlementPrice, strike, l.isCall, positionSize);
 
             emit Settle(pool, positionSize, exerciseValue, settlementPrice, ZERO);
         }
