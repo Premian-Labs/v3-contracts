@@ -404,7 +404,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
                 isCallTest ? 0.081788809122193005e18 : 243101814000000000000
             )
         );
-
         vault.trade(poolKey, tradeSize, true, totalPremium / 2, address(0));
     }
 
