@@ -311,23 +311,6 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     }
 
     /// @inheritdoc IVaultRegistry
-    function getSettings(bytes32 vaultType) external view returns (bytes memory) {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        return l.settings[vaultType];
-    }
-
-    /// @inheritdoc IVaultRegistry
-    function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external onlyOwner {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        l.settings[vaultType] = updatedSettings;
-
-        // Loop through the vaults == vaultType
-        for (uint256 i = 0; i < l.vaultsByType[vaultType].length(); i++) {
-            IVault(l.vaultsByType[vaultType].at(i)).updateSettings(updatedSettings);
-        }
-    }
-
-    /// @inheritdoc IVaultRegistry
     function getImplementation(bytes32 vaultType) external view returns (address) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.implementations[vaultType];

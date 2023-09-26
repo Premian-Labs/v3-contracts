@@ -15,6 +15,7 @@ interface IVault is ISolidStateERC4626 {
     error Vault__InvalidSettingsUpdate();
     error Vault__InvariantViolated();
     error Vault__MaximumAmountExceeded(UD60x18 maximum, UD60x18 amount);
+    error Vault__NotAuthorized();
     error Vault__OptionExpired(uint256 timestamp, uint256 maturity);
     error Vault__OptionPoolNotListed();
     error Vault__OptionTypeMismatchWithVault();
@@ -88,9 +89,14 @@ interface IVault is ISolidStateERC4626 {
 
     event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
 
+    event UpdateSettings(bytes settings);
+
     /// @notice Updates the vault settings
     /// @param settings Encoding of the new settings
     function updateSettings(bytes memory settings) external;
+
+    /// @notice Return vault abi encoded vault settings
+    function getSettings() external view returns (bytes memory);
 
     /// @notice Returns the trade quote premium
     /// @param poolKey The option pool key

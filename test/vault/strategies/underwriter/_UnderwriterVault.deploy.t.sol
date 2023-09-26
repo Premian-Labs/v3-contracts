@@ -81,8 +81,6 @@ contract UnderwriterVaultDeployTest is DeployTest {
         settings[8] = 0.05e18;
         settings[9] = 0.02e18;
 
-        vaultRegistry.updateSettings(vaultType, abi.encode(settings));
-
         // Deploy and set vault implementation
         address vaultImpl = address(
             new UnderwriterVaultMock(
@@ -107,7 +105,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 address(oracleAdapter),
                 "WETH Call Vault",
                 "WETH Call Vault",
-                true
+                true,
+                abi.encode(settings)
             )
         );
 
@@ -129,7 +128,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 address(oracleAdapter),
                 "WETH Put Vault",
                 "WETH Put Vault",
-                false
+                false,
+                abi.encode(settings)
             )
         );
 

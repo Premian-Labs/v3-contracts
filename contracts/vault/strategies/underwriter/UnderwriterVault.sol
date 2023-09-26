@@ -9,6 +9,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
@@ -43,6 +44,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     address internal immutable VX_PREMIA;
     address internal immutable POOL_DIAMOND;
 
+    modifier onlyRegistryOwner() {
+        if (msg.sender != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
+        _;
+    }
+
     constructor(
         address vaultRegistry,
         address feeReceiver,
@@ -73,11 +79,31 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc IVault
-    function updateSettings(bytes memory settings) external {
-        if (msg.sender != VAULT_REGISTRY) revert Vault__SettingsNotFromRegistry();
-
+    function updateSettings(bytes memory settings) external onlyRegistryOwner {
         // Decode data and update storage variable
         UnderwriterVaultStorage.layout().updateSettings(settings);
+
+        emit UpdateSettings(settings);
+    }
+
+    /// @inheritdoc IVault
+    function getSettings() external view returns (bytes memory) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        UD60x18[] memory settings = new UD60x18[](10);
+
+        settings[0] = l.alphaCLevel;
+        settings[1] = l.hourlyDecayDiscount;
+        settings[2] = l.minCLevel;
+        settings[3] = l.maxCLevel;
+        settings[4] = l.minDTE;
+        settings[5] = l.maxDTE;
+        settings[6] = l.minDelta;
+        settings[7] = l.maxDelta;
+        settings[8] = l.performanceFeeRate;
+        settings[9] = l.managementFeeRate;
+
+        return abi.encode(settings);
     }
 
     /// @notice Gets the timestamp of the current block.

@@ -13,7 +13,7 @@ library VaultRegistryStorage {
 
     struct Layout {
         EnumerableSet.AddressSet vaultAddresses;
-        mapping(bytes32 vaultType => bytes) settings;
+        mapping(bytes32 vaultType => bytes) __deprecated_settings;
         mapping(bytes32 vaultType => address) implementations;
         mapping(address vault => IVaultRegistry.Vault) vaults;
         mapping(address vault => IVaultRegistry.TokenPair[] supported) supportedTokenPairs;
