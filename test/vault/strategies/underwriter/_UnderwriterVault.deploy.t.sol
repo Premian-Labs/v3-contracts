@@ -31,6 +31,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
     address longCall;
     address shortCall;
 
+    uint256[] settings;
+
     VolatilityOracleMock volOracle;
 
     UnderwriterVaultMock vault;
@@ -68,7 +70,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         vaultType = keccak256("UnderwriterVault");
 
         // Update settings
-        uint256[] memory settings = new uint256[](10);
+        settings = new uint256[](10);
 
         settings[0] = 3e18;
         settings[1] = 0.005e18;

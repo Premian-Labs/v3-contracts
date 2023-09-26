@@ -533,44 +533,20 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     }
 
     function test_getSettings_ReturnExpectedValue() public {
-        uint256[] memory settings = new uint256[](10);
-
-        settings[0] = 3e18;
-        settings[1] = 0.005e18;
-        settings[2] = 1.05e18;
-        settings[3] = 1.2e18;
-        settings[4] = 3e18;
-        settings[5] = 30e18;
-        settings[6] = 0.1e18;
-        settings[7] = 0.7e18;
-        settings[8] = 0.05e18;
-        settings[9] = 0.02e18;
-
         assertEq(vault.getSettings(), abi.encode(settings));
+
+        uint256[] memory newSettings = new uint256[](10);
 
         for (uint256 i = 0; i < settings.length; i++) {
-            settings[i] = settings[i] * 2;
+            newSettings[i] = settings[i] * 2;
         }
 
-        vault.updateSettings(abi.encode(settings));
+        vault.updateSettings(abi.encode(newSettings));
 
-        assertEq(vault.getSettings(), abi.encode(settings));
+        assertEq(vault.getSettings(), abi.encode(newSettings));
     }
 
     function test_getSettings_RevertIf_NotOwner() public {
-        uint256[] memory settings = new uint256[](10);
-
-        settings[0] = 3e18;
-        settings[1] = 0.005e18;
-        settings[2] = 1.05e18;
-        settings[3] = 1.2e18;
-        settings[4] = 3e18;
-        settings[5] = 30e18;
-        settings[6] = 0.1e18;
-        settings[7] = 0.7e18;
-        settings[8] = 0.05e18;
-        settings[9] = 0.02e18;
-
         vm.prank(users.trader);
 
         vm.expectRevert(IVault.Vault__NotAuthorized.selector);
