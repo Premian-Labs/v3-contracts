@@ -23,7 +23,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
     UD60x18 strike0 = ud(100e18);
 
     event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
-    event ManagementFeePaid(address indexed feeReceiver, uint256 feesInSharesMinted, UD60x18 pricePerShare);
+    event ManagementFeePaid(address indexed feeReceiver, uint256 feesInSharesMinted);
 
     function setupManagementFees() public {
         vault.setProtocolFees(ud(1e18));
@@ -50,7 +50,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         //
         vm.expectEmit();
         UD60x18 feeInShares = isCallTest ? ud(0.050505050505050505e18) : ud(0.050505050505050505e20);
-        emit ManagementFeePaid(FEE_RECEIVER, feeInShares.unwrap(), ud(0.99e18));
+        emit ManagementFeePaid(FEE_RECEIVER, feeInShares.unwrap());
         // test exposed function
         vault.chargeManagementFees();
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp1);

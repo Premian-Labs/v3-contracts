@@ -31,7 +31,7 @@ interface IVault is ISolidStateERC4626 {
     // Events
     event UpdateQuotes();
 
-    event PricePerShareUpdated(UD60x18 pricePerShare);
+    event PricePerShare(UD60x18 pricePerShare);
 
     event Trade(
         address indexed user,
@@ -41,8 +41,7 @@ interface IVault is ISolidStateERC4626 {
         UD60x18 premium,
         UD60x18 takerFee,
         UD60x18 makerRebate,
-        UD60x18 vaultFee,
-        UD60x18 pricePerShare
+        UD60x18 vaultFee
     );
 
     event Exercise(
@@ -50,8 +49,7 @@ interface IVault is ISolidStateERC4626 {
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 settlementPrice,
-        UD60x18 fee,
-        UD60x18 pricePerShare
+        UD60x18 fee
     );
 
     event Settle(
@@ -59,13 +57,12 @@ interface IVault is ISolidStateERC4626 {
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 settlementPrice,
-        UD60x18 fee,
-        UD60x18 pricePerShare
+        UD60x18 fee
     );
 
-    event ManagementFeePaid(address indexed recipient, uint256 managementFee, UD60x18 pricePerShare);
+    event ManagementFeePaid(address indexed recipient, uint256 managementFee);
 
-    event PerformanceFeePaid(address indexed recipient, uint256 performanceFee, UD60x18 pricePerShare);
+    event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
     event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
 

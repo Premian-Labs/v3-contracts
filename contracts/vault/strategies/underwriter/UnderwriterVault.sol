@@ -327,6 +327,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
+
+        emit PricePerShare(UD60x18.wrap(assetAmount) / UD60x18.wrap(shareAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -336,7 +338,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
-        return super._deposit(assetAmount, receiver);
+        shareAmount = super._deposit(assetAmount, receiver);
+
+        emit PricePerShare(UD60x18.wrap(assetAmount) / UD60x18.wrap(shareAmount));
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -394,6 +398,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     function _maxWithdrawUD60x18(
@@ -454,6 +460,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -469,7 +477,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.totalAssets = l.totalAssets + l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
-        emit PricePerShareUpdated(_getPricePerShareUD60x18());
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -484,7 +491,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.totalAssets = l.totalAssets - l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
-        emit PricePerShareUpdated(_getPricePerShareUD60x18());
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -520,7 +526,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         l.lastTradeTimestamp = _getBlockTimestamp();
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
-        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol), _getPricePerShareUD60x18());
+        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol));
     }
 
     /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
@@ -820,17 +826,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         }
 
         // Emit trade event
-        emit Trade(
-            msg.sender,
-            quote.pool,
-            size,
-            true,
-            totalPremium,
-            quote.mintingFee,
-            ZERO,
-            quote.spread,
-            _getPricePerShareUD60x18()
-        );
+        emit Trade(msg.sender, quote.pool, size, true, totalPremium, quote.mintingFee, ZERO, quote.spread);
 
         // Emit event for updated quotes
         emit UpdateQuotes();
@@ -842,7 +838,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 strike,
         bool isCall,
         UD60x18 size
-    ) internal returns (UD60x18) {
+    ) internal pure returns (UD60x18) {
         if (size == ZERO) return ZERO;
 
         UD60x18 intrinsicValue;
@@ -878,7 +874,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 settlementPrice = IPool(pool).getSettlementPrice();
             UD60x18 exerciseValue = _calculateExerciseValue(settlementPrice, strike, l.isCall, positionSize);
 
-            emit Settle(pool, positionSize, exerciseValue, settlementPrice, ZERO, _getPricePerShareUD60x18());
+            emit Settle(pool, positionSize, exerciseValue, settlementPrice, ZERO);
         }
     }
 
@@ -951,7 +947,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 managementFeeInShares = _computeManagementFee(l, timestamp);
             _mint(FEE_RECEIVER, managementFeeInShares.unwrap());
             l.lastManagementFeeTimestamp = timestamp;
-            emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap(), _getPricePerShareUD60x18());
+            emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap());
         } else {
             l.lastManagementFeeTimestamp = timestamp;
         }
