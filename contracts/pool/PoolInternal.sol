@@ -418,6 +418,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit Deposit(
             p.owner,
             tokenId,
+            args.size,
             delta.collateral.intoUD60x18(),
             delta.longs.intoUD60x18(),
             delta.shorts.intoUD60x18(),
@@ -577,6 +578,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit Withdrawal(
             p.owner,
             vars.tokenId,
+            size,
             delta.collateral.intoUD60x18(),
             delta.longs.intoUD60x18(),
             delta.shorts.intoUD60x18(),
@@ -1132,7 +1134,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == srcPOwnerBalance) _deletePosition(l, srcKeyHash);
 
-        emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
+        emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId, size);
     }
 
     /// @notice Calculates the exercise value of a position

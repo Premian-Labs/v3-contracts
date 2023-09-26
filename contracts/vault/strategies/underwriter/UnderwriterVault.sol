@@ -327,6 +327,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
+
+        emit PricePerShare(l.convertAssetToUD60x18(assetAmount) / ud(shareAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -336,7 +338,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
-        return super._deposit(assetAmount, receiver);
+        shareAmount = super._deposit(assetAmount, receiver);
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -394,6 +396,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     function _maxWithdrawUD60x18(
@@ -454,6 +458,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -835,6 +841,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
+
+            emit Settle(pool, positionSize, ZERO);
         }
     }
 
