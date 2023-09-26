@@ -328,7 +328,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
 
-        emit PricePerShare(UD60x18.wrap(assetAmount) / UD60x18.wrap(shareAmount));
+        emit PricePerShare(l.convertAssetToUD60x18(assetAmount) / ud(shareAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
