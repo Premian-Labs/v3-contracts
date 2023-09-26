@@ -339,8 +339,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
         shareAmount = super._deposit(assetAmount, receiver);
-
-        emit PricePerShare(UD60x18.wrap(assetAmount) / UD60x18.wrap(shareAmount));
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
