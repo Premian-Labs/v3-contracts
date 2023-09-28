@@ -44,11 +44,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     address internal immutable VX_PREMIA;
     address internal immutable POOL_DIAMOND;
 
-    modifier onlyRegistryOwner() {
-        if (msg.sender != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
-        _;
-    }
-
     constructor(
         address vaultRegistry,
         address feeReceiver,
@@ -79,7 +74,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc IVault
-    function updateSettings(bytes memory settings) external onlyRegistryOwner {
+    function updateSettings(bytes memory settings) external {
+        _revertIfNotRegistryOwner(msg.sender);
+
         // Decode data and update storage variable
         UnderwriterVaultStorage.layout().updateSettings(settings);
 
@@ -598,6 +595,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 decay = decayRate * duration;
 
         return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
+    }
+
+    function _revertIfNotRegistryOwner(address addr) internal view {
+        if (addr != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
