@@ -9,6 +9,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
@@ -74,10 +75,32 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @inheritdoc IVault
     function updateSettings(bytes memory settings) external {
-        if (msg.sender != VAULT_REGISTRY) revert Vault__SettingsNotFromRegistry();
+        _revertIfNotRegistryOwner(msg.sender);
 
         // Decode data and update storage variable
         UnderwriterVaultStorage.layout().updateSettings(settings);
+
+        emit UpdateSettings(settings);
+    }
+
+    /// @inheritdoc IVault
+    function getSettings() external view returns (bytes memory) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        UD60x18[] memory settings = new UD60x18[](10);
+
+        settings[0] = l.alphaCLevel;
+        settings[1] = l.hourlyDecayDiscount;
+        settings[2] = l.minCLevel;
+        settings[3] = l.maxCLevel;
+        settings[4] = l.minDTE;
+        settings[5] = l.maxDTE;
+        settings[6] = l.minDelta;
+        settings[7] = l.maxDelta;
+        settings[8] = l.performanceFeeRate;
+        settings[9] = l.managementFeeRate;
+
+        return abi.encode(settings);
     }
 
     /// @notice Gets the timestamp of the current block.
@@ -578,6 +601,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 decay = decayRate * duration;
 
         return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
+    }
+
+    function _revertIfNotRegistryOwner(address addr) internal view {
+        if (addr != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
     }
 
     /// @notice Ensures that an option is tradeable with the vault.

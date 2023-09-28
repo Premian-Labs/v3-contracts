@@ -13,11 +13,6 @@ import {ProxyUpgradeableOwnable} from "../../contracts/proxy/ProxyUpgradeableOwn
 contract VaultRegistryHarness is VaultRegistry {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
 
-    function hasSettings(bytes32 vaultType) external view returns (bool) {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        return l.settings[vaultType].length != 0;
-    }
-
     function hasImplementation(bytes32 vaultType) external view returns (bool) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.implementations[vaultType] != address(0);

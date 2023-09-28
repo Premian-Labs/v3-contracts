@@ -5,7 +5,6 @@ pragma solidity =0.8.19;
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
-import {IVault} from "./IVault.sol";
 import {IVaultRegistry} from "./IVaultRegistry.sol";
 import {VaultRegistryStorage} from "./VaultRegistryStorage.sol";
 
@@ -308,23 +307,6 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     function getVaultsByType(bytes32 vaultType) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return _getVaultsFromAddressSet(l.vaultsByType[vaultType]);
-    }
-
-    /// @inheritdoc IVaultRegistry
-    function getSettings(bytes32 vaultType) external view returns (bytes memory) {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        return l.settings[vaultType];
-    }
-
-    /// @inheritdoc IVaultRegistry
-    function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external onlyOwner {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        l.settings[vaultType] = updatedSettings;
-
-        // Loop through the vaults == vaultType
-        for (uint256 i = 0; i < l.vaultsByType[vaultType].length(); i++) {
-            IVault(l.vaultsByType[vaultType].at(i)).updateSettings(updatedSettings);
-        }
     }
 
     /// @inheritdoc IVaultRegistry

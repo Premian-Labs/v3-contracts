@@ -33,6 +33,10 @@ contract VaultMock is Vault {
 
     function updateSettings(bytes memory settings) external {}
 
+    function getSettings() external pure returns (bytes memory) {
+        return "";
+    }
+
     function getQuote(IPoolFactory.PoolKey calldata, UD60x18, bool, address) external pure returns (uint256 premium) {
         return 0;
     }

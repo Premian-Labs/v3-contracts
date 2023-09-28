@@ -31,6 +31,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
     address longCall;
     address shortCall;
 
+    uint256[] settings;
+
     VolatilityOracleMock volOracle;
 
     UnderwriterVaultMock vault;
@@ -68,7 +70,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         vaultType = keccak256("UnderwriterVault");
 
         // Update settings
-        uint256[] memory settings = new uint256[](10);
+        settings = new uint256[](10);
 
         settings[0] = 3e18;
         settings[1] = 0.005e18;
@@ -80,8 +82,6 @@ contract UnderwriterVaultDeployTest is DeployTest {
         settings[7] = 0.7e18;
         settings[8] = 0.05e18;
         settings[9] = 0.02e18;
-
-        vaultRegistry.updateSettings(vaultType, abi.encode(settings));
 
         // Deploy and set vault implementation
         address vaultImpl = address(
@@ -107,7 +107,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 address(oracleAdapter),
                 "WETH Call Vault",
                 "WETH Call Vault",
-                true
+                true,
+                abi.encode(settings)
             )
         );
 
@@ -129,7 +130,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 address(oracleAdapter),
                 "WETH Put Vault",
                 "WETH Put Vault",
-                false
+                false,
+                abi.encode(settings)
             )
         );
 

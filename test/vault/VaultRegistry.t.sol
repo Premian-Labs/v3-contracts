@@ -16,11 +16,6 @@ contract VaultRegistryHarness is VaultRegistry {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    function hasSettings(bytes32 vaultType) external view returns (bool) {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        return l.settings[vaultType].length != 0;
-    }
-
     function hasImplementation(bytes32 vaultType) external view returns (bool) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.implementations[vaultType] != address(0);
@@ -229,45 +224,6 @@ contract VaultRegistryTest is Test, Assertions {
         vm.prank(user);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         registry.removeVault(address(123));
-    }
-
-    function test_updateSettings() public {
-        bytes memory settings = abi.encode("1) What", "2) H", 9000000000, 0);
-
-        vm.prank(deployer);
-        registry.updateSettings(vaultType, settings);
-
-        assert(registry.hasSettings(vaultType));
-    }
-
-    function test_updateSettings_revertIf_NotOwner() public {
-        bytes memory settings = abi.encode("1) What", "2) H", 9000000000, 0);
-
-        vm.prank(user);
-        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        registry.updateSettings(vaultType, settings);
-
-        assert(!registry.hasSettings(vaultType));
-    }
-
-    function test_getSettings() public {
-        bytes memory settings = abi.encode("1) What", "2) H", 9000000000, 0);
-
-        vm.prank(deployer);
-        registry.updateSettings(vaultType, settings);
-
-        vm.prank(user);
-        settings = registry.getSettings(vaultType);
-
-        (string memory word1, string memory word2, uint256 num1, uint256 num2) = abi.decode(
-            settings,
-            (string, string, uint256, uint256)
-        );
-
-        assertEq(word1, "1) What");
-        assertEq(word2, "2) H");
-        assertEq(num1, 9000000000);
-        assertEq(num2, 0);
     }
 
     function test_setImplementation() public {

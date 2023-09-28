@@ -531,4 +531,25 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
         vault.trade(poolKey, ud(3e18), true, 1000e18, address(0));
     }
+
+    function test_getSettings_ReturnExpectedValue() public {
+        assertEq(vault.getSettings(), abi.encode(settings));
+
+        uint256[] memory newSettings = new uint256[](10);
+
+        for (uint256 i = 0; i < settings.length; i++) {
+            newSettings[i] = settings[i] * 2;
+        }
+
+        vault.updateSettings(abi.encode(newSettings));
+
+        assertEq(vault.getSettings(), abi.encode(newSettings));
+    }
+
+    function test_updateSettings_RevertIf_NotOwner() public {
+        vm.prank(users.trader);
+
+        vm.expectRevert(IVault.Vault__NotAuthorized.selector);
+        vault.updateSettings(abi.encode(settings));
+    }
 }
