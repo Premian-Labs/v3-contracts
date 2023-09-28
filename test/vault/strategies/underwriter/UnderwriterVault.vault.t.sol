@@ -546,7 +546,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         assertEq(vault.getSettings(), abi.encode(newSettings));
     }
 
-    function test_getSettings_RevertIf_NotOwner() public {
+    function test_updateSettings_RevertIf_NotOwner() public {
         vm.prank(users.trader);
 
         vm.expectRevert(IVault.Vault__NotAuthorized.selector);
