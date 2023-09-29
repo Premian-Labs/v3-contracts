@@ -171,19 +171,19 @@
       "owner": ""
     },
     "PoolBase": {
-      "address": "0x05a9958429e17b92D8312f498B11ADf02F44ffBC",
-      "block": 42886663,
-      "commitHash": "95bbe40586f23661b9efdac05480bf81c534915a",
+      "address": "0xd9901b511b120a048af5971481069cb75dDf0249",
+      "block": 44500710,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "DiamondFacet",
       "deploymentArgs": [],
-      "timestamp": 1695329906,
-      "txHash": "0xd86a26c2065a1bf860b48578a9efe08a96cf50dd8bd97e5bc71acdfeeb6ca55c",
+      "timestamp": 1695997213,
+      "txHash": "0x3568ffb413351766450a08c6ad0cf6b9d695611bc3a8edf8dbdd37325c127bc6",
       "owner": ""
     },
     "PoolCore": {
-      "address": "0xF3BC84a7F06Fc4F885dc29457bF49313375452f4",
-      "block": 42886776,
-      "commitHash": "95bbe40586f23661b9efdac05480bf81c534915a",
+      "address": "0x5cac92740879D9E1Cd83C000a6361dB4cDDa8362",
+      "block": 44500967,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -195,14 +195,14 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1695329973,
-      "txHash": "0x0e55a47b7ef007b7d4f17b91a3b99448e8a576678ee82ff3c23137d60b1fca9d",
+      "timestamp": 1695997315,
+      "txHash": "0x2f7201c1b06d291b90cb505c38a6e13bff65a2bf9161edb849216f57e37c0974",
       "owner": ""
     },
     "PoolDepositWithdraw": {
-      "address": "0x19A989763d35e82983acBc716a60293bB5Ebd536",
-      "block": 42886930,
-      "commitHash": "95bbe40586f23661b9efdac05480bf81c534915a",
+      "address": "0xBF0A9636A12C97f18Df2E62724C5705a84CE47bC",
+      "block": 44501229,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -214,14 +214,14 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1695330046,
-      "txHash": "0x2b5d365151960c7ed1c71f61c156d87237455c3cc1123c704166b97af1d1d2cd",
+      "timestamp": 1695997417,
+      "txHash": "0x7b90bfddc00fc6ca9fef5cce7fbfd190ee8dbe59ca2043a9fb721f7fa4ca2700",
       "owner": ""
     },
     "PoolTrade": {
-      "address": "0x07FB0a6ada889C10309E9332f90EBD91d0b52c16",
-      "block": 42887110,
-      "commitHash": "95bbe40586f23661b9efdac05480bf81c534915a",
+      "address": "0xBf614a696f54c64e6C9930F8aA0f8d0289Dc90c5",
+      "block": 44501499,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "DiamondFacet",
       "deploymentArgs": [
         "0x31eC5598e786dbA4E1Fb7263016c3ff58Cb3c6b6",
@@ -233,8 +233,8 @@
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8"
       ],
-      "timestamp": 1695330119,
-      "txHash": "0x713b12d07fc3ff536c4a3dbd7c984cd6b67f3543f7e11575dab7bdc81c8fd83b",
+      "timestamp": 1695997523,
+      "txHash": "0xe6f474bffa85f54ea70a6ec5e600a1fe84ea2fe5af4df554662a64d5adeef85e",
       "owner": ""
     },
     "OrderbookStream": {
@@ -258,13 +258,13 @@
       "owner": ""
     },
     "VaultRegistryImplementation": {
-      "address": "0xe27249e659473D984A7e3B341491Ba144b39bCD3",
-      "block": 40511206,
-      "commitHash": "98989dc09a9b4e4374093d080f70663016763f77",
+      "address": "0x02B2166f4E1aacefB09e099Ee7782d8a098F9cb0",
+      "block": 44501992,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "Implementation",
       "deploymentArgs": [],
-      "timestamp": 1694339755,
-      "txHash": "0x484aa2215bc7d30e8336cefd30b5fde60b6723de25a7502fcaafdaf1bd3dc174",
+      "timestamp": 1695997696,
+      "txHash": "0xc2f4e78be130800368be2d020edb454822d1925cf6d2d64125708d500d8efe2f",
       "owner": ""
     },
     "VaultRegistryProxy": {
@@ -298,9 +298,9 @@
       "owner": ""
     },
     "UnderwriterVaultImplementation": {
-      "address": "0xe4E0Ef8acce2FA0a7d7DA20598BD73080dF79dE8",
-      "block": 42884708,
-      "commitHash": "95bbe40586f23661b9efdac05480bf81c534915a",
+      "address": "0x9161C715F63A84e3A8EE0b2e11c8421A550dFE01",
+      "block": 44502462,
+      "commitHash": "42b37bdf629bcda7c9e77a30fa5c4d1521037258",
       "contractType": "Implementation",
       "deploymentArgs": [
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
@@ -312,8 +312,8 @@
         "0x558A90f1D04DFF85BfBEAA3c1300fb2E9CF25f60",
         "0xe7ff52Fc96ec9505d56698eaA8Bc5B1aF22EBF1c"
       ],
-      "timestamp": 1695328867,
-      "txHash": "0x29c9d731c1def0b87a1dbe7f5c1007d7b27218f92a4ba7809f522633173112fe",
+      "timestamp": 1695997871,
+      "txHash": "0xe043fb8ef45a84f11a5d6d2834fb012799bd8e7ed02a013e5318cef44b050ed2",
       "owner": ""
     },
     "VaultMiningImplementation": {
