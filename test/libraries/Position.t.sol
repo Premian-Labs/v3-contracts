@@ -4,36 +4,41 @@ pragma solidity ^0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
-
-import {Assertions} from "../Assertions.sol";
-
 import {Position} from "contracts/libraries/Position.sol";
 import {IPosition} from "contracts/libraries/IPosition.sol";
 import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
 
-contract PositionTest is Test, Assertions {
+import {Base_Test} from "../Base.t.sol";
+
+contract Position_Unit_Test is Base_Test {
     using Position for Position.KeyInternal;
     using PRBMathExtra for UD60x18;
 
+    // Test contracts
     PositionMock internal position;
-    Position.KeyInternal internal key;
-    address internal user;
 
-    function setUp() public {
-        position = new PositionMock();
-        user = address(123);
+    // Variables
+    Position.KeyInternal internal key;
+
+    function setUp() public virtual override {
+        super.setUp();
+
         key = Position.KeyInternal({
-            owner: user,
-            operator: user,
+            owner: users.lp,
+            operator: users.lp,
             lower: ud(0.25e18),
             upper: ud(0.75e18),
             orderType: Position.OrderType.CSUP,
             isCall: true,
             strike: ud(1000e18)
         });
+    }
+
+    function deploy() internal virtual override {
+        position = new PositionMock();
+        //user = address(123);
     }
 
     function test_keyHash_ReturnsKeyHash() public {

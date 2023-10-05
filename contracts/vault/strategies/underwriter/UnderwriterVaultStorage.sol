@@ -8,6 +8,7 @@ import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol"
 import {IVault} from "../../IVault.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
+import {ONE} from "contracts/libraries/Constants.sol";
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -107,8 +108,9 @@ library UnderwriterVaultStorage {
     function updateSettings(Layout storage l, bytes memory settings) internal {
         // Handle decoding of settings and updating storage
         if (settings.length == 0) revert IVault.Vault__SettingsUpdateIsEmpty();
-
         UD60x18[] memory arr = abi.decode(settings, (UD60x18[]));
+        // minCLevel cannot be less than one
+        if (arr[2] < ONE) revert IVault.Vault__InvalidSettingsUpdate();
 
         l.alphaCLevel = arr[0];
         l.hourlyDecayDiscount = arr[1];

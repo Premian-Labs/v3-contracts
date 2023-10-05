@@ -24,7 +24,8 @@ contract UnderwriterVaultProxy is Proxy {
         address oracleAdapter,
         string memory name,
         string memory symbol,
-        bool isCall
+        bool isCall,
+        bytes memory settings
     ) {
         VAULT_REGISTRY = vaultRegistry;
 
@@ -37,7 +38,6 @@ contract UnderwriterVaultProxy is Proxy {
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        bytes memory settings = IVaultRegistry(VAULT_REGISTRY).getSettings(VAULT_TYPE);
         l.updateSettings(settings);
 
         l.isCall = isCall;
