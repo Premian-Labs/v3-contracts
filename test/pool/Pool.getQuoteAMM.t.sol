@@ -100,6 +100,6 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         // fees3 = 2,046875 * 0,003 = 0,006140625
 
         assertEq(totalNetPremiumUpdated, isCallTest ? 0.943833203125 ether : 943.833203e6);
-        assertEq(totalTakerFeeUpdated, isCallTest ? 0.029766796875 ether : 29.766796e6);
+        assertEq(totalTakerFeeUpdated, isCallTest ? 0.029766796875 ether : 29.766797e6);
     }
 }

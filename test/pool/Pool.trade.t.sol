@@ -22,6 +22,8 @@ import {IPool} from "contracts/pool/IPool.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
+import {console} from "forge-std/console.sol";
+
 abstract contract PoolTradeTest is DeployTest {
     function test_trade_Buy500Options_WithApproval() public {
         posKey.orderType = Position.OrderType.CS;
@@ -295,5 +297,37 @@ abstract contract PoolTradeTest is DeployTest {
 
         vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
         pool.trade(ud(1), true, 0, address(0));
+    }
+
+    function test_sell_options_Fuzz(uint256 amount) public {
+        deposit(1000 ether);
+
+        // bonund trade size to be less than amount of collateral (liquidity) available in pool and greater than 0 to prevent it from reverting
+        vm.assume(amount < 1000 ether);
+        vm.assume(amount >= 1 ether);
+
+        UD60x18 tradeSize = ud(amount);
+        console.log(amount);
+        uint256 collateralScaled = roundUpToTokenDecimals(contractsToCollateral(tradeSize));
+
+        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
+        // if we log out the totalPremium here, we can see that is it 1 less than the value of IERC20(poolToken).balanceOf(users.trader), which is where the test is failing (see below)
+        // console.log(totalPremium);
+
+        address poolToken = getPoolToken();
+
+        vm.startPrank(users.trader);
+        // we give the trader the amount of collateral scaled tokens. So it's either the "collateralScaled" or the "totalPremium" calculation that is off by 1
+        deal(poolToken, users.trader, collateralScaled);
+        IERC20(poolToken).approve(address(router), collateralScaled);
+
+        pool.trade(tradeSize, false, totalPremium - totalPremium / 10, address(0));
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
+
+        // this is the assertion that fails
+        // total premium amount is off by 1 (1 less than the token balance of the trader)
+        assertEq(IERC20(poolToken).balanceOf(users.trader), totalPremium);
     }
 }

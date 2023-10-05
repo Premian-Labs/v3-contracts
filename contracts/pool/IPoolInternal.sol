@@ -145,6 +145,7 @@ interface IPoolInternal is IPosition, IPricing {
         ReferralVarsInternal referral;
         UD60x18 totalMintBurn;
         UD60x18 offset;
+        UD60x18 premiumWithFees;
     }
 
     struct DepositArgsInternal {

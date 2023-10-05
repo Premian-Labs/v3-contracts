@@ -17,6 +17,7 @@ import {UD50x28} from "../libraries/UD50x28.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+import {iZERO, ZERO} from "contracts/libraries/Constants.sol";
 
 library PoolStorage {
     using SafeERC20 for IERC20;
@@ -113,6 +114,54 @@ library PoolStorage {
     function fromPoolTokenDecimals(Layout storage l, int256 value) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
         return sd(OptionMath.scaleDecimals(value, decimals, 18));
+    }
+
+    /// @notice
+    function roundDown(Layout storage l, UD60x18 value) internal view returns (uint256) {
+        return l.toPoolTokenDecimals(value);
+    }
+
+    /// @notice
+    function roundDownUD60x18(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
+        return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
+    }
+
+    /// @notice
+    function roundDownSD59x18(Layout storage l, SD59x18 value) internal view returns (SD59x18) {
+        SD59x18 valueRoundedDown = l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
+        if (value > iZERO) {
+            return valueRoundedDown;
+        } else {
+            if (valueRoundedDown != value) {
+                return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value) - int256(1));
+            } else {
+                return value;
+            }
+        }
+    }
+
+    /// @notice
+    function roundUp(Layout storage l, UD60x18 value) internal view returns (uint256) {
+        UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
+        uint256 increment;
+        if (valueRoundedDown != value) increment = uint256(1);
+        return l.toPoolTokenDecimals(value) + increment;
+    }
+
+    /*function roundUpSD59x18(Layout storage l, SD59x18 value) internal view returns (SD59x18) {
+        UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
+        if (valueRoundedDown != value) {
+            return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(valueRoundedDown) + uint256(1));
+        }
+        return valueRoundedDown;
+    }*/
+
+    function roundUpUD60x18(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
+        UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
+        if (valueRoundedDown != value) {
+            return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(valueRoundedDown) + uint256(1));
+        }
+        return valueRoundedDown;
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL
