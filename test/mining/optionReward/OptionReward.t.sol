@@ -379,13 +379,7 @@ contract OptionRewardTest is Assertions, Test {
         oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod - 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionReward.OptionReward__ExercisePeriodNotEnded.selector,
-                maturity,
-                maturity + exercisePeriod
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__OptionNotExpired.selector, maturity));
         optionReward.settle(strike, maturity);
     }
 

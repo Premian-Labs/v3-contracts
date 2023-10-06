@@ -97,10 +97,6 @@ abstract contract OptionPSTest is Assertions, Test {
         assertEq(_isCall, isCall);
     }
 
-    function test_getExerciseDuration_ReturnExpectedValue() public {
-        assertEq(option.getExerciseDuration(), 7 days);
-    }
-
     function test_underwrite_Success() public {
         vm.startPrank(underwriter);
 
@@ -184,13 +180,7 @@ abstract contract OptionPSTest is Assertions, Test {
     function test_annihilate_RevertIf_ExercisePeriodEnded() public {
         vm.warp(maturity + exercisePeriod + 1);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionPS.OptionPS__ExercisePeriodEnded.selector,
-                maturity,
-                maturity + exercisePeriod
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionPS.OptionPS__OptionExpired.selector, maturity));
         option.annihilate(strike, maturity, ud(1e18));
     }
 
@@ -244,19 +234,13 @@ abstract contract OptionPSTest is Assertions, Test {
         option.exercise(strike, maturity, ud(1e18));
     }
 
-    function test_exercise_RevertIf_ExercisePeriodEnded() public {
+    function test_exercise_RevertIf_OptionExpired() public {
         vm.warp(maturity + exercisePeriod + 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionPS.OptionPS__ExercisePeriodEnded.selector,
-                maturity,
-                maturity + exercisePeriod
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IOptionPS.OptionPS__OptionExpired.selector, maturity));
         option.exercise(strike, maturity, ud(1e18));
     }
 
-    function test_settle_Success() public {
+    function test_settleShort_Success() public {
         vm.prank(underwriter);
         option.underwrite(strike, maturity, longReceiver, ud(1e18));
 
@@ -272,10 +256,10 @@ abstract contract OptionPSTest is Assertions, Test {
         vm.warp(maturity + exercisePeriod + 1);
 
         vm.prank(underwriter);
-        option.settle(strike, maturity, ud(1e18));
+        option.settleShort(strike, maturity, ud(1e18));
 
         vm.prank(otherUnderwriter);
-        option.settle(strike, maturity, ud(3e18));
+        option.settleShort(strike, maturity, ud(3e18));
 
         assertEq(option.balanceOf(longReceiver, _longTokenId()), 1e18);
         assertEq(option.totalSupply(_longTokenId()), 1e18);
@@ -305,21 +289,17 @@ abstract contract OptionPSTest is Assertions, Test {
         assertEq(quote.balanceOf(feeReceiver), isCall ? fee : 0);
     }
 
-    function test_settle_RevertIf_OptionNotExpired() public {
+    function test_settleShort_RevertIf_OptionNotExpired() public {
         vm.expectRevert(abi.encodeWithSelector(IOptionPS.OptionPS__OptionNotExpired.selector, maturity));
-        option.settle(strike, maturity, ud(1e18));
+        option.settleShort(strike, maturity, ud(1e18));
     }
 
-    function test_settle_RevertIf_ExercisePeriodNotEnded() public {
+    function test_settleShort_RevertIf_ExercisePeriodNotEnded() public {
         vm.warp(maturity + 1);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionPS.OptionPS__ExercisePeriodNotEnded.selector,
-                maturity,
-                maturity + exercisePeriod
-            )
+            abi.encodeWithSelector(IOptionPS.OptionPS__OptionNotExpired.selector, maturity, maturity + exercisePeriod)
         );
-        option.settle(strike, maturity, ud(1e18));
+        option.settleShort(strike, maturity, ud(1e18));
     }
 
     function test_getTokenIds_ReturnExpectedValue() public {

@@ -13,10 +13,7 @@ interface IOptionReward {
     error OptionReward__NoRedeemableLongs();
     error OptionReward__NotCallOption(address option);
     error OptionReward__UnderwriterNotAuthorized(address sender);
-    error OptionReward__ExercisePeriodNotEnded(uint256 maturity, uint256 exercisePeriodEnd);
     error OptionReward__OptionNotExpired(uint256 maturity);
-    error OptionReward__OptionInTheMoney(UD60x18 settlementPrice, UD60x18 strike);
-    error OptionReward__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
     error OptionReward__PriceIsZero();
     error OptionReward__ZeroRewardPerContract(UD60x18 strike, uint256 maturity);
 

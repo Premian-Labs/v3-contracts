@@ -31,9 +31,6 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     address internal immutable FEE_RECEIVER;
     UD60x18 internal constant FEE = UD60x18.wrap(0.003e18); // 0.3%
 
-    // @notice amount of time the exercise period lasts (in seconds)
-    uint256 internal constant EXERCISE_DURATION = 7 days;
-
     constructor(address feeReceiver) {
         FEE_RECEIVER = feeReceiver;
     }
@@ -42,11 +39,6 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     function getSettings() external view returns (address base, address quote, bool isCall) {
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         return (l.base, l.quote, l.isCall);
-    }
-
-    /// @inheritdoc IOptionPS
-    function getExerciseDuration() external pure returns (uint256) {
-        return EXERCISE_DURATION;
     }
 
     /// @inheritdoc IOptionPS
@@ -86,7 +78,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
     /// @inheritdoc IOptionPS
     function annihilate(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
-        _revertIfExercisePeriodEnded(maturity);
+        _revertIfOptionExpired(maturity);
 
         uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.Short.formatTokenId(maturity, strike);
@@ -107,48 +99,114 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     }
 
     /// @inheritdoc IOptionPS
-    function exercise(
+    function getExerciseCost(
+        UD60x18 strike,
+        UD60x18 contractSize
+    ) public view returns (uint256 totalExerciseCost, uint256 fee) {
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+
+        address exerciseToken = l.getExerciseToken();
+
+        UD60x18 _exerciseCost = l.isCall ? contractSize * strike : contractSize;
+
+        totalExerciseCost = l.toTokenDecimals(_exerciseCost, exerciseToken);
+        fee = l.toTokenDecimals(_exerciseCost * FEE, exerciseToken);
+    }
+
+    /// @inheritdoc IOptionPS
+    function getExerciseValue(UD60x18 strike, UD60x18 contractSize) public view returns (uint256) {
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+        return l.toTokenDecimals(l.isCall ? contractSize : contractSize * strike, l.getCollateral());
+    }
+
+    /// @inheritdoc IOptionPS
+    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+        _revertIfOptionExpired(maturity);
+
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+
+        (uint256 totalExerciseCost, uint256 fee) = getExerciseCost(strike, contractSize);
+
+        address exerciseToken = l.getExerciseToken();
+        IERC20(exerciseToken).safeTransferFrom(msg.sender, address(this), totalExerciseCost);
+        IERC20(exerciseToken).safeTransfer(FEE_RECEIVER, fee);
+
+        l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
+
+        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
+        uint256 longExercisedTokenId = TokenType.LongExercised.formatTokenId(maturity, strike);
+
+        _burnUD60x18(msg.sender, longTokenId, contractSize);
+        _mintUD60x18(msg.sender, longExercisedTokenId, contractSize);
+
+        emit Exercise(
+            msg.sender,
+            strike,
+            maturity,
+            contractSize,
+            l.fromTokenDecimals(totalExerciseCost, exerciseToken),
+            l.fromTokenDecimals(fee, exerciseToken)
+        );
+    }
+
+    /// @inheritdoc IOptionPS
+    function cancelExercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+        _revertIfOptionExpired(maturity);
+
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+
+        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
+        uint256 longExercisedTokenId = TokenType.LongExercised.formatTokenId(maturity, strike);
+
+        l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] - contractSize;
+
+        _burnUD60x18(msg.sender, longExercisedTokenId, contractSize);
+        _mintUD60x18(msg.sender, longTokenId, contractSize);
+
+        address exerciseToken = l.getExerciseToken();
+
+        (uint256 totalExerciseCost, uint256 fee) = getExerciseCost(strike, contractSize);
+        IERC20(exerciseToken).safeTransfer(FEE_RECEIVER, totalExerciseCost - fee);
+
+        emit CancelExercise(
+            msg.sender,
+            strike,
+            maturity,
+            contractSize,
+            l.fromTokenDecimals(totalExerciseCost - fee, exerciseToken)
+        );
+    }
+
+    /// @inheritdoc IOptionPS
+    function settleLong(
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
     ) external nonReentrant returns (uint256 exerciseValue) {
         _revertIfOptionNotExpired(maturity);
-        _revertIfExercisePeriodEnded(maturity);
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
 
-        UD60x18 _exerciseValue = l.isCall ? contractSize : contractSize * strike;
-        UD60x18 exerciseCost = l.isCall ? contractSize * strike : contractSize;
+        exerciseValue = getExerciseValue(strike, contractSize);
 
         address collateral = l.getCollateral();
-        address exerciseToken = l.getExerciseToken();
-
-        UD60x18 fee = exerciseCost * FEE;
-        IERC20(exerciseToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            l.toTokenDecimals(exerciseCost + fee, exerciseToken)
-        );
-        IERC20(exerciseToken).safeTransfer(FEE_RECEIVER, l.toTokenDecimals(fee, exerciseToken));
 
         l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
-        exerciseValue = l.toTokenDecimals(_exerciseValue, collateral);
         IERC20(collateral).safeTransfer(msg.sender, exerciseValue);
 
-        emit Exercise(msg.sender, strike, maturity, contractSize, _exerciseValue, exerciseCost, fee);
+        emit SettleLong(msg.sender, strike, maturity, contractSize, l.fromTokenDecimals(exerciseValue, collateral));
     }
 
     /// @inheritdoc IOptionPS
-    function settle(
+    function settleShort(
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
     ) external nonReentrant returns (uint256 collateralAmount, uint256 exerciseTokenAmount) {
         _revertIfOptionNotExpired(maturity);
-        _revertIfExercisePeriodNotEnded(maturity);
 
         {
             uint256 shortTokenId = TokenType.Short.formatTokenId(maturity, strike);
@@ -177,7 +235,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
             IERC20(exerciseToken).safeTransfer(msg.sender, exerciseTokenAmount);
         }
 
-        emit Settle(msg.sender, contractSize, strike, maturity, _collateralAmount, _exerciseTokenAmount);
+        emit SettleShort(msg.sender, contractSize, strike, maturity, _collateralAmount, _exerciseTokenAmount);
     }
 
     /// @inheritdoc IOptionPS
@@ -203,18 +261,6 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     /// @notice Revert if option has not expired
     function _revertIfOptionNotExpired(uint64 maturity) internal view {
         if (block.timestamp < maturity) revert OptionPS__OptionNotExpired(maturity);
-    }
-
-    /// @notice Revert if exercise period has not ended
-    function _revertIfExercisePeriodNotEnded(uint64 maturity) internal view {
-        uint256 target = maturity + EXERCISE_DURATION;
-        if (block.timestamp < target) revert OptionPS__ExercisePeriodNotEnded(maturity, target);
-    }
-
-    /// @notice Revert if exercise period has ended
-    function _revertIfExercisePeriodEnded(uint64 maturity) internal view {
-        uint256 target = maturity + EXERCISE_DURATION;
-        if (block.timestamp > target) revert OptionPS__ExercisePeriodEnded(maturity, target);
     }
 
     /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
