@@ -166,7 +166,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         address exerciseToken = l.getExerciseToken();
 
         (uint256 totalExerciseCost, uint256 fee) = getExerciseCost(strike, contractSize);
-        IERC20(exerciseToken).safeTransfer(FEE_RECEIVER, totalExerciseCost - fee);
+        IERC20(exerciseToken).safeTransfer(msg.sender, totalExerciseCost - fee);
 
         emit CancelExercise(
             msg.sender,

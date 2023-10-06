@@ -266,6 +266,40 @@ abstract contract OptionPSTest is Assertions, Test {
         option.exercise(strike, maturity, ud(1e18));
     }
 
+    function test_cancelExercise_Success() public {
+        vm.prank(underwriter);
+        option.underwrite(strike, maturity, longReceiver, ud(1e18));
+
+        assertEq(quote.balanceOf(feeReceiver), 0);
+
+        uint256 fee = isCall ? (3e6 * 0.003e18) / 1e18 : (0.3e18 * 0.003e18) / 1e18;
+
+        vm.startPrank(longReceiver);
+        option.exercise(strike, maturity, ud(0.3e18));
+
+        option.cancelExercise(strike, maturity, ud(0.2e18));
+
+        assertEq(option.balanceOf(underwriter, _longTokenId()), 0, "a");
+        assertEq(option.balanceOf(underwriter, _longExercisedTokenId()), 0, "b");
+        assertEq(option.balanceOf(underwriter, _shortTokenId()), 1e18, "c");
+
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), 0.9e18, "d");
+        assertEq(option.balanceOf(longReceiver, _longExercisedTokenId()), 0.1e18, "e");
+        assertEq(option.balanceOf(longReceiver, _shortTokenId()), 0, "f");
+
+        assertEq(quote.balanceOf(underwriter), isCall ? initialQuoteBalance : initialQuoteBalance - 10e6, "g");
+        assertEq(quote.balanceOf(longReceiver), isCall ? initialQuoteBalance - 1e6 - fee : initialQuoteBalance, "h");
+
+        assertEq(quote.balanceOf(feeReceiver), isCall ? fee : 0, "i");
+        assertEq(base.balanceOf(feeReceiver), isCall ? 0 : fee, "j");
+    }
+
+    function test_cancelExercise_RevertIf_OptionExpired() public {
+        vm.warp(maturity + 1);
+        vm.expectRevert(abi.encodeWithSelector(IOptionPS.OptionPS__OptionExpired.selector, maturity));
+        option.cancelExercise(strike, maturity, ud(1e18));
+    }
+
     function test_settleShort_Success() public {
         vm.prank(underwriter);
         option.underwrite(strike, maturity, longReceiver, ud(1e18));
