@@ -109,8 +109,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
         UD60x18 _exerciseCost = l.isCall ? contractSize * strike : contractSize;
 
-        totalExerciseCost = l.toTokenDecimals(_exerciseCost, exerciseToken);
         fee = l.toTokenDecimals(_exerciseCost * FEE, exerciseToken);
+        totalExerciseCost = l.toTokenDecimals(_exerciseCost, exerciseToken) + fee;
     }
 
     /// @inheritdoc IOptionPS
@@ -186,15 +186,13 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _revertIfOptionNotExpired(maturity);
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
-        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
+        uint256 longExercisedTokenId = TokenType.LongExercised.formatTokenId(maturity, strike);
 
         exerciseValue = getExerciseValue(strike, contractSize);
 
         address collateral = l.getCollateral();
 
-        l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
-
-        _burnUD60x18(msg.sender, longTokenId, contractSize);
+        _burnUD60x18(msg.sender, longExercisedTokenId, contractSize);
         IERC20(collateral).safeTransfer(msg.sender, exerciseValue);
 
         emit SettleLong(msg.sender, strike, maturity, contractSize, l.fromTokenDecimals(exerciseValue, collateral));
@@ -231,6 +229,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
             collateralAmount = l.toTokenDecimals(_collateralAmount, collateral);
             exerciseTokenAmount = l.toTokenDecimals(_exerciseTokenAmount, exerciseToken);
+
             IERC20(collateral).safeTransfer(msg.sender, collateralAmount);
             IERC20(exerciseToken).safeTransfer(msg.sender, exerciseTokenAmount);
         }
