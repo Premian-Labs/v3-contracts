@@ -17,7 +17,7 @@ import {UD50x28} from "../libraries/UD50x28.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
-import {iZERO, ZERO} from "contracts/libraries/Constants.sol";
+import {iZERO} from "contracts/libraries/Constants.sol";
 
 library PoolStorage {
     using SafeERC20 for IERC20;
@@ -147,14 +147,6 @@ library PoolStorage {
         if (valueRoundedDown != value) increment = uint256(1);
         return l.toPoolTokenDecimals(value) + increment;
     }
-
-    /*function roundUpSD59x18(Layout storage l, SD59x18 value) internal view returns (SD59x18) {
-        UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
-        if (valueRoundedDown != value) {
-            return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(valueRoundedDown) + uint256(1));
-        }
-        return valueRoundedDown;
-    }*/
 
     function roundUpUD60x18(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
         UD60x18 valueRoundedDown = l.roundDownUD60x18(value);

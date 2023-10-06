@@ -22,8 +22,6 @@ import {IPool} from "contracts/pool/IPool.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
-import {console} from "forge-std/console.sol";
-
 abstract contract PoolTradeTest is DeployTest {
     function test_trade_Buy500Options_WithApproval() public {
         posKey.orderType = Position.OrderType.CS;
@@ -307,12 +305,10 @@ abstract contract PoolTradeTest is DeployTest {
         vm.assume(amount >= 1 ether);
 
         UD60x18 tradeSize = ud(amount);
-        console.log(amount);
         uint256 collateralScaled = roundUpToTokenDecimals(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
         // if we log out the totalPremium here, we can see that is it 1 less than the value of IERC20(poolToken).balanceOf(users.trader), which is where the test is failing (see below)
-        // console.log(totalPremium);
 
         address poolToken = getPoolToken();
 
