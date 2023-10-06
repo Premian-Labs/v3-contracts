@@ -51,6 +51,12 @@ interface IOptionReward {
         uint256 fee;
     }
 
+    /// @notice Returns the option strike price and maturity timestamp. Note that the on-chain price is constantly updating,
+    ///         therefore, the strike price returned may not be the same as the strike price at the time of underwriting.
+    /// @return strike the option strike price (18 decimals)
+    /// @return maturity the option maturity timestamp
+    function previewOptionParams() external view returns (UD60x18 strike, uint64 maturity);
+
     /// @notice Underwrite an option
     /// @param longReceiver the address that will receive the long tokens
     /// @param contractSize number of long tokens to mint (18 decimals)

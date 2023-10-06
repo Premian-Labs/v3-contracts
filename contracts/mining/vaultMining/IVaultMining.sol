@@ -71,6 +71,11 @@ interface IVaultMining {
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
 
+    /// @notice `OptionReward.previewOptionParams` wrapper, returns the params for the option reward token
+    /// @return strike the option strike price (18 decimals)
+    /// @return maturity the option maturity timestamp
+    function previewOptionParams() external view returns (UD60x18 strike, uint64 maturity);
+
     /// @notice Allocate pending rewards for a list of vaults, and claim given amount of rewards.
     /// @param vaults The vaults for which to trigger allocation of pending rewards
     /// @param amount The amount of rewards to claim.
