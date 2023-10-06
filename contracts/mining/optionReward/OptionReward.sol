@@ -106,6 +106,11 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     }
 
     /// @inheritdoc IOptionReward
+    function getRewardPerContract(UD60x18 strike, uint64 maturity) external view returns (UD60x18) {
+        return OptionRewardStorage.layout().rewardPerContract[strike][maturity];
+    }
+
+    /// @inheritdoc IOptionReward
     function settle(UD60x18 strike, uint64 maturity) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         _revertIfNotExpired(maturity);

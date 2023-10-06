@@ -60,6 +60,9 @@ interface IOptionReward {
     /// @return baseAmount the amount of base tokens earned as reward
     function claimRewards(UD60x18 strike, uint64 maturity) external returns (uint256 baseAmount);
 
+    /// @notice Returns the amount of `base` tokens which can be claimed per long not exercised after the lockup period.
+    function getRewardPerContract(UD60x18 strike, uint64 maturity) external view returns (UD60x18);
+
     /// @notice Settle options after the exercise period has ended, reserve base tokens necessary for `claimRewards`,
     /// and transfer excess base tokens + quote tokens to `paymentSplitter`
     /// @param strike the option strike price (18 decimals)
