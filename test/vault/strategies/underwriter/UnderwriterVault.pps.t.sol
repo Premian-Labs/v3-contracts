@@ -57,86 +57,6 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         oracleAdapter.setPriceAt(t3, ud(1000e18));
     }
 
-    function test_getTotalLiabilitiesExpired_ReturnExpectedValue() public {
-        setupOracleAdapterMock();
-
-        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
-
-        infos[0].maturity = t0;
-        infos[0].strikes = new UD60x18[](4);
-        infos[0].sizes = new UD60x18[](4);
-        infos[0].strikes[0] = ud(800e18);
-        infos[0].strikes[1] = ud(900e18);
-        infos[0].strikes[2] = ud(1500e18);
-        infos[0].strikes[3] = ud(2000e18);
-        infos[0].sizes[0] = ud(1e18);
-        infos[0].sizes[1] = ud(2e18);
-        infos[0].sizes[2] = ud(2e18);
-        infos[0].sizes[3] = ud(1e18);
-
-        infos[1].maturity = t1;
-        infos[1].strikes = new UD60x18[](3);
-        infos[1].sizes = new UD60x18[](3);
-        infos[1].strikes[0] = ud(700e18);
-        infos[1].strikes[1] = ud(900e18);
-        infos[1].strikes[2] = ud(1500e18);
-        infos[1].sizes[0] = ud(1e18);
-        infos[1].sizes[1] = ud(5e18);
-        infos[1].sizes[2] = ud(1e18);
-
-        infos[2].maturity = t2;
-        infos[2].strikes = new UD60x18[](3);
-        infos[2].sizes = new UD60x18[](3);
-        infos[2].strikes[0] = ud(800e18);
-        infos[2].strikes[1] = ud(1500e18);
-        infos[2].strikes[2] = ud(2000e18);
-        infos[2].sizes[0] = ud(1e18);
-        infos[2].sizes[1] = ud(2e18);
-        infos[2].sizes[2] = ud(1e18);
-
-        infos[3].maturity = t3;
-        infos[3].strikes = new UD60x18[](2);
-        infos[3].sizes = new UD60x18[](2);
-        infos[3].strikes[0] = ud(900e18);
-        infos[3].strikes[1] = ud(1500e18);
-        infos[3].sizes[0] = ud(2e18);
-        infos[3].sizes[1] = ud(2e18);
-
-        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
-
-        UD60x18[8] memory expected = isCallTest
-            ? [
-                ud(0),
-                ud(0.4e18),
-                ud(0.4e18),
-                ud(0.4e18 + 2.28571428571e18),
-                ud(0.4e18 + 2.28571428571e18),
-                ud(2.68571428571e18 + 0.625e18),
-                ud(2.68571428571e18 + 0.625e18 + 0.2e18),
-                ud(2.68571428571e18 + 0.625e18 + 0.2e18)
-            ]
-            : [
-                ud(0),
-                ud(2000e18),
-                ud(2000e18),
-                ud(2000e18 + 100e18),
-                ud(2000e18 + 100e18),
-                ud(2100e18 + 400e18),
-                ud(2100e18 + 400e18 + 1000e18),
-                ud(2100e18 + 400e18 + 1000e18)
-            ];
-
-        vault.setTimestamp(t0 - 1 days);
-        assertEq(vault.getTotalLiabilitiesExpired(), 0);
-
-        vault.setListingsAndSizes(infos);
-
-        for (uint256 i = 0; i < timestamps.length; i++) {
-            vault.setTimestamp(timestamps[i]);
-            assertApproxEqAbs(vault.getTotalLiabilitiesExpired().unwrap(), expected[i].unwrap(), isCallTest ? 1e8 : 0);
-        }
-    }
-
     function test_getTotalLiabilitiesUnexpired_ReturnExpectedValue() public {
         setupVolOracleMock();
 
@@ -158,47 +78,6 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
                 vault.getTotalLiabilitiesUnexpired().unwrap(),
                 expected[i].unwrap(),
                 isCallTest ? 0.000002e18 : 0.002e18
-            );
-        }
-    }
-
-    function test_getTotalLiabilities_ReturnExpectedValue() public {
-        setupVolOracleMock();
-        setupOracleAdapterMock();
-
-        vault.setListingsAndSizes(getInfos());
-        vault.setSpotPrice(ud(1000e18));
-
-        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
-
-        UD60x18[8] memory expected = isCallTest
-            ? [
-                ud(0.679618e18),
-                ud(0.641099e18),
-                ud(0.634583e18),
-                ud(0.806477e18),
-                ud(0.804646e18),
-                ud(1.1e18),
-                ud(1.1e18),
-                ud(1.1e18)
-            ]
-            : [
-                ud(6576.0e18),
-                ud(6537.998e18),
-                ud(6531.865e18),
-                ud(4504.526e18),
-                ud(4502.855e18),
-                ud(3898.767e18),
-                ud(3900e18),
-                ud(3900e18)
-            ];
-
-        for (uint256 i = 0; i < timestamps.length; i++) {
-            vault.setTimestamp(timestamps[i]);
-            assertApproxEqAbs(
-                vault.getTotalLiabilities().unwrap(),
-                expected[i].unwrap(),
-                isCallTest ? 0.00001e18 : 0.01e18
             );
         }
     }
