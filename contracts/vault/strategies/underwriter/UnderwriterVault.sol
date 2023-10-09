@@ -25,7 +25,6 @@ import {IPool} from "../../../pool/IPool.sol";
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {Vault} from "../../Vault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-import {console} from "forge-std/console.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option contracts by using collateral deposited by users
 contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
