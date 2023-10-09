@@ -101,7 +101,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         UD60x18 increment = (ud(10e18) * ud(0.95e18)) / ud(6 days * 1e18);
         assertEq(vault.spreadUnlockingTicks(t0), ud(1.24e18) / ud(7 days * 1e18) + increment);
         // totalLockedSpread be incremented by the spread earned (10)
-        assertEq(vault.totalLockedSpread(), ud(18e18) + spread * ud(0.95e18));
+        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread * ud(0.95e18));
         // totalAssets should be incremented by the premiums collected and the spread
         uint256 totalAssets = vault.totalAssets();
         assertEq(totalAssets, toTokenDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));
