@@ -30,6 +30,17 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     address internal constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     /// @inheritdoc IOptionReward
+    function previewOptionParams() public view returns (UD60x18 strike, uint64 maturity) {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        // Calculates the maturity starting from the 8AM UTC timestamp of the current day
+        maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
+        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
+        _revertIfPriceIsZero(price);
+        // Applies discount to spot price and rounds to nearest strike interval
+        strike = OptionMath.roundToStrikeInterval(price * l.discount);
+    }
+
+    /// @inheritdoc IOptionReward
     function underwrite(address longReceiver, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
@@ -37,17 +48,12 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         IERC20(l.base).safeTransferFrom(msg.sender, address(this), collateral);
         IERC20(l.base).approve(address(l.option), collateral);
 
-        // Calculates the maturity starting from the 8AM UTC timestamp of the current day
-        uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
-
-        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
-        _revertIfPriceIsZero(price);
-
-        UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
+        (UD60x18 strike, uint64 maturity) = previewOptionParams();
 
         l.redeemableLongs[longReceiver][strike][maturity] =
             l.redeemableLongs[longReceiver][strike][maturity] +
             contractSize;
+
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
         l.option.underwrite(strike, maturity, longReceiver, contractSize);
 

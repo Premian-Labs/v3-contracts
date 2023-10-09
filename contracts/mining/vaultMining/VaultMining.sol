@@ -128,6 +128,11 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IVaultMining
+    function previewOptionParams() external view returns (UD60x18 strike, uint64 maturity) {
+        return IOptionReward(OPTION_REWARD).previewOptionParams();
+    }
+
+    /// @inheritdoc IVaultMining
     function claimAll(address[] calldata vaults) external nonReentrant {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 

@@ -222,6 +222,16 @@ contract OptionRewardTest is Assertions, Test {
         optionReward = OptionReward(optionRewardFactory.deployProxy(key));
     }
 
+    function test_previewOptionParams_Success() public {
+        oracleAdapter.setPrice(spot);
+        vm.warp(1682155823); // Apr-22-2023 09:30:23 AM +UTC
+        uint256 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
+        uint256 expectedMaturity = timestamp8AMUTC + 30 days; // May-22-2023 08:00:00 AM +UTC
+        (UD60x18 _strike, uint64 _maturity) = optionReward.previewOptionParams();
+        assertEq(_strike, strike);
+        assertEq(_maturity, expectedMaturity);
+    }
+
     function test_underwrite_Success() public {
         oracleAdapter.setPrice(spot);
 
