@@ -3,6 +3,7 @@
 pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -13,7 +14,7 @@ import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {ZERO, ONE} from "../../../libraries/Constants.sol";
+import {ZERO, ONE, iZERO} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
@@ -24,6 +25,7 @@ import {IPool} from "../../../pool/IPool.sol";
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {Vault} from "../../Vault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
+import {console} from "forge-std/console.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option contracts by using collateral deposited by users
 contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
@@ -503,6 +505,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 spread,
         UD60x18 premium
     ) internal {
+        // needs to be
+        _updateState(l);
         UD60x18 spreadProtocol = spread * l.performanceFeeRate;
         UD60x18 spreadLP = spread - spreadProtocol;
 
@@ -662,6 +666,45 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
+    function _relu(SD59x18 x) internal view returns (SD59x18) {
+        if (x > iZERO) {
+            return x;
+        } else {
+            return iZERO;
+        }
+    }
+
+    function _computeUnlockAfterSettlement(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
+        uint256 timestamp = _getBlockTimestamp();
+
+        // Get last maturity before the current time
+        uint256 lastExpired = timestamp >= l.maxMaturity
+            ? l.maxMaturity
+            : l.maturities.prev(l.getMaturityAfterTimestamp(timestamp));
+
+        uint256 current = l.minMaturity;
+        totalAssets = l.totalAssets;
+        totalLockedAssets = l.totalLockedAssets;
+        while (current <= lastExpired && current != 0) {
+            for (uint256 i = 0; i < l.maturityToStrikes[current].length(); i++) {
+                UD60x18 strike = l.maturityToStrikes[current].at(i);
+                UD60x18 positionSize = l.positionSizes[current][strike];
+                UD60x18 unlockedCollateral = l.isCall ? positionSize : positionSize * strike;
+                totalLockedAssets = totalLockedAssets - unlockedCollateral;
+
+                UD60x18 settlementPrice = _getSettlementPrice(l, current);
+                UD60x18 callPayoff = l.isCall
+                    ? _relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()).intoUD60x18() / settlementPrice
+                    : _relu(strike.intoSD59x18() - settlementPrice.intoSD59x18()).intoUD60x18();
+                totalAssets = totalAssets - positionSize * callPayoff;
+            }
+            current = l.maturities.next(current);
+        }
+        return (totalAssets, totalLockedAssets);
+    }
+
     /// @notice Get the variables needed in order to compute the quote for a trade
     function _getQuoteInternal(
         UnderwriterVaultStorage.Layout storage l,
@@ -672,13 +715,18 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
         _revertIfOptionInvalid(args.strike, args.maturity);
 
-        _revertIfInsufficientFunds(args.strike, args.size, _availableAssetsUD60x18(l));
+        (UD60x18 totalAssets, UD60x18 totalLockedAssets) = _computeUnlockAfterSettlement(l);
+
+        _revertIfInsufficientFunds(
+            args.strike,
+            args.size,
+            totalAssets - totalLockedAssets - _getLockedSpreadInternal(l).totalLockedSpread
+        );
 
         QuoteVars memory vars;
-
         {
             // Compute C-level
-            UD60x18 utilisation = (l.totalLockedAssets + l.collateral(args.size, args.strike)) / l.totalAssets;
+            UD60x18 utilisation = (totalLockedAssets + l.collateral(args.size, args.strike)) / totalAssets;
 
             UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
 
@@ -846,7 +894,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @notice Settles all options that are expired
     function _settle(UnderwriterVaultStorage.Layout storage l) internal {
-        // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
+        // Needs to update state as settle effects the listed positions, i.e. maturities and maturityToStrikes.
         _updateState(l);
 
         uint256 timestamp = _getBlockTimestamp();

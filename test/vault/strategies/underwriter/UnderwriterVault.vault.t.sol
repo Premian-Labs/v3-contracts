@@ -14,6 +14,7 @@ import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwr
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+import {console} from "forge-std/console.sol";
 
 abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     UD60x18 spot = UD60x18.wrap(1000e18);
@@ -85,6 +86,30 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             isCallTest ? 0.163577618244386010e18 : 486.203629e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
+    }
+
+    function test_getQuote_ForFullyUtilisedVaultWithUnsettledOptions() public {
+        setup();
+        console.log(vault.totalAssets());
+
+        UD60x18 tradeSize = ud(4 ether);
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        vm.startPrank(users.trader);
+        IERC20 token = IERC20(getPoolToken());
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        console.log(vault.totalAssets());
+        console.log(vault.totalLockedAssets().unwrap());
+
+        vault.setTimestamp(poolKey.maturity);
+        poolKey.maturity = 1678435200;
+        assertApproxEqAbs(
+            fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
+            isCallTest ? 0.160026767588644148e18 : 475.26231e18,
+            isCallTest ? 0.000001e18 : 0.01e18
+        );
+        assertEq(vault.totalLockedAssets(), isCallTest ? tradeSize : tradeSize * strike);
     }
 
     function test_getQuote_RevertIf_NotEnoughAvailableAssets() public {
@@ -183,6 +208,29 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
         vault.getQuote(poolKey, ud(3e18), true, address(0));
+    }
+
+    function test_trade_CallSettleInternally() public {
+        setup();
+
+        UD60x18 protocolFees = ud(1e18);
+        vault.setProtocolFees(protocolFees);
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
+
+        deal(address(token), address(vault), toTokenDecimals(depositSize + protocolFees));
+
+        UD60x18 tradeSize = ud(3e18);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+
+        vm.expectEmit();
+        emit ClaimProtocolFees(FEE_RECEIVER, toTokenDecimals(protocolFees));
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
     }
 
     function test_trade_ProcessTradeCorrectly() public {

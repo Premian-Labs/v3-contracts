@@ -39,6 +39,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
     UnderwriterVaultMock callVault;
     UnderwriterVaultMock putVault;
 
+    event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
+
     function setUp() public virtual override {
         _setUp(16597500, 1677225600);
 
