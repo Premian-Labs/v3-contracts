@@ -665,7 +665,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
-    function _relu(SD59x18 x) internal view returns (SD59x18) {
+    function _relu(SD59x18 x) internal pure returns (SD59x18) {
         if (x > iZERO) {
             return x;
         } else {
