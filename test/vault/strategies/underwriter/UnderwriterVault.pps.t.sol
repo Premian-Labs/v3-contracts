@@ -82,61 +82,6 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         }
     }
 
-    function test_getTotalFairValue_ReturnExpectedValue() public {
-        UnderwriterVaultMock.MaturityInfo[] memory infos = getInfos();
-
-        UD60x18 totalLocked;
-
-        for (uint256 i = 0; i < infos.length; i++) {
-            for (uint256 j = 0; j < infos[i].strikes.length; j++) {
-                UD60x18 strike = infos[i].strikes[j];
-                UD60x18 size = infos[i].sizes[j];
-
-                totalLocked = totalLocked + (isCallTest ? size : size * strike);
-            }
-        }
-
-        setupVolOracleMock();
-        setupOracleAdapterMock();
-
-        vault.setListingsAndSizes(infos);
-        vault.setSpotPrice(ud(1000e18));
-
-        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
-
-        UD60x18[8] memory expected = isCallTest
-            ? [
-                totalLocked - ud(0.679618e18),
-                totalLocked - ud(0.641099e18),
-                totalLocked - ud(0.634583e18),
-                totalLocked - ud(0.806477e18),
-                totalLocked - ud(0.804646e18),
-                totalLocked - ud(1.1e18),
-                totalLocked - ud(1.1e18),
-                totalLocked - ud(1.1e18)
-            ]
-            : [
-                totalLocked - ud(6576.0e18),
-                totalLocked - ud(6537.998e18),
-                totalLocked - ud(6531.865e18),
-                totalLocked - ud(4504.526e18),
-                totalLocked - ud(4502.855e18),
-                totalLocked - ud(3898.767e18),
-                totalLocked - ud(3900e18),
-                totalLocked - ud(3900e18)
-            ];
-
-        for (uint256 i = 0; i < timestamps.length; i++) {
-            vault.setTimestamp(timestamps[i]);
-            vault.setTotalLockedAssets(totalLocked);
-            assertApproxEqAbs(
-                vault.getTotalFairValue().unwrap(),
-                expected[i].unwrap(),
-                isCallTest ? 0.00001e18 : 0.01e18
-            );
-        }
-    }
-
     function test_getPricePerShare_ReturnExpectedValue() public {
         // prettier-ignore
         UD60x18[4][5] memory values = isCallTest

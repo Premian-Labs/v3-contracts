@@ -22,11 +22,10 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
 
     UD60x18 strike0 = ud(100e18);
 
-    event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
     event ManagementFeePaid(address indexed feeReceiver, uint256 feesInSharesMinted);
 
     function setupManagementFees() public {
-        vault.setProtocolFees(ud(1e18));
+        vault.setProtocolFees(ud(0e18));
         vault.setTimestamp(timestamp0);
     }
 
@@ -55,7 +54,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         vault.chargeManagementFees();
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp1);
         assertEq(ud(vault.totalAssets()), isCallTest ? ud(5e18) : ud(5e6) * strike0);
-        assertEq(vault.getProtocolFees(), ud(1e18)); // protocol fees should not be incremented
+        assertEq(vault.getProtocolFees(), ud(0e18)); // protocol fees should not be incremented
         assertEq(vault.totalSupply(), isCallTest ? ud(5.050505050505050505e18) : ud(5.050505050505050505e20));
         assertEq(vault.getPricePerShare(), ud(0.99e18));
         assertEq(vault.balanceOf(FEE_RECEIVER), feeInShares);
@@ -72,7 +71,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp1);
         assertEq(ud(vault.totalAssets()), isCallTest ? ud(10e18) : ud(10e6) * strike0);
         assertEq(vault.totalSupply(), isCallTest ? ud(10.101010101010101010e18) : ud(10.10101010101010101005e20));
-        assertEq(vault.getProtocolFees(), ud(1e18));
+        assertEq(vault.getProtocolFees(), ud(0e18));
         assertEq(vault.getPricePerShare(), ud(0.99e18));
     }
 
@@ -91,7 +90,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
 
         assertApproxEqAbs(vault.totalAssets(), isCallTest ? 10e18 : (ud(10e6) * strike0).unwrap(), 1);
         assertEq(vault.totalSupply(), isCallTest ? ud(10.101010101010101010e18) : ud(10.10101010101010101005e20));
-        assertEq(vault.getProtocolFees(), ud(1e18));
+        assertEq(vault.getProtocolFees(), ud(0e18));
         assertApproxEqAbs(vault.getPricePerShare().unwrap(), 0.99e18, isCallTest ? 1 : 1e9);
     }
 
@@ -107,7 +106,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         // test correct processing
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp2);
         assertEq(ud(vault.totalAssets()), isCallTest ? ud(5e18) : ud(5e8));
-        assertEq(vault.getProtocolFees(), ud(1e18));
+        assertEq(vault.getProtocolFees(), ud(0e18));
         // call: 10,101010101010101010 + 10,101010101010101010 * 0,02 / 0,98 - 5 / 0,9702
         assertEq(vault.totalSupply(), isCallTest ? ud(5.153576582148010715e18) : ud(5.15357658214801071486e20));
         assertEq(vault.getPricePerShare(), ud(0.9702e18));
@@ -126,7 +125,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         // test correct processing
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp2);
         assertApproxEqAbs(vault.totalAssets(), isCallTest ? 5e18 : 5e8, 1);
-        assertEq(vault.getProtocolFees(), ud(1e18));
+        assertEq(vault.getProtocolFees(), ud(0e18));
         // call: 10,101010101010101010 + 10,101010101010101010 * 0,02 / 0,98 - 5 / 0,9702
         assertEq(vault.totalSupply(), isCallTest ? ud(5.153576582148010715e18) : ud(5.15357658214801071486e20));
         assertApproxEqAbs(vault.getPricePerShare().unwrap(), 0.9702e18, isCallTest ? 1 : 1e10);

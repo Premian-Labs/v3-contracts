@@ -93,8 +93,6 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
         vault.afterBuy(strike, t0, size, spread, premium);
 
-        // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there
-        assertEq(vault.lastSpreadUnlockUpdate(), startTime + 1 days);
         // (1,24 / 7 + 5,56 / 10 + 11,2 / 14 + (10 * 0,95) / 6) / (24 * 60 * 60) = 0,000036070326278658
         assertEq(vault.spreadUnlockingRate(), 36070326278658);
         // positionSize should be incremented by the bought amount and equal 2.234
@@ -102,8 +100,8 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         // spreadUnlockingTick should be incremented by the spread amount divided by the the time to maturity
         UD60x18 increment = (ud(10e18) * ud(0.95e18)) / ud(6 days * 1e18);
         assertEq(vault.spreadUnlockingTicks(t0), ud(1.24e18) / ud(7 days * 1e18) + increment);
-        // totalLockedSpread should be incremented by the spread earned (10) after updating the state
-        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread * ud(0.95e18));
+        // totalLockedSpread be incremented by the spread earned (10)
+        assertEq(vault.totalLockedSpread(), ud(18e18) + spread * ud(0.95e18));
         // totalAssets should be incremented by the premiums collected and the spread
         uint256 totalAssets = vault.totalAssets();
         assertEq(totalAssets, toTokenDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));

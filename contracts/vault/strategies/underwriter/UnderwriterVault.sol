@@ -313,7 +313,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         uint256 shareAmountOffset
     ) internal virtual override {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        _settle(l);
         l.pendingAssetsDeposit = assetAmount;
         super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
@@ -327,6 +326,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         uint256 assetAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        _settle(l);
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
         shareAmount = super._deposit(assetAmount, receiver);
@@ -502,11 +503,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 spread,
         UD60x18 premium
     ) internal {
-        // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
-        // we can make this function more efficient later on by not writing twice to storage, i.e.
-        // compute the updated state, then increment values, then write to storage
-        _settle(l);
-
         UD60x18 spreadProtocol = spread * l.performanceFeeRate;
         UD60x18 spreadLP = spread - spreadProtocol;
 
@@ -781,6 +777,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address referrer
     ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        _settle(l);
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
