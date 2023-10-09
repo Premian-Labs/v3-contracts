@@ -1,6 +1,4 @@
 import {
-  OptionPS__factory,
-  OptionPSFactory__factory,
   OptionReward__factory,
   OptionRewardFactory__factory,
 } from '../../typechain';
