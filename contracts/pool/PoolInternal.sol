@@ -770,11 +770,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        if (args.isBuy) {
-            vars.totalPremium = l.roundUpUD60x18(vars.totalPremium);
-        } else {
-            vars.totalPremium = l.roundDownUD60x18(vars.totalPremium);
-        }
+        vars.totalPremium = isBuy ? l.roundUpUD60x18(vars.totalPremium) :  l.roundDownUD60x18(vars.totalPremium);
         vars.totalTakerFees = l.roundUpUD60x18(vars.totalTakerFees);
 
         vars.premiumWithFees = args.isBuy
