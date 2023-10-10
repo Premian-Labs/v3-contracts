@@ -362,7 +362,17 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.lastTradeTimestamp;
     }
 
-    function setMaxClevel(UD60x18 maxCLevel) public {
+    function setHourlyDecayDiscount(UD60x18 hourlyDecayDiscount) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        l.hourlyDecayDiscount = hourlyDecayDiscount;
+    }
+
+    function setMinCLevel(UD60x18 minCLevel) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        l.minCLevel = minCLevel;
+    }
+
+    function setMaxCLevel(UD60x18 maxCLevel) public {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         l.maxCLevel = maxCLevel;
     }
@@ -459,6 +469,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 decayRate
     ) external pure returns (UD60x18) {
         return _computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
+    }
+
+    function computeCLevelGeoMean(
+        UD60x18 totalAssets,
+        UD60x18 totalLockedAssets,
+        UD60x18 orderSize
+    ) external view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return _computeCLevelGeoMean(totalAssets, totalLockedAssets, orderSize, l);
     }
 
     function setProtocolFees(UD60x18 value) external {

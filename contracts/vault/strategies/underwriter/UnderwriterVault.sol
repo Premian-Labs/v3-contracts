@@ -576,6 +576,39 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
     }
 
+    function _computeCLevelGeoMean(
+        UD60x18 totalAssets,
+        UD60x18 totalLockedAssets,
+        UD60x18 orderSize,
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18 cLevel) {
+        // Compute C-level
+        UD60x18 utilisationBefore = totalLockedAssets / totalAssets;
+        UD60x18 utilisationAfter = (totalLockedAssets + orderSize) / totalAssets;
+
+        UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
+
+        UD60x18 cLevelBefore = _computeCLevel(
+            utilisationBefore,
+            ZERO,
+            l.alphaCLevel,
+            l.minCLevel,
+            l.maxCLevel,
+            l.hourlyDecayDiscount
+        );
+
+        UD60x18 cLevelAfter = _computeCLevel(
+            utilisationAfter,
+            hoursSinceLastTx,
+            l.alphaCLevel,
+            l.minCLevel,
+            l.maxCLevel,
+            l.hourlyDecayDiscount
+        );
+
+        cLevel = (cLevelBefore * cLevelAfter).sqrt();
+    }
+
     function _revertIfNotRegistryOwner(address addr) internal view {
         if (addr != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
     }
@@ -723,21 +756,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         );
 
         QuoteVars memory vars;
-        {
-            // Compute C-level
-            UD60x18 utilisation = (totalLockedAssets + l.collateral(args.size, args.strike)) / totalAssets;
 
-            UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
-
-            vars.cLevel = _computeCLevel(
-                utilisation,
-                hoursSinceLastTx,
-                l.alphaCLevel,
-                l.minCLevel,
-                l.maxCLevel,
-                l.hourlyDecayDiscount
-            );
-        }
+        vars.cLevel = _computeCLevelGeoMean(totalAssets, totalLockedAssets, l.collateral(args.size, args.strike), l);
 
         vars.spot = _getSpotPrice();
 
