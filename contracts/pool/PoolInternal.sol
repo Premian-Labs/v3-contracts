@@ -244,7 +244,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 vars.maxSize = pricing.maxTradeSize();
             }
         }
-        vars.totalPremium = isBuy ? l.roundUpUD60x18(vars.totalPremium) :  l.roundDownUD60x18(vars.totalPremium);
+        vars.totalPremium = isBuy ? l.roundUpUD60x18(vars.totalPremium) : l.roundDownUD60x18(vars.totalPremium);
         vars.totalTakerFee = l.roundUpUD60x18(vars.totalTakerFee);
 
         return (
@@ -766,7 +766,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        vars.totalPremium = isBuy ? l.roundUpUD60x18(vars.totalPremium) :  l.roundDownUD60x18(vars.totalPremium);
+        vars.totalPremium = args.isBuy ? l.roundUpUD60x18(vars.totalPremium) : l.roundDownUD60x18(vars.totalPremium);
         vars.totalTakerFees = l.roundUpUD60x18(vars.totalTakerFees);
 
         vars.premiumWithFees = args.isBuy
