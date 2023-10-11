@@ -128,16 +128,11 @@ library PoolStorage {
 
     /// @notice
     function roundDownSD59x18(Layout storage l, SD59x18 value) internal view returns (SD59x18) {
-        SD59x18 valueRoundedDown = l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
-        if (value > iZERO) {
-            return valueRoundedDown;
-        } else {
-            if (valueRoundedDown != value) {
-                return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value) - int256(1));
-            } else {
-                return value;
-            }
-        }
+        SD59x18 valueTruncated = l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
+        if (value > iZERO) return valueTruncated;
+        // a -ve value with truncated decimals corresponds to a rounded up value
+        if (valueTruncated != value) return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value) - int256(1));
+        return value;
     }
 
     /// @notice

@@ -6,6 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 import {UD50x28} from "../../libraries/UD50x28.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
@@ -74,4 +75,14 @@ interface IPoolCoreMock {
     function safeTransferIgnoreDust(address to, uint256 value) external;
 
     function safeTransferIgnoreDustUD60x18(address to, UD60x18 value) external;
+
+    function exposed_roundDown(UD60x18 value) external view returns (uint256);
+
+    function exposed_roundDownUD60x18(UD60x18 value) external view returns (UD60x18);
+
+    function exposed_roundDownSD59x18(SD59x18 value) external view returns (SD59x18);
+
+    function exposed_roundUp(UD60x18 value) external view returns (uint256);
+
+    function exposed_roundUpUD60x18(UD60x18 value) external view returns (UD60x18);
 }
