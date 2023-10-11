@@ -116,17 +116,23 @@ library PoolStorage {
         return sd(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
-    /// @notice
+    /// @notice Scales the decimals places from UD60x18 to the pool token decimals.
+    /// @param UD60x18 The value that should be rounded down
+    /// @return Returns the scaled value in uint256
     function roundDown(Layout storage l, UD60x18 value) internal view returns (uint256) {
         return l.toPoolTokenDecimals(value);
     }
 
-    /// @notice
+    /// @notice Scales the decimals places from UD60x18 to the pool token decimals and casts it back to UD60x18.
+    /// @param UD60x18 The value that should be rounded down
+    /// @return Returns the scaled value in UD60x18
     function roundDownUD60x18(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
         return l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
     }
 
-    /// @notice
+    /// @notice Scales the decimals places from SD59x18 to the pool token decimals and casts it back to SD59x18.
+    /// @param SD59x18 The value that should be rounded down
+    /// @return Returns the scaled value in SD59x18
     function roundDownSD59x18(Layout storage l, SD59x18 value) internal view returns (SD59x18) {
         SD59x18 valueTruncated = l.fromPoolTokenDecimals(l.toPoolTokenDecimals(value));
         if (value > iZERO) return valueTruncated;
@@ -135,7 +141,9 @@ library PoolStorage {
         return value;
     }
 
-    /// @notice
+    /// @notice Scales the decimals places from UD60x18 to the pool token decimals and rounds up any residuals.
+    /// @param UD60x18 The value that should be rounded up
+    /// @return Returns the rounded up value in uint256
     function roundUp(Layout storage l, UD60x18 value) internal view returns (uint256) {
         UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
         uint256 increment;
@@ -143,6 +151,10 @@ library PoolStorage {
         return l.toPoolTokenDecimals(value) + increment;
     }
 
+    /// @notice Scales the decimals places from UD60x18 to the pool token decimals and casts it back to UD60x18.
+    ///         Any residuals are rounded up.
+    /// @param UD60x18 The value that should be rounded up
+    /// @return Returns the rounded up value in UD60x18
     function roundUpUD60x18(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
         UD60x18 valueRoundedDown = l.roundDownUD60x18(value);
         if (valueRoundedDown != value) {
