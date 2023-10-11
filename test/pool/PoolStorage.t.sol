@@ -28,18 +28,18 @@ abstract contract PoolStorageTest is DeployTest {
 
     function test_roundDown() public {
         assertEq(pool.exposed_roundDown(valueUD), isCallTest ? 3 ether : 3e6);
-        assertEq(pool.exposed_roundDown(valueExtendedUD), isCallTest ? 3 ether : 3e6);
+        assertEq(pool.exposed_roundDown(valueExtendedUD), isCallTest ? valueExtendedUD : ud(3e6));
     }
 
     function test_roundDownUD60x18() public {
         assertEq(pool.exposed_roundDownUD60x18(valueUD), valueUD);
-        assertEq(pool.exposed_roundDownUD60x18(valueExtendedUD), isCallTest ? valueUD : valueUD + ud(3e12));
+        assertEq(pool.exposed_roundDownUD60x18(valueExtendedUD), isCallTest ? valueExtendedUD : valueUD);
     }
 
     function test_roundDownSD59x18() public {
         assertEq(pool.exposed_roundDownSD59x18(valueSD), valueSD);
-        assertEq(pool.exposed_roundDownSD59x18(valueExtendedSD), valueSD);
-        assertEq(pool.exposed_roundDownSD59x18(valueExtendedSDNeg), valueSDNeg);
+        assertEq(pool.exposed_roundDownSD59x18(valueExtendedSD), isCallTest ? valueExtendedSD : valueSD);
+        assertEq(pool.exposed_roundDownSD59x18(valueExtendedSDNeg), isCallTest ? valueExtendedSDNeg : valueSDNeg);
     }
 
     function test_roundUp() public {
@@ -49,6 +49,6 @@ abstract contract PoolStorageTest is DeployTest {
 
     function test_roundUpUD60x18() public {
         assertEq(pool.exposed_roundUpUD60x18(valueUD), valueUD);
-        assertEq(pool.exposed_roundUpUD60x18(valueExtendedUD), isCallTest ? valueExtendedUD : ud(3 ether) + ud(3e12));
+        assertEq(pool.exposed_roundUpUD60x18(valueExtendedUD), isCallTest ? valueExtendedUD : ud(3 ether) + ud(1e12));
     }
 }
