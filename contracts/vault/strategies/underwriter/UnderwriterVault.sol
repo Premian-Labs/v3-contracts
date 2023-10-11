@@ -665,14 +665,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
-    function _relu(SD59x18 x) internal pure returns (SD59x18) {
-        if (x > iZERO) {
-            return x;
-        } else {
-            return iZERO;
-        }
-    }
-
     function _computeUnlockAfterSettlement(
         UnderwriterVaultStorage.Layout storage l
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
@@ -695,8 +687,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
                 UD60x18 settlementPrice = _getSettlementPrice(l, current);
                 UD60x18 callPayoff = l.isCall
-                    ? _relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()).intoUD60x18() / settlementPrice
-                    : _relu(strike.intoSD59x18() - settlementPrice.intoSD59x18()).intoUD60x18();
+                    ? OptionMathExternal.relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()) / settlementPrice
+                    : OptionMathExternal.relu(strike.intoSD59x18() - settlementPrice.intoSD59x18());
                 totalAssets = totalAssets - positionSize * callPayoff;
             }
             current = l.maturities.next(current);
