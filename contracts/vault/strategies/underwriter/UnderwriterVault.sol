@@ -3,7 +3,6 @@
 pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -14,7 +13,7 @@ import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {ZERO, ONE, iZERO} from "../../../libraries/Constants.sol";
+import {ZERO, ONE} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
