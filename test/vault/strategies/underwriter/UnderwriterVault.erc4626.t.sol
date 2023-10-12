@@ -191,9 +191,17 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     }
 
     function test_deposit_CallsSettle() public {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = toTokenDecimals(ud(1 ether));
+
+        vm.startPrank(users.trader);
+
+        token.approve(address(vault), assetAmount);
         vm.expectEmit();
         emit UpdateQuotes();
-        addDeposit(users.trader, ud(1 ether));
+        vault.deposit(assetAmount, users.trader);
+
+        vm.stopPrank();
     }
 
     function test_withdraw_CallsSettle() public {
@@ -206,9 +214,19 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     }
 
     function test_mint_CallsSettle() public {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = toTokenDecimals(ud(1 ether));
+
+        vm.startPrank(users.trader);
+
+        token.approve(address(vault), assetAmount);
+        uint256 shareAmount = vault.previewDeposit(assetAmount);
+
         vm.expectEmit();
         emit UpdateQuotes();
-        addMint(users.trader, ud(1 ether));
+        vault.mint(shareAmount, users.trader);
+
+        vm.stopPrank();
     }
 
     function test_redeem_CallsSettle() public {
