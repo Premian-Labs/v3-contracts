@@ -772,9 +772,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         vars.premiumWithFees = args.isBuy
             ? vars.totalPremium + vars.totalTakerFees
             : vars.totalPremium - vars.totalTakerFees;
-        totalPremium = l.toPoolTokenDecimals(vars.premiumWithFees);
+        premiumWithFees = l.toPoolTokenDecimals(vars.premiumWithFees);
 
-        _revertIfTradeAboveMaxSlippage(totalPremium, args.premiumLimit, args.isBuy);
+        _revertIfTradeAboveMaxSlippage(premiumWithFees, args.premiumLimit, args.isBuy);
 
         delta = _calculateAndUpdateUserAssets(
             l,
@@ -884,11 +884,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else {
             delta.collateral = totalPremium.intoSD59x18() - PRBMathExtra.max(iShortCollateral, iZERO);
         }
-        if (delta.collateral > iZERO) {
-            delta.collateral = l.roundDownSD59x18(delta.collateral);
-        } else {
-            delta.collateral = l.roundDownSD59x18(delta.collateral);
-        }
+
+        delta.collateral = l.roundDownSD59x18(delta.collateral);
 
         return delta;
     }
