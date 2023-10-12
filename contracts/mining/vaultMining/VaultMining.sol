@@ -49,6 +49,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         l.rewardsAvailable = l.rewardsAvailable + amount;
     }
 
+    /// @inheritdoc IVaultMining
     function getRewardsAvailable() external view returns (UD60x18) {
         return VaultMiningStorage.layout().rewardsAvailable;
     }
@@ -58,30 +59,40 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         return VaultMiningStorage.layout().userRewards[user];
     }
 
+    function _calculateRewardsUpdate(VaultMiningStorage.Layout storage l) internal view returns (UD60x18 rewardAmount) {
+        if (block.timestamp <= l.lastUpdate) return ZERO;
+
+        UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
+        rewardAmount = yearsElapsed * l.rewardsPerYear;
+
+        if (rewardAmount > l.rewardsAvailable) {
+            rewardAmount = l.rewardsAvailable;
+        }
+    }
+
+    function _calculateAccRewardsPerShare(
+        VaultMiningStorage.Layout storage l,
+        VaultInfo storage vInfo,
+        UD60x18 rewardAmount
+    ) internal view returns (UD60x18 accRewardsPerShare) {
+        accRewardsPerShare = vInfo.accRewardsPerShare;
+        if (vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
+            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
+            accRewardsPerShare = accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
+        }
+    }
+
     /// @inheritdoc IVaultMining
     function getPendingUserRewardsFromVault(address user, address vault) external view returns (UD60x18) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
         if (l.lastUpdate == 0) return ZERO;
 
-        UD60x18 rewardAmount;
-        if (block.timestamp > l.lastUpdate) {
-            UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
-            rewardAmount = yearsElapsed * l.rewardsPerYear;
-
-            if (rewardAmount > l.rewardsAvailable) {
-                rewardAmount = l.rewardsAvailable;
-            }
-        }
-
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
-        UD60x18 accRewardsPerShare = vInfo.accRewardsPerShare;
-        if (vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
-            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
-            accRewardsPerShare = accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
-        }
+        UD60x18 rewardAmount = _calculateRewardsUpdate(l);
+        UD60x18 accRewardsPerShare = _calculateAccRewardsPerShare(l, vInfo, rewardAmount);
 
         return (uInfo.shares * accRewardsPerShare) - uInfo.rewardDebt;
     }
@@ -93,16 +104,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         if (l.lastUpdate == 0) return ZERO;
 
         UD60x18 totalRewards = l.userRewards[user];
-
-        UD60x18 rewardAmount;
-        if (block.timestamp > l.lastUpdate) {
-            UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
-            rewardAmount = yearsElapsed * l.rewardsPerYear;
-
-            if (rewardAmount > l.rewardsAvailable) {
-                rewardAmount = l.rewardsAvailable;
-            }
-        }
+        UD60x18 rewardAmount = _calculateRewardsUpdate(l);
 
         IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
         for (uint256 i = 0; i < vaults.length; i++) {
@@ -110,12 +112,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
             VaultInfo storage vInfo = l.vaultInfo[vault];
             UserInfo storage uInfo = l.userInfo[vault][user];
 
-            UD60x18 accRewardsPerShare = vInfo.accRewardsPerShare;
-            if (vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
-                UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
-                accRewardsPerShare = accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
-            }
-
+            UD60x18 accRewardsPerShare = _calculateAccRewardsPerShare(l, vInfo, rewardAmount);
             totalRewards = totalRewards + (uInfo.shares * accRewardsPerShare) - uInfo.rewardDebt;
         }
 
@@ -223,14 +220,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
             return;
         }
 
-        if (block.timestamp <= l.lastUpdate) return;
-
-        UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
-        UD60x18 rewardAmount = yearsElapsed * l.rewardsPerYear;
-
-        if (rewardAmount > l.rewardsAvailable) {
-            rewardAmount = l.rewardsAvailable;
-        }
+        UD60x18 rewardAmount = _calculateRewardsUpdate(l);
 
         l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
         l.lastUpdate = block.timestamp;
@@ -247,7 +237,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
             UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
 
             // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
-            if (vInfo.totalShares == ZERO) {
+            if (vInfo.votes == ZERO || vInfo.totalShares == ZERO) {
                 l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
                 continue;
             }
