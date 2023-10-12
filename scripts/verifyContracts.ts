@@ -30,8 +30,6 @@ async function main() {
     )
       continue;
 
-    console.log('category', category);
-
     for (let contract in deployment[category]) {
       console.log(`Verifying ${contract}`);
 
@@ -58,51 +56,48 @@ async function main() {
         libraries = {
           OptionMathExternal: deployment.core.OptionMathExternal.address,
         };
-      } else if (contract === ContractKey.ChainlinkAdapterProxy) {
+      } else if (
+        contract === ContractKey.ChainlinkAdapterProxy ||
+        contract === ContractKey.UserSettingsProxy ||
+        contract === ContractKey.VaultRegistryProxy ||
+        contract === ContractKey.VolatilityOracleProxy ||
+        contract === ContractKey.OptionPSFactoryProxy ||
+        contract === ContractKey.OptionRewardFactoryProxy ||
+        contract === ContractKey.PaymentSplitterProxy
+      ) {
         contractPath = proxyUpgradableOwnablePath;
       } else if (contract === ContractKey.PoolFactoryProxy) {
         contractPath =
           'contracts/factory/PoolFactoryProxy.sol:PoolFactoryProxy';
-      } else if (contract === ContractKey.UserSettingsProxy) {
-        contractPath = proxyUpgradableOwnablePath;
       } else if (contract === ContractKey.ReferralProxy) {
         contractPath = 'contracts/referral/ReferralProxy.sol:ReferralProxy';
       } else if (contract === ContractKey.VxPremiaProxy) {
         contractPath = 'contracts/staking/VxPremiaProxy.sol:VxPremiaProxy';
-      } else if (contract === ContractKey.VaultRegistryProxy) {
-        contractPath = proxyUpgradableOwnablePath;
-      } else if (contract === ContractKey.VolatilityOracleProxy) {
-        contractPath = proxyUpgradableOwnablePath;
       } else if (contract === ContractKey.VaultMiningProxy) {
         contractPath =
           'contracts/mining/vaultMining/VaultMiningProxy.sol:VaultMiningProxy';
-      } else if (contract === ContractKey.OptionPSFactoryProxy) {
-        contractPath = proxyUpgradableOwnablePath;
-      } else if (contract === ContractKey.OptionRewardFactoryProxy) {
-        contractPath = proxyUpgradableOwnablePath;
-      } else if (contract === ContractKey.PaymentSplitterProxy) {
-        contractPath = proxyUpgradableOwnablePath;
       } else if (contract === 'PREMIA/USDC-C') {
         contractPath = optionPsProxyPath;
       } else if (contract === 'PREMIA/USDC') {
         contractPath = optionRewardProxyPath;
-      } else if (
-        contract.slice(0, 4) === 'pSV-'
-      ) {
+      } else if (contract.includes('pSV-')) {
         contractPath = underwriterVaultProxyPath;
       } else {
         console.log('Skipping...');
         continue;
       }
 
-      console.log({ address, deploymentArgs, libraries, contractPath });
-
-      await verifyContractsOnEtherscan(
-        address,
-        deploymentArgs,
-        libraries,
-        contractPath,
-      );
+      try {
+        await verifyContractsOnEtherscan(
+          address,
+          deploymentArgs,
+          libraries,
+          contractPath,
+        );
+      } catch (e) {
+        console.log({ address, deploymentArgs, libraries, contractPath });
+        console.error(e);
+      }
     }
   }
 }
