@@ -87,12 +87,7 @@ async function main() {
       } else if (contract === 'PREMIA/USDC') {
         contractPath = optionRewardProxyPath;
       } else if (
-        contract === 'pSV-WETH/USDCe-C' ||
-        contract === 'pSV-WETH/USDCe-P' ||
-        contract === 'pSV-WBTC/USDCe-C' ||
-        contract === 'pSV-WBTC/USDCe-P' ||
-        contract === 'pSV-ARB/USDCe-C' ||
-        contract === 'pSV-ARB/USDCe-P'
+        contract.slice(0, 4) === 'pSV-'
       ) {
         contractPath = underwriterVaultProxyPath;
       } else {
