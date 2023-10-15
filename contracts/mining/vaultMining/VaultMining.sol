@@ -237,7 +237,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
             UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
 
             // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
-            if (vInfo.votes == ZERO || vInfo.totalShares == ZERO) {
+            if (vInfo.totalShares == ZERO) {
                 l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
                 continue;
             }
