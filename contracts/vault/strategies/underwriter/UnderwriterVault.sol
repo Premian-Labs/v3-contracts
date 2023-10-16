@@ -503,7 +503,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 spread,
         UD60x18 premium
     ) internal {
-        // needs to be
+        // spread state needs to be updated otherwise spread dispersion is inconsistent
         _updateState(l);
         UD60x18 spreadProtocol = spread * l.performanceFeeRate;
         UD60x18 spreadLP = spread - spreadProtocol;
