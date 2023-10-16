@@ -234,7 +234,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
             IERC20(exerciseToken).safeTransfer(msg.sender, exerciseTokenAmount);
         }
 
-        emit SettleShort(msg.sender, contractSize, strike, maturity, _collateralAmount, _exerciseTokenAmount);
+        emit SettleShort(msg.sender, strike, maturity, contractSize, _collateralAmount, _exerciseTokenAmount);
     }
 
     /// @inheritdoc IOptionPS
