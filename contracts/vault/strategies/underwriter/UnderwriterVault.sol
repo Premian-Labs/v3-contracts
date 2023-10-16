@@ -686,8 +686,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
                 UD60x18 settlementPrice = _getSettlementPrice(l, current);
                 UD60x18 callPayoff = l.isCall
-                    ? OptionMathExternal.relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()) / settlementPrice
-                    : OptionMathExternal.relu(strike.intoSD59x18() - settlementPrice.intoSD59x18());
+                    ? OptionMath.relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()) / settlementPrice
+                    : OptionMath.relu(strike.intoSD59x18() - settlementPrice.intoSD59x18());
                 totalAssets = totalAssets - positionSize * callPayoff;
             }
             current = l.maturities.next(current);

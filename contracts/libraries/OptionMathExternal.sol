@@ -45,11 +45,4 @@ library OptionMathExternal {
     ) public pure returns (UD60x18) {
         return OptionMath.blackScholesPrice(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
     }
-
-    /// @notice Implementation of the ReLu function `f(x)=(x)^+` to compute call / put payoffs
-    /// @param x Input value (18 decimals)
-    /// @return result Output of the relu function (18 decimals)
-    function relu(SD59x18 x) public pure returns (UD60x18) {
-        return OptionMath.relu(x);
-    }
 }
