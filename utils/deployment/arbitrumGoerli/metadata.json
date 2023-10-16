@@ -317,9 +317,9 @@
       "owner": ""
     },
     "VaultMiningImplementation": {
-      "address": "0x9E9D2410D1587f1ee99d36b0C1a4bd9114943502",
-      "block": 46555495,
-      "commitHash": "35b40e9ebdde1a19fa1a362f01e1ad6080d5890e",
+      "address": "0xd77e22C53f0F5e4fC92381cfdc6E4be0160b6510",
+      "block": 48363391,
+      "commitHash": "6d8f673e9fd9e94954e9da2588b294e031974b3f",
       "contractType": "Implementation",
       "deploymentArgs": [
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
@@ -327,8 +327,8 @@
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8",
         "0x0F0569935A6bE2Ed5a4EBbA3909D3996fb8faAf8"
       ],
-      "timestamp": 1696863552,
-      "txHash": "0xfcf37d1bec3cc4e1dd69bf0ef708f065182093aa0620554f6ee2dfcee601307f",
+      "timestamp": 1697453790,
+      "txHash": "0x2e3688ddf2e2ba4bdac07a6e114953873a3d251ebdeb9213b2a2a5a8fcc68d5e",
       "owner": ""
     },
     "VaultMiningProxy": {
@@ -365,13 +365,13 @@
       "owner": "0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54"
     },
     "OptionPSImplementation": {
-      "address": "0x2b37404feDe2A2FbeB0445874f9b4B6538C4e45E",
-      "block": 46496390,
-      "commitHash": "c5dfebe76e8b9df2c58aa2c288ee836021d9b1d2",
+      "address": "0xf42c8972cCBCBA6a50e7Cb1136A9019830abCeee",
+      "block": 48363072,
+      "commitHash": "6d8f673e9fd9e94954e9da2588b294e031974b3f",
       "contractType": "Implementation",
       "deploymentArgs": ["0x1B8A7fc9c65d9fBF441d953025e322b11D441169"],
-      "timestamp": 1696845501,
-      "txHash": "0x56767427b24ba3e708d4f7b2e9183995d58b1505b8a8483329582d9e992ca153",
+      "timestamp": 1697453687,
+      "txHash": "0xae317a3ff880bb50540a867e31eb734351dd7480a53fb3f28f2682fd7590bd0a",
       "owner": ""
     },
     "OptionRewardFactoryImplementation": {
