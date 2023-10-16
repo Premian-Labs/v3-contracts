@@ -303,7 +303,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _deposit(
         address caller,
         address receiver,
@@ -327,6 +326,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
@@ -344,12 +344,12 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _mint(
         uint256 shareAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
@@ -372,13 +372,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _redeem(
         uint256 shareAmount,
         address receiver,
         address owner
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that vault share holder pays management fees due
         _chargeManagementFees();
@@ -435,13 +435,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _withdraw(
         uint256 assetAmount,
         address receiver,
         address owner
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that vault share holder pays management fees due
         _chargeManagementFees();
@@ -490,7 +490,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @notice An internal hook inside the buy function that is called after
     ///         logic inside the buy function is run to update state variables
-    /// @dev vault must settle expired options before pps is calculated
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
     /// @param size The amount of contracts.
@@ -815,6 +814,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address referrer
     ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
 
         QuoteInternal memory quote = _getQuoteInternal(
