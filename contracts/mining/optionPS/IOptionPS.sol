@@ -45,9 +45,9 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
 
     event SettleShort(
         address indexed user,
-        UD60x18 contractSize,
         UD60x18 strike,
         uint256 maturity,
+        UD60x18 contractSize,
         UD60x18 collateralAmount,
         UD60x18 exerciseTokenAmount
     );
