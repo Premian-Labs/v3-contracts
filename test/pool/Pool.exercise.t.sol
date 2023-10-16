@@ -48,6 +48,7 @@ abstract contract PoolExerciseTest is DeployTest {
         TradeInternal memory trade = _test_exercise_trade_Buy100Options();
 
         uint256 protocolFees = pool.protocolFees();
+        assertLt(0 ether, protocolFees);
 
         vm.warp(poolKey.maturity);
         UD60x18 settlementPrice = getSettlementPrice(isITM);
@@ -66,6 +67,15 @@ abstract contract PoolExerciseTest is DeployTest {
                 poolKey.isCallPool
             )
         );
+
+        uint256 expectedExerciseValue;
+        if (isITM) {
+            if (isCallTest) {
+                expectedExerciseValue = 16.666666666666666666 ether;
+            } else {
+                expectedExerciseValue = toTokenDecimals((ud(100 ether) * ud(200 ether)));
+            }
+        }
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), exerciseValue - exerciseFee);
 
