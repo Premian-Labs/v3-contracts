@@ -144,16 +144,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethereum-waffle/mock-contract@npm:^3.4.4":
-  version: 3.4.4
-  resolution: "@ethereum-waffle/mock-contract@npm:3.4.4"
-  dependencies:
-    "@ethersproject/abi": ^5.5.0
-    ethers: ^5.5.2
-  checksum: 6e5c62b342e424cd1937f2f7eb424056ad143b238320880f378c0db61c6d694617f968687321a2f030d546aa5b4dde42681cbb419589d7f87452c82844a4488b
-  languageName: node
-  linkType: hard
-
 "@ethereumjs/common@npm:2.5.0":
   version: 2.5.0
   resolution: "@ethereumjs/common@npm:2.5.0"
@@ -1244,13 +1234,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidstate/contracts@npm:^0.0.57":
-  version: 0.0.57
-  resolution: "@solidstate/contracts@npm:0.0.57"
-  checksum: 267aa0202bb57b3c96c038ecf519dba412be739a4e9e51491b15fe5c9e1f69dce11f84a418886f1fddfabbc3182e13c48a4f175914f279bed5ccccfb748d9af7
-  languageName: node
-  linkType: hard
-
 "@solidstate/hardhat-4byte-uploader@npm:^1.1.0":
   version: 1.1.0
   resolution: "@solidstate/hardhat-4byte-uploader@npm:1.1.0"
@@ -1259,25 +1242,6 @@ __metadata:
   peerDependencies:
     hardhat: ^2.0.0
   checksum: 2e0ca60717f1fbbd16b077ee66ff02e56b18fc883914d373bb6de33dec994bc9cf45c55944a5c954bcaa209d4bf7578fae6993063e9e66ccff9459d8d40cd976
-  languageName: node
-  linkType: hard
-
-"@solidstate/library@npm:^0.0.57":
-  version: 0.0.57
-  resolution: "@solidstate/library@npm:0.0.57"
-  dependencies:
-    eth-permit: ^0.1.10
-  checksum: c36b956adfdbb806851c2ed0cd48eb32d77e9c56f3c1a7887b351edbcf864d312b880a6e4a3e68ea435e2806711089c517d4412bad1da9806ba68a7dc65049e7
-  languageName: node
-  linkType: hard
-
-"@solidstate/spec@npm:^0.0.57":
-  version: 0.0.57
-  resolution: "@solidstate/spec@npm:0.0.57"
-  dependencies:
-    "@ethereum-waffle/mock-contract": ^3.4.4
-    "@solidstate/library": ^0.0.57
-  checksum: 95f76d8d45fc61e0f474402979a9482234093b564c30b938d059ae83f570e5f202c160c487d19e6e9e862aa307c41091d1d6596b36ad75b613dd8a514b90749d
   languageName: node
   linkType: hard
 
@@ -3173,15 +3137,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eth-permit@npm:^0.1.10":
-  version: 0.1.10
-  resolution: "eth-permit@npm:0.1.10"
-  dependencies:
-    utf8: ^3.0.0
-  checksum: 9b6ce4ba002f57fa7c5e032cd52c805e1e095f82f54d5e7d3672b6475c3e781060b6202fc2c514117673bbaed73a3b8d910538d78d67c69c7b36d4fb75c55d92
-  languageName: node
-  linkType: hard
-
 "ethereum-bloom-filters@npm:^1.0.6":
   version: 1.0.10
   resolution: "ethereum-bloom-filters@npm:1.0.10"
@@ -3276,7 +3231,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethers@npm:5.7.2, ethers@npm:^5.5.2, ethers@npm:^5.7.1":
+"ethers@npm:5.7.2, ethers@npm:^5.7.1":
   version: 5.7.2
   resolution: "ethers@npm:5.7.2"
   dependencies:
@@ -6084,10 +6039,7 @@ __metadata:
     "@safe-global/api-kit": ^1.3.0
     "@safe-global/protocol-kit": ^1.2.0
     "@safe-global/safe-core-sdk-types": ^2.2.0
-    "@solidstate/contracts": ^0.0.57
     "@solidstate/hardhat-4byte-uploader": ^1.1.0
-    "@solidstate/library": ^0.0.57
-    "@solidstate/spec": ^0.0.57
     "@typechain/ethers-v5": ^11.1.1
     "@typechain/hardhat": ^7.0.0
     "@types/lodash": ^4
@@ -7520,7 +7472,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"utf8@npm:3.0.0, utf8@npm:^3.0.0":
+"utf8@npm:3.0.0":
   version: 3.0.0
   resolution: "utf8@npm:3.0.0"
   checksum: cb89a69ad9ab393e3eae9b25305b3ff08bebca9adc839191a34f90777eb2942f86a96369d2839925fea58f8f722f7e27031d697f10f5f39690f8c5047303e62d
