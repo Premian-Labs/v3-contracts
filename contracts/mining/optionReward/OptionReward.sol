@@ -30,6 +30,17 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     address internal constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     /// @inheritdoc IOptionReward
+    function previewOptionParams() public view returns (UD60x18 strike, uint64 maturity) {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        // Calculates the maturity starting from the 8AM UTC timestamp of the current day
+        maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
+        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
+        _revertIfPriceIsZero(price);
+        // Applies discount to spot price and rounds to nearest strike interval
+        strike = OptionMath.roundToStrikeInterval(price * l.discount);
+    }
+
+    /// @inheritdoc IOptionReward
     function underwrite(address longReceiver, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
@@ -37,17 +48,12 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         IERC20(l.base).safeTransferFrom(msg.sender, address(this), collateral);
         IERC20(l.base).approve(address(l.option), collateral);
 
-        // Calculates the maturity starting from the 8AM UTC timestamp of the current day
-        uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
-
-        UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
-        _revertIfPriceIsZero(price);
-
-        UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
+        (UD60x18 strike, uint64 maturity) = previewOptionParams();
 
         l.redeemableLongs[longReceiver][strike][maturity] =
             l.redeemableLongs[longReceiver][strike][maturity] +
             contractSize;
+
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
         l.option.underwrite(strike, maturity, longReceiver, contractSize);
 
@@ -106,9 +112,14 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     }
 
     /// @inheritdoc IOptionReward
+    function getRewardPerContract(UD60x18 strike, uint64 maturity) external view returns (UD60x18) {
+        return OptionRewardStorage.layout().rewardPerContract[strike][maturity];
+    }
+
+    /// @inheritdoc IOptionReward
     function settle(UD60x18 strike, uint64 maturity) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
-        _revertIfExercisePeriodNotEnded(l, maturity);
+        _revertIfNotExpired(maturity);
 
         SettleVarsInternal memory vars;
 
@@ -134,7 +145,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             vars.maxRedeemableLongs = PRBMathExtra.min(vars.totalUnderwritten, longTotalSupply);
         }
 
-        (, uint256 quoteAmount) = l.option.settle(strike, maturity, vars.totalUnderwritten);
+        (, uint256 quoteAmount) = l.option.settleShort(strike, maturity, vars.totalUnderwritten);
 
         vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * l.fee, false);
 
@@ -198,30 +209,29 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         if (price == ZERO) revert OptionReward__PriceIsZero();
     }
 
-    /// @notice Revert if exercise period has not ended
+    /// @notice Revert if lock period has not ended
     function _revertIfLockPeriodNotEnded(uint64 maturity) internal view {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         if (block.timestamp < maturity + l.lockupDuration)
             revert OptionReward__LockupNotExpired(maturity + l.lockupDuration);
     }
 
-    /// @notice Revert if exercise period has not ended
+    /// @notice Revert if claim period has not ended
     function _revertIfClaimPeriodEnded(uint64 maturity) internal view {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         if (block.timestamp > maturity + l.lockupDuration + l.claimDuration)
             revert OptionReward__ClaimPeriodEnded(maturity + l.lockupDuration + l.claimDuration);
     }
 
-    /// @notice Revert if exercise period has not ended
+    /// @notice Revert if claim period has not ended
     function _revertIfClaimPeriodNotEnded(uint64 maturity) internal view {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         if (block.timestamp < maturity + l.lockupDuration + l.claimDuration)
             revert OptionReward__ClaimPeriodNotEnded(maturity + l.lockupDuration + l.claimDuration);
     }
 
-    /// @notice Revert if exercise period has not ended
-    function _revertIfExercisePeriodNotEnded(OptionRewardStorage.Layout storage l, uint64 maturity) internal view {
-        uint256 target = maturity + l.option.getExerciseDuration();
-        if (block.timestamp < target) revert OptionReward__ExercisePeriodNotEnded(maturity, target);
+    /// @notice Revert if the option is not expired
+    function _revertIfNotExpired(uint64 maturity) internal view {
+        if (block.timestamp < maturity) revert OptionReward__OptionNotExpired(maturity);
     }
 }

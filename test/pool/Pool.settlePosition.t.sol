@@ -116,6 +116,69 @@ abstract contract PoolSettlePositionTest is DeployTest {
         }
     }
 
+    function _test_settlePosition_trade_Sell100Options() internal returns (TradeInternal memory trade) {
+        posKey.orderType = Position.OrderType.LC;
+
+        trade.initialCollateral = deposit(1000 ether);
+        trade.size = ud(100 ether);
+        (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, false);
+
+        trade.poolToken = getPoolToken();
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(FEE_RECEIVER);
+
+        vm.startPrank(users.trader);
+
+        deal(trade.poolToken, users.trader, trade.size.unwrap());
+        IERC20(trade.poolToken).approve(address(router), trade.size.unwrap());
+
+        pool.trade(trade.size, false, trade.totalPremium + trade.totalPremium / 10, address(0));
+
+        vm.stopPrank();
+    }
+
+    function _test_settlePosition_Sell100Options(bool isITM) internal {
+        TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
+
+        uint256 protocolFees = pool.protocolFees();
+
+        UD60x18 settlementPrice = getSettlementPrice(isITM);
+        oracleAdapter.setPrice(settlementPrice);
+
+        vm.warp(poolKey.maturity);
+        vm.prank(posKey.operator);
+
+        pool.settlePosition(posKey);
+
+        UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
+        uint256 collateral = toTokenDecimals(trade.size * (ONE - payoff));
+
+        assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
+
+        assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral);
+
+        assertEq(
+            IERC20(trade.poolToken).balanceOf(posKey.operator),
+            trade.initialCollateral + trade.totalPremium - collateral - protocolFees
+        );
+
+        assertEq(IERC20(trade.poolToken).balanceOf(FEE_RECEIVER) - trade.feeReceiverBalance, protocolFees);
+
+        assertEq(pool.getClaimableFees(posKey), 0);
+        assertEq(pool.protocolFees(), 0);
+
+        assertEq(pool.balanceOf(posKey.operator, tokenId()), 0);
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), trade.size);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), 0);
+    }
+
+    function test_settlePosition_Sell100Options_ITM() public {
+        _test_settlePosition_Buy100Options(true);
+    }
+
+    function test_settlePosition_Sell100Options_OTM() public {
+        _test_settlePosition_Buy100Options(false);
+    }
+
     function test_settlePosition_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
         vm.prank(posKey.operator);
