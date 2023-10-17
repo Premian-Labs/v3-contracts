@@ -90,7 +90,7 @@ async function main() {
     args[4],
     args[5],
     args[6] === 'true',
-    settings,
+    args[7],
   );
 
   await updateDeploymentMetadata(
