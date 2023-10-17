@@ -70,6 +70,42 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         assertEq(vault.getAvailableAssets(), ud(1.2979e18));
     }
 
+    function test_availableAssets_UnsettledOptions() public {
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
+
+        infos[0].maturity = t0;
+        infos[0].strikes = new UD60x18[](2);
+        infos[0].sizes = new UD60x18[](2);
+        infos[0].strikes[0] = ud(900e18);
+        infos[0].strikes[1] = ud(2000e18);
+        infos[0].sizes[0] = ud(1e18);
+        infos[0].sizes[1] = ud(2e18);
+
+        infos[1].maturity = t1;
+        infos[1].strikes = new UD60x18[](1);
+        infos[1].sizes = new UD60x18[](1);
+        infos[1].strikes[0] = ud(700e18);
+        infos[1].sizes[0] = ud(1e18);
+
+        oracleAdapter.setPriceAt(t0, ud(1000e18));
+        oracleAdapter.setPriceAt(t1, ud(1400e18));
+
+        vault.setListingsAndSizes(infos);
+        vault.setTotalAssets(isCallTest ? ud(5 ether) : ud(5600 ether));
+        // totalLocked, call: 4 ether, put: 5600 ether
+        vault.setTotalLockedAssets(isCallTest ? ud(4 ether) : ud(5600 ether));
+
+        vault.setTimestamp(startTime);
+        assertEq(vault.getAvailableAssets(), isCallTest ? ud(1 ether) : ud(0 ether));
+
+        vault.setTimestamp(t0);
+        // payout, call: 0.1 ether, put: 2 * 1000 ether
+        // available: totalAssets - payout - lockedPostSettlement
+        // call: 5 ether - 0.1 ether - 1 ether = 3.9 ether
+        // put:  5600 ether - 2000 ether - 700 ether = 2900 ether
+        assertEq(vault.getAvailableAssets(), isCallTest ? ud(3.9 ether) : ud(2900 ether));
+    }
+
     function test_afterBuy_Success() public {
         setupSpreadVault();
 

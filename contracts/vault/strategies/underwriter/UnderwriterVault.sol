@@ -191,13 +191,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return l.isCall ? total / vars.spot : total;
     }
 
-    /// @notice Gets the total fair value of the basket of options underwritten
-    ///         by this vault at the current time
-    /// @return The total fair value of the basket of options underwritten
-    function _getTotalFairValue(UnderwriterVaultStorage.Layout storage l) internal view returns (UD60x18) {
-        return l.totalLockedAssets - _getTotalLiabilitiesUnexpired(l);
-    }
-
     /// @notice Gets the total locked spread for the vault
     /// @return vars The total locked spread
     function _getLockedSpreadInternal(
@@ -238,10 +231,14 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return ud(_totalSupply());
     }
 
-    /// @notice Gets the current amount of available assets
-    /// @return The amount of available assets
+    /// @notice Gets the amount of available assets that are available after settlement
+    /// @return The amount of available assets after calling the settle function
     function _availableAssetsUD60x18(UnderwriterVaultStorage.Layout storage l) internal view returns (UD60x18) {
-        return l.totalAssets - l.totalLockedAssets - _getLockedSpreadInternal(l).totalLockedSpread;
+        (
+            UD60x18 totalAssetsAfterSettlement,
+            UD60x18 totalLockedAfterSettlement
+        ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
+        return totalAssetsAfterSettlement - totalLockedAfterSettlement - _getLockedSpreadInternal(l).totalLockedSpread;
     }
 
     /// @notice Gets the current price per share for the vault
@@ -250,8 +247,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         if ((_totalSupplyUD60x18() != ZERO) && (l.totalAssets != ZERO)) {
+            (UD60x18 totalAssetsPostSettlement, ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
             UD60x18 managementFeeInShares = _computeManagementFee(l, _getBlockTimestamp());
-            UD60x18 totalAssets = _availableAssetsUD60x18(l) + _getTotalFairValue(l);
+            UD60x18 totalAssets = totalAssetsPostSettlement -
+                _getLockedSpreadInternal(l).totalLockedSpread -
+                _getTotalLiabilitiesUnexpired(l);
             return totalAssets / (_totalSupplyUD60x18() + managementFeeInShares);
         }
 
@@ -664,6 +664,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @notice Computes the `totalAssets` and `totalLockedAssets` after the settlement of expired options.
+    ///         The `totalAssets` after settlement are the `totalAssets` less the exercise value of the call or put
+    ///         options that were sold. The `totalLockedAssets`
+    /// @return totalAssets the total assets post settlement
+    ///         totalLockedAssets the total locked assets post settlement
     function _computeAssetsAfterSettlementOfExpiredOptions(
         UnderwriterVaultStorage.Layout storage l
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {

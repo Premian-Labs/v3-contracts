@@ -94,10 +94,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalLiabilitiesUnexpired(UnderwriterVaultStorage.layout());
     }
 
-    function getTotalFairValue() external view returns (UD60x18) {
-        return _getTotalFairValue(UnderwriterVaultStorage.layout());
-    }
-
     function getNumberOfListings() external view returns (uint256) {
         return _getNumberOfListings();
     }
