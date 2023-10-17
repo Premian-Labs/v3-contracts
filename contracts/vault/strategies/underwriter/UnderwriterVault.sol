@@ -663,7 +663,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
-    function _computeUnlockAfterSettlement(
+    /// @notice Computes the `totalAssets` and `totalLockedAssets` after the settlement of expired options.
+    function _computeAssetsAfterSettlementOfExpiredOptions(
         UnderwriterVaultStorage.Layout storage l
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
         uint256 timestamp = _getBlockTimestamp();
@@ -676,6 +677,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         uint256 current = l.minMaturity;
         totalAssets = l.totalAssets;
         totalLockedAssets = l.totalLockedAssets;
+
         while (current <= lastExpired && current != 0) {
             for (uint256 i = 0; i < l.maturityToStrikes[current].length(); i++) {
                 UD60x18 strike = l.maturityToStrikes[current].at(i);
@@ -684,6 +686,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 totalLockedAssets = totalLockedAssets - unlockedCollateral;
 
                 UD60x18 settlementPrice = _getSettlementPrice(l, current);
+
                 UD60x18 callPayoff = l.isCall
                     ? OptionMath.relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()) / settlementPrice
                     : OptionMath.relu(strike.intoSD59x18() - settlementPrice.intoSD59x18());
@@ -704,7 +707,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
         _revertIfOptionInvalid(args.strike, args.maturity);
 
-        (UD60x18 totalAssets, UD60x18 totalLockedAssets) = _computeUnlockAfterSettlement(l);
+        (UD60x18 totalAssets, UD60x18 totalLockedAssets) = _computeAssetsAfterSettlementOfExpiredOptions(l);
 
         _revertIfInsufficientFunds(
             args.strike,

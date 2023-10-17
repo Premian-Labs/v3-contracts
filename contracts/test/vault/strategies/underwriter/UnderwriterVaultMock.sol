@@ -510,4 +510,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeManagementFee(l, _getBlockTimestamp());
     }
+
+    function exposed_computeAssetsAfterSettlementOfExpiredOptions() external view returns (UD60x18, UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return _computeAssetsAfterSettlementOfExpiredOptions(l);
+    }
 }
