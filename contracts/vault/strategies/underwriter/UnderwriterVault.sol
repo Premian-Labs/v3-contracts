@@ -667,7 +667,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ///         The `totalAssets` after settlement are the `totalAssets` less the exercise value of the call or put
     ///         options that were sold. The `totalLockedAssets`
     /// @return totalAssets the total assets post settlement
-    ///         totalLockedAssets the total locked assets post settlement
+    /// @return totalLockedAssets the total locked assets post settlement
     function _computeAssetsAfterSettlementOfExpiredOptions(
         UnderwriterVaultStorage.Layout storage l
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
