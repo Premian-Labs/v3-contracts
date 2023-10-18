@@ -472,12 +472,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function computeCLevelGeoMean(
-        UD60x18 totalAssets,
-        UD60x18 totalLockedAssets,
+        UD60x18 totalAssetsVar,
+        UD60x18 totalLockedAssetsVar,
         UD60x18 orderSize
     ) external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return _computeCLevelGeoMean(totalAssets, totalLockedAssets, orderSize, l);
+        return _computeCLevelGeoMean(totalAssetsVar, totalLockedAssetsVar, orderSize, l);
     }
 
     function setProtocolFees(UD60x18 value) external {
