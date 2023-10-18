@@ -926,8 +926,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @inheritdoc IUnderwriterVault
     function settle() external override nonReentrant {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        _settle(l);
+        _settle(UnderwriterVaultStorage.layout());
     }
 
     /// @notice Computes and returns the management fee in shares that have to be paid by vault share holders for using the vault.
