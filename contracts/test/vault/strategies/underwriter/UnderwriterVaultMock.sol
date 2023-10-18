@@ -511,4 +511,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeAssetsAfterSettlementOfExpiredOptions(l);
     }
+
+    function setPendingAssetsDeposit(uint256 depositAmount) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        l.pendingAssetsDeposit = depositAmount;
+    }
 }
