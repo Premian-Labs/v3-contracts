@@ -10,6 +10,8 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {WAD, ZERO} from "../../libraries/Constants.sol";
+import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
+import {UD50x28} from "../../libraries/UD50x28.sol";
 
 import {IOptionReward} from "../optionReward/IOptionReward.sol";
 
@@ -22,6 +24,7 @@ import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
 contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using VaultMiningStorage for VaultMiningStorage.Layout;
+    using PRBMathExtra for UD60x18;
 
     /// @notice Address of the vault registry
     address internal immutable VAULT_REGISTRY;
@@ -62,8 +65,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     function _calculateRewardsUpdate(VaultMiningStorage.Layout storage l) internal view returns (UD60x18 rewardAmount) {
         if (block.timestamp <= l.lastUpdate) return ZERO;
 
-        UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
-        rewardAmount = yearsElapsed * l.rewardsPerYear;
+        UD50x28 yearsElapsed = UD50x28.wrap((block.timestamp - l.lastUpdate) * 1e28) / UD50x28.wrap(365 days * 1e28);
+        rewardAmount = (yearsElapsed * l.rewardsPerYear.intoUD50x28()).intoUD60x18();
 
         if (rewardAmount > l.rewardsAvailable) {
             rewardAmount = l.rewardsAvailable;
