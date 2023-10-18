@@ -26,6 +26,7 @@ interface IVaultMining {
         uint256 __deprecated_lastRewardTimestamp;
         // Accumulated rewards per share
         UD60x18 accRewardsPerShare;
+        // Reward debt (Works similarly as description below in UserInfo struct), but at the vault level, using `l.globalAccRewardsPerVote`
         UD60x18 rewardDebt;
     }
 

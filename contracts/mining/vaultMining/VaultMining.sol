@@ -9,7 +9,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
-import {WAD, ZERO} from "../../libraries/Constants.sol";
+import {ZERO} from "../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 import {UD50x28} from "../../libraries/UD50x28.sol";
 
