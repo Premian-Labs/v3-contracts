@@ -251,9 +251,14 @@ contract VaultMiningTest is Test, Assertions {
         vm.warp(ts + 16 * ONE_DAY);
         vaultA.burn(carol, 30e18);
 
-        // 1k per day emission, but 2 pools didnt had update yet allocating pending rewards, so only 16k/2 already allocated
-        // We also need to add 250 to that amount, as vaultA had 0 shares during first day of emission, leading to emission not being released
-        assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 200_000e18 - 16_000e18 / 2 + 250e18, delta);
+        // 1k per day emission, during 16 days
+        // We also need to add 250 to that amount, as vaultA had 0 shares during first day of emission, leading to emission being added back to available rewards
+        assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 200_000e18 - 16_000e18 + 250e18, delta, "aa");
+
+        vaultMining.updateVaults();
+
+        // After update of all vaults is triggered, rewards of 2 vaults (8k) are added back to available rewards, as those 2 vaults have 0 totalShares
+        assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 200_000e18 - 16_000e18 / 2 + 250e18, delta, "ab");
 
         // Alice should have: 833.3333333333333 + 5*2/7*250 + 1*2/6.5*250 = 1267.3992673992673
         assertApproxEqAbs(

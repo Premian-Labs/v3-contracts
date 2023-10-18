@@ -26,6 +26,7 @@ interface IVaultMining {
         uint256 __deprecated_lastRewardTimestamp;
         // Accumulated rewards per share
         UD60x18 accRewardsPerShare;
+        UD60x18 rewardDebt;
     }
 
     struct UserInfo {

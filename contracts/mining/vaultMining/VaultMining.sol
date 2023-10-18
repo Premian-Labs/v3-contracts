@@ -77,7 +77,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     ) internal view returns (UD60x18 accRewardsPerShare) {
         accRewardsPerShare = vInfo.accRewardsPerShare;
         if (vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
-            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
+            UD60x18 globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
+            UD60x18 vaultRewardAmount = globalAccRewardsPerVote * vInfo.votes - vInfo.rewardDebt;
             accRewardsPerShare = accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
         }
     }
@@ -227,31 +228,26 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         if (rewardAmount == ZERO) return;
 
-        IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
-        for (uint256 i = 0; i < vaults.length; i++) {
-            address vault = vaults[i].vault;
-            VaultInfo storage vInfo = l.vaultInfo[vault];
-
-            if (vInfo.votes == ZERO) continue;
-
-            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
-
-            // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
-            if (vInfo.totalShares == ZERO) {
-                l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
-                continue;
-            }
-
-            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
-        }
+        l.globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
     }
 
     function _updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
+        UD60x18 vaultRewardAmount = l.globalAccRewardsPerVote * vInfo.votes - vInfo.rewardDebt;
+
+        if (vInfo.totalShares == ZERO) {
+            // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
+            l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
+        } else {
+            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
+        }
+
         vInfo.totalShares = newTotalShares;
         _updateVaultAllocation(l, vault, utilisationRate);
+
+        vInfo.rewardDebt = vInfo.votes * l.globalAccRewardsPerVote;
     }
 
     /// @inheritdoc IVaultMining
