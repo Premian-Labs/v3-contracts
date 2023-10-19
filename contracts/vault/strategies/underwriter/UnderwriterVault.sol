@@ -3,7 +3,6 @@
 pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -14,7 +13,7 @@ import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {ZERO, ONE, iZERO} from "../../../libraries/Constants.sol";
+import {ZERO, ONE} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
@@ -68,10 +67,15 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        UD60x18 totalAssets = l.totalAssets + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        (
+            UD60x18 totalAssetsAfterSettlement,
+            UD60x18 totalLockedAfterSettlement
+        ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
+
+        UD60x18 totalAssets = totalAssetsAfterSettlement + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
         if (totalAssets == ZERO) return ZERO;
 
-        return l.totalLockedAssets / totalAssets;
+        return totalLockedAfterSettlement / totalAssets;
     }
 
     /// @inheritdoc IVault
@@ -192,13 +196,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return l.isCall ? total / vars.spot : total;
     }
 
-    /// @notice Gets the total fair value of the basket of options underwritten
-    ///         by this vault at the current time
-    /// @return The total fair value of the basket of options underwritten
-    function _getTotalFairValue(UnderwriterVaultStorage.Layout storage l) internal view returns (UD60x18) {
-        return l.totalLockedAssets - _getTotalLiabilitiesUnexpired(l);
-    }
-
     /// @notice Gets the total locked spread for the vault
     /// @return vars The total locked spread
     function _getLockedSpreadInternal(
@@ -239,10 +236,14 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return ud(_totalSupply());
     }
 
-    /// @notice Gets the current amount of available assets
-    /// @return The amount of available assets
+    /// @notice Gets the amount of available assets that are available after settlement
+    /// @return The amount of available assets after calling the settle function
     function _availableAssetsUD60x18(UnderwriterVaultStorage.Layout storage l) internal view returns (UD60x18) {
-        return l.totalAssets - l.totalLockedAssets - _getLockedSpreadInternal(l).totalLockedSpread;
+        (
+            UD60x18 totalAssetsAfterSettlement,
+            UD60x18 totalLockedAfterSettlement
+        ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
+        return totalAssetsAfterSettlement - totalLockedAfterSettlement - _getLockedSpreadInternal(l).totalLockedSpread;
     }
 
     /// @notice Gets the current price per share for the vault
@@ -251,8 +252,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         if ((_totalSupplyUD60x18() != ZERO) && (l.totalAssets != ZERO)) {
+            (UD60x18 totalAssetsPostSettlement, ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
             UD60x18 managementFeeInShares = _computeManagementFee(l, _getBlockTimestamp());
-            UD60x18 totalAssets = _availableAssetsUD60x18(l) + _getTotalFairValue(l);
+            UD60x18 totalAssets = totalAssetsPostSettlement -
+                _getLockedSpreadInternal(l).totalLockedSpread -
+                _getTotalLiabilitiesUnexpired(l);
             return totalAssets / (_totalSupplyUD60x18() + managementFeeInShares);
         }
 
@@ -304,7 +308,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _deposit(
         address caller,
         address receiver,
@@ -328,6 +331,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
@@ -345,12 +349,12 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _mint(
         uint256 shareAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
@@ -373,13 +377,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _redeem(
         uint256 shareAmount,
         address receiver,
         address owner
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that vault share holder pays management fees due
         _chargeManagementFees();
@@ -436,13 +440,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    /// @dev vault must settle expired options before pps is calculated
     function _withdraw(
         uint256 assetAmount,
         address receiver,
         address owner
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
         // charge management fees such that vault share holder pays management fees due
         _chargeManagementFees();
@@ -491,7 +495,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @notice An internal hook inside the buy function that is called after
     ///         logic inside the buy function is run to update state variables
-    /// @dev vault must settle expired options before pps is calculated
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
     /// @param size The amount of contracts.
@@ -504,7 +507,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 spread,
         UD60x18 premium
     ) internal {
-        // needs to be
+        // spread state needs to be updated otherwise spread dispersion is inconsistent
         _updateState(l);
         UD60x18 spreadProtocol = spread * l.performanceFeeRate;
         UD60x18 spreadLP = spread - spreadProtocol;
@@ -698,15 +701,12 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
-    function _relu(SD59x18 x) internal pure returns (SD59x18) {
-        if (x > iZERO) {
-            return x;
-        } else {
-            return iZERO;
-        }
-    }
-
-    function _computeUnlockAfterSettlement(
+    /// @notice Computes the `totalAssets` and `totalLockedAssets` after the settlement of expired options.
+    ///         The `totalAssets` after settlement are the `totalAssets` less the exercise value of the call or put
+    ///         options that were sold. The `totalLockedAssets`
+    /// @return totalAssets the total assets post settlement
+    /// @return totalLockedAssets the total locked assets post settlement
+    function _computeAssetsAfterSettlementOfExpiredOptions(
         UnderwriterVaultStorage.Layout storage l
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
         uint256 timestamp = _getBlockTimestamp();
@@ -719,6 +719,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         uint256 current = l.minMaturity;
         totalAssets = l.totalAssets;
         totalLockedAssets = l.totalLockedAssets;
+
         while (current <= lastExpired && current != 0) {
             for (uint256 i = 0; i < l.maturityToStrikes[current].length(); i++) {
                 UD60x18 strike = l.maturityToStrikes[current].at(i);
@@ -727,9 +728,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 totalLockedAssets = totalLockedAssets - unlockedCollateral;
 
                 UD60x18 settlementPrice = _getSettlementPrice(l, current);
+
                 UD60x18 callPayoff = l.isCall
-                    ? _relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()).intoUD60x18() / settlementPrice
-                    : _relu(strike.intoSD59x18() - settlementPrice.intoSD59x18()).intoUD60x18();
+                    ? OptionMath.relu(settlementPrice.intoSD59x18() - strike.intoSD59x18()) / settlementPrice
+                    : OptionMath.relu(strike.intoSD59x18() - settlementPrice.intoSD59x18());
                 totalAssets = totalAssets - positionSize * callPayoff;
             }
             current = l.maturities.next(current);
@@ -747,7 +749,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
         _revertIfOptionInvalid(args.strike, args.maturity);
 
-        (UD60x18 totalAssets, UD60x18 totalLockedAssets) = _computeUnlockAfterSettlement(l);
+        (UD60x18 totalAssets, UD60x18 totalLockedAssets) = _computeAssetsAfterSettlementOfExpiredOptions(l);
 
         _revertIfInsufficientFunds(
             args.strike,
@@ -844,6 +846,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address referrer
     ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Note: vault must settle expired options before pps is calculated
         _settle(l);
 
         QuoteInternal memory quote = _getQuoteInternal(
@@ -948,8 +951,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @inheritdoc IUnderwriterVault
     function settle() external override nonReentrant {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        _settle(l);
+        _settle(UnderwriterVaultStorage.layout());
     }
 
     /// @notice Computes and returns the management fee in shares that have to be paid by vault share holders for using the vault.

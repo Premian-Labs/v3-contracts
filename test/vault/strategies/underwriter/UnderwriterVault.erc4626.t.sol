@@ -11,6 +11,8 @@ import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/
 import {IVault} from "contracts/vault/IVault.sol";
 
 abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
+    event UpdateQuotes();
+
     function test_totalAssets_ReturnExpectedValue() public {
         UD60x18[3] memory cases = [ud(1e18), ud(1.1e18), ud(590.7e18)];
 
@@ -186,5 +188,53 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
     function test_asset_ReturnExpectedValue() public {
         assertEq(vault.asset(), isCallTest ? base : quote);
+    }
+
+    function test_deposit_CallsSettle() public {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = toTokenDecimals(ud(1 ether));
+
+        vm.startPrank(users.trader);
+
+        token.approve(address(vault), assetAmount);
+        vm.expectEmit();
+        emit UpdateQuotes();
+        vault.deposit(assetAmount, users.trader);
+
+        vm.stopPrank();
+    }
+
+    function test_withdraw_CallsSettle() public {
+        addDeposit(users.trader, ud(1 ether));
+        vm.expectEmit();
+        emit UpdateQuotes();
+        vm.startPrank(users.trader);
+        vault.withdraw(isCallTest ? 1 ether : 1e6, users.trader, users.trader);
+        vm.stopPrank();
+    }
+
+    function test_mint_CallsSettle() public {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = toTokenDecimals(ud(1 ether));
+
+        vm.startPrank(users.trader);
+
+        token.approve(address(vault), assetAmount);
+        uint256 shareAmount = vault.previewDeposit(assetAmount);
+
+        vm.expectEmit();
+        emit UpdateQuotes();
+        vault.mint(shareAmount, users.trader);
+
+        vm.stopPrank();
+    }
+
+    function test_redeem_CallsSettle() public {
+        addDeposit(users.trader, ud(1 ether));
+        vm.expectEmit();
+        emit UpdateQuotes();
+        vm.startPrank(users.trader);
+        vault.redeem(1 ether, users.trader, users.trader);
+        vm.stopPrank();
     }
 }
