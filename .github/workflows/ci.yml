@@ -35,6 +35,9 @@ jobs:
       - name: 'Lint contracts with solhint'
         run: 'yarn lint'
 
+      - name: 'Lint contracts with @premia/sol-linter'
+        run: 'yarn sol-linter'
+
       - name: 'lint-contract summary'
         run: |
           echo "## Lint result" >> $GITHUB_STEP_SUMMARY
