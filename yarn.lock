@@ -1037,16 +1037,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@premia/sol-linter@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@premia/sol-linter@npm:1.0.0"
+"@premia/sol-linter@npm:v1.0.1":
+  version: 1.0.1
+  resolution: "@premia/sol-linter@npm:1.0.1"
   dependencies:
     cli-table3: ^0.6.3
     solidity-ast: ^0.4.52
     typescript: ^5.2.2
   bin:
     sol-linter: dist/index.js
-  checksum: e50526af10f23237546154e611bf9d309e672dbc80497bb42595a40196bcfcf25e297641871808605195345c1a27b3fe37d9c358530607f3215ac29c6f81adac
+  checksum: 2064c31acab9ae590bd2a9bb2191b2de55e9b6d52be382d4f65c79e6a9bc77dac8aa6ec3aaebcb472e98c28b58fbcf9f71abaaaea5d6d0c57b70d2d3ec1988be
   languageName: node
   linkType: hard
 
@@ -6386,7 +6386,7 @@ __metadata:
     "@ethersproject/providers": ^5.7.2
     "@nomicfoundation/hardhat-verify": ^1.1.1
     "@nomiclabs/hardhat-ethers": ^2.2.3
-    "@premia/sol-linter": ^1.0.0
+    "@premia/sol-linter": v1.0.1
     "@safe-global/api-kit": ^1.3.0
     "@safe-global/protocol-kit": ^1.2.0
     "@safe-global/safe-core-sdk-types": ^2.2.0
