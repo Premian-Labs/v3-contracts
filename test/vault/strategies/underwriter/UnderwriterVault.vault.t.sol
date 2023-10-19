@@ -95,10 +95,10 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             } else {
                 vault.setIsCall(false);
             }
-            for (uint256 i = 0; i < totalAssets.length; i++) {
+            for (uint256 j = 0; j < totalAssets.length; j++) {
                 assertApproxEqAbs(
-                    vault.computeCLevelGeoMean(totalAssets[i], totalLockedAssets[i], size).unwrap(),
-                    expected[i].unwrap(),
+                    vault.computeCLevelGeoMean(totalAssets[j], totalLockedAssets[j], size).unwrap(),
+                    expected[j].unwrap(),
                     1000
                 );
             }
