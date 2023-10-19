@@ -38,11 +38,6 @@ jobs:
       - name: 'Lint contracts with @premia/sol-linter'
         run: 'yarn sol-linter'
 
-      - name: 'lint-contract summary'
-        run: |
-          echo "## Lint result" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
-
   build:
     needs: ['lint']
     runs-on: 'ubuntu-latest'
@@ -78,11 +73,6 @@ jobs:
             cache
           key: 'foundry-build-${{ github.sha }}'
 
-      - name: 'Add build summary'
-        run: |
-          echo "## Build result" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
-
   test:
     needs: ['build']
     runs-on: 'ubuntu-latest'
@@ -115,8 +105,3 @@ jobs:
 
       - name: 'Run tests'
         run: 'yarn test'
-
-      - name: 'Add test summary'
-        run: |
-          echo "## Test result" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
