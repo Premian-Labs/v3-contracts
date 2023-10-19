@@ -39,7 +39,7 @@ jobs:
         run: 'forge config'
 
       - name: 'Build the contracts'
-        run: 'forge build --sizes --deny-warnings --ignored-error-codes 3628 --ignored-error-codes 5574'
+        run: 'forge build --deny-warnings --ignored-error-codes 3628 --ignored-error-codes 5574'
 
       - name: 'Cache the build so that it can be re-used by the other jobs'
         uses: 'actions/cache/save@v3'
