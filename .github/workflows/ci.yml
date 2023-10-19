@@ -32,8 +32,8 @@ jobs:
       - name: 'Install Node.js packages'
         run: 'yarn install --frozen-lockfile'
 
-      - name: 'Lint contracts'
-        run: 'yarn run lint'
+      - name: 'Lint contracts with solhint'
+        run: 'yarn lint'
 
       - name: 'lint-contract summary'
         run: |
@@ -111,7 +111,7 @@ jobs:
             cache
 
       - name: 'Run tests'
-        run: 'yarn run test'
+        run: 'yarn test'
 
       - name: 'Add test summary'
         run: |
