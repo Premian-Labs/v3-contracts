@@ -15,29 +15,6 @@ env:
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
-  lint:
-    runs-on: 'ubuntu-latest'
-    steps:
-      - name: 'Check out the repo'
-        uses: 'actions/checkout@v3'
-        with:
-          submodules: 'recursive'
-
-      - name: 'Install Node.js'
-        uses: 'actions/setup-node@v3'
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      - name: 'Install Node.js packages'
-        run: 'yarn install --frozen-lockfile'
-
-      - name: 'Lint contracts with solhint'
-        run: 'yarn lint'
-
-      - name: 'Lint contracts with @premia/sol-linter'
-        run: 'yarn sol-linter'
-
   build:
     needs: ['lint']
     runs-on: 'ubuntu-latest'
@@ -72,6 +49,38 @@ jobs:
             out
             cache
           key: 'foundry-build-${{ github.sha }}'
+
+  lint:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --frozen-lockfile'
+
+      - name: 'Lint contracts with solhint'
+        run: 'yarn lint'
+
+      - name: 'Restore the cached build'
+        uses: 'actions/cache/restore@v3'
+        with:
+          fail-on-cache-miss: true
+          key: 'foundry-build-${{ github.sha }}'
+          path: |
+            out
+            cache
+
+      - name: 'Lint contracts with @premia/sol-linter'
+        run: 'yarn sol-linter'
 
   test:
     needs: ['build']
