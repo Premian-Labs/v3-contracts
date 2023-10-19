@@ -16,7 +16,6 @@ env:
 
 jobs:
   build:
-    needs: ['lint']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
@@ -51,6 +50,7 @@ jobs:
           key: 'foundry-build-${{ github.sha }}'
 
   lint:
+    needs: ['build']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
@@ -83,7 +83,7 @@ jobs:
         run: 'yarn sol-linter'
 
   test:
-    needs: ['build']
+    needs: ['lint']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
