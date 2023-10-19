@@ -666,11 +666,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
-    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
+    /// @return premiumWithFees The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         TradeArgsInternal memory args
-    ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
+    ) internal returns (uint256 premiumWithFees, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _revertIfZeroSize(args.size);
@@ -806,7 +806,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.user,
             args.size,
             delta,
-            vars.totalPremium,
+            vars.premiumWithFees,
             vars.totalTakerFees,
             vars.totalProtocolFees,
             l.marketPrice.intoUD60x18(),
