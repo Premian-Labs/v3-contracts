@@ -6,6 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 import {UD50x28} from "../../libraries/UD50x28.sol";
+import {SD49x28} from "../../libraries/SD49x28.sol";
 
 import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
@@ -51,13 +52,25 @@ interface IPoolCoreMock {
 
     function exposed_mint(address account, uint256 id, UD60x18 amount) external;
 
+    function exposed_depositFeeAndTicksUpdate(
+        Position.Key memory p,
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        uint256 tokenId
+    ) external;
+
     function getCurrentTick() external view returns (UD60x18);
 
     function getLiquidityRate() external view returns (UD50x28);
 
+    function getGlobalFeeRate() external view returns (UD50x28);
+
     function getLongRate() external view returns (UD50x28);
 
     function getShortRate() external view returns (UD50x28);
+
+    function getPositionFeeRate(Position.Key memory p) external view returns (SD49x28);
 
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory);
 

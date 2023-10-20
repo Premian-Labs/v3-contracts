@@ -276,14 +276,17 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl._getPricing.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedArea.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_cross.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_depositFeeAndTicksUpdate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_mint.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isRateNonTerminating.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getGlobalFeeRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLongRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getPositionFeeRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getShortRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.quoteOBHash.selector);

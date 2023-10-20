@@ -20,7 +20,7 @@ library OptionRewardFactoryStorage {
     }
 
     /// @notice Returns the encoded option reward key using `args`
-    function keyHash(IOptionRewardFactory.OptionRewardArgs memory args) internal pure returns (bytes32) {
+    function keyHash(IOptionRewardFactory.OptionRewardKey memory args) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
@@ -31,7 +31,9 @@ library OptionRewardFactoryStorage {
                     args.penalty,
                     args.optionDuration,
                     args.lockupDuration,
-                    args.claimDuration
+                    args.claimDuration,
+                    args.fee,
+                    args.feeReceiver
                 )
             );
     }

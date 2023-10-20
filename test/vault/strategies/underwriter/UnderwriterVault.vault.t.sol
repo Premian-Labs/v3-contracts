@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.19;
 
-import "forge-std/console2.sol";
-
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -72,7 +70,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         assertApproxEqAbs(
             fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
-            isCallTest ? 0.15828885563446596e18 : 469.9068335343156e18,
+            isCallTest ? 0.163577618244386010e18 : 486.203629e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
     }
@@ -84,7 +82,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         assertApproxEqAbs(
             fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
-            isCallTest ? 0.158288659375834262e18 : 469.906637e18,
+            isCallTest ? 0.163577618244386010e18 : 486.203629e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
     }
@@ -402,11 +400,10 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IVault.Vault__AboveMaxSlippage.selector,
-                isCallTest ? 158288659375834262 : 469906637275684065913,
-                isCallTest ? 79144329687917131 : 234953318000000000000
+                isCallTest ? 0.163577618244386010e18 : 486203629000000000000,
+                isCallTest ? 0.081788809122193005e18 : 243101814000000000000
             )
         );
-
         vault.trade(poolKey, tradeSize, true, totalPremium / 2, address(0));
     }
 
@@ -533,5 +530,26 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
         vault.trade(poolKey, ud(3e18), true, 1000e18, address(0));
+    }
+
+    function test_getSettings_ReturnExpectedValue() public {
+        assertEq(vault.getSettings(), abi.encode(settings));
+
+        uint256[] memory newSettings = new uint256[](10);
+
+        for (uint256 i = 0; i < settings.length; i++) {
+            newSettings[i] = settings[i] * 2;
+        }
+
+        vault.updateSettings(abi.encode(newSettings));
+
+        assertEq(vault.getSettings(), abi.encode(newSettings));
+    }
+
+    function test_updateSettings_RevertIf_NotOwner() public {
+        vm.prank(users.trader);
+
+        vm.expectRevert(IVault.Vault__NotAuthorized.selector);
+        vault.updateSettings(abi.encode(settings));
     }
 }

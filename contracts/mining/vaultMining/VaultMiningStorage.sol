@@ -20,6 +20,12 @@ library VaultMiningStorage {
         mapping(address pool => mapping(address user => IVaultMining.UserInfo info)) userInfo;
         // Total votes across all pools
         UD60x18 totalVotes;
+        // Total rewards accumulated by the user and not yet claimed
+        mapping(address user => UD60x18) userRewards;
+        // Timestamp of last update
+        uint256 lastUpdate;
+        // Total rewards accumulated by a vault for each vote it has
+        UD60x18 globalAccRewardsPerVote;
         // Dual mining pools
         mapping(address pool => EnumerableSet.AddressSet) dualMining;
     }

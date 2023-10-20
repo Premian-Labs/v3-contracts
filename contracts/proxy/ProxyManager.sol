@@ -8,11 +8,14 @@ import {ProxyManagerStorage} from "./ProxyManagerStorage.sol";
 import {IProxyManager} from "./IProxyManager.sol";
 
 contract ProxyManager is IProxyManager, OwnableInternal {
+    /// @inheritdoc IProxyManager
     function getManagedProxyImplementation() external view returns (address) {
         return ProxyManagerStorage.layout().managedProxyImplementation;
     }
 
+    /// @inheritdoc IProxyManager
     function setManagedProxyImplementation(address implementation) external onlyOwner {
         ProxyManagerStorage.layout().managedProxyImplementation = implementation;
+        emit ManagedImplementationSet(implementation);
     }
 }

@@ -5,6 +5,8 @@ pragma solidity ^0.8.19;
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD49x28} from "contracts/libraries/SD49x28.sol";
+import {SD49x28} from "contracts/libraries/UD50x28.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -521,6 +523,52 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.getLiquidityRate(), 0.0);
         assertEq(pool.getLongRate(), 0.0);
         assertEq(pool.getShortRate(), 0.0);
+    }
+
+    function test_deposit_CS_Redeposit() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.CS;
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+        IPoolInternal.Tick memory tickLower = pool.exposed_getTick(ud(0.1 ether));
+        IPoolInternal.Tick memory tickUpper = pool.exposed_getTick(ud(0.2 ether));
+        assertEq(tickLower.longDelta, SD49x28.wrap(0 ether));
+        assertEq(tickUpper.longDelta, SD49x28.wrap(0 ether));
+        assertEq(tickLower.shortDelta, SD49x28.wrap(0.01e28));
+        assertEq(tickUpper.shortDelta, SD49x28.wrap(-0.01e28));
+        assertEq(pool.getLiquidityRate(), 0.0 ether);
+        deposit(depositSize);
+        IPoolInternal.Tick memory tickLowerUpdated = pool.exposed_getTick(ud(0.1 ether));
+        IPoolInternal.Tick memory tickUpperUpdated = pool.exposed_getTick(ud(0.2 ether));
+        assertEq(tickLowerUpdated.longDelta, SD49x28.wrap(0 ether));
+        assertEq(tickUpperUpdated.longDelta, SD49x28.wrap(0 ether));
+        assertEq(tickLowerUpdated.shortDelta, SD49x28.wrap(0.02e28));
+        assertEq(tickUpperUpdated.shortDelta, SD49x28.wrap(-0.02e28));
+        assertEq(pool.getLiquidityRate(), 0.0 ether);
+    }
+
+    function test_deposit_LC_Redeposit() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+        IPoolInternal.Tick memory tickLower = pool.exposed_getTick(ud(0.1 ether));
+        IPoolInternal.Tick memory tickUpper = pool.exposed_getTick(ud(0.2 ether));
+        assertEq(tickLower.longDelta, SD49x28.wrap(-0.01e28));
+        assertEq(tickUpper.longDelta, SD49x28.wrap(-0.01e28));
+        assertEq(tickLower.shortDelta, SD49x28.wrap(0.0 ether));
+        assertEq(tickUpper.shortDelta, SD49x28.wrap(0.0 ether));
+        assertEq(pool.getLiquidityRate(), 0.01e28);
+        deposit(depositSize);
+        IPoolInternal.Tick memory tickLowerUpdated = pool.exposed_getTick(ud(0.1 ether));
+        IPoolInternal.Tick memory tickUpperUpdated = pool.exposed_getTick(ud(0.2 ether));
+        assertEq(tickLowerUpdated.longDelta, SD49x28.wrap(-0.02e28));
+        assertEq(tickUpperUpdated.longDelta, SD49x28.wrap(-0.02e28));
+        assertEq(tickLowerUpdated.shortDelta, SD49x28.wrap(0.0 ether));
+        assertEq(tickUpperUpdated.shortDelta, SD49x28.wrap(0.0 ether));
+        assertEq(pool.getLiquidityRate(), 0.02e28);
     }
 
     function _setup_CS() public {
@@ -1212,5 +1260,46 @@ abstract contract PoolDepositTest is DeployTest {
         // Test that 28 is non-terminating
         result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.029 ether));
         assertTrue(result);
+    }
+
+    function test_depositFeeAndTicksUpdate() public {
+        // prepare the ticks
+        UD60x18 depositSize = ud(2 ether);
+        UD60x18 tradeSize = ud(0.5 ether);
+        trade(tradeSize.unwrap(), true, depositSize.unwrap());
+        IERC20 token = IERC20(getPoolToken());
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(posKey.lower, posKey.upper);
+
+        assertEq(pool.exposed_getTick(posKey.lower).shortDelta, SD49x28.wrap(-0.01e28));
+        assertEq(pool.exposed_getTick(posKey.lower).shortDelta, SD49x28.wrap(-0.01e28));
+        // lower = 0.1, upper = 0.3
+        // premium
+        // call: (0,1 + 0,15) / 2 * 0,5 = 0.0625
+        // put: (0,1 + 0,15) / 2 * 0,5 * 1000 = 62.5
+        // taker fees
+        // call: (0,1 + 0,15) / 2 * 0,5 * 0,03 = 0.001875
+        // put: (0,1 + 0,15) / 2 * 0,5 * 0,03 * 1000 = 1.875
+        // 0,0001875 * 10^18 / 2 / (2 / 200) / (0,0009375 * 10^18) = 10..
+        // call: 93750000000000000 / 10^18 / 100 * 10^18 = 0.0009375 * 10^18
+        // put: 93750000000000000000 / 10^18 / 100 * 10^6 = 937500
+        assertEq(pool.getClaimableFees(posKey), isCallTest ? 0.0009375 ether : 0.9375e6);
+        assertEq(pool.getPositionFeeRate(posKey), 0);
+        assertEq(token.balanceOf(users.lp), 0);
+        uint256 tokenId = PoolStorage.formatTokenId(posKey.operator, posKey.lower, posKey.upper, posKey.orderType);
+        pool.exposed_depositFeeAndTicksUpdate(posKey, nearestBelowLower, nearestBelowUpper, ud(0.0 ether), tokenId);
+        assertEq(pool.getPositionFeeRate(posKey), isCallTest ? SD49x28.wrap(0.09375e28) : SD49x28.wrap(93.75e28));
+        assertEq(token.balanceOf(users.lp), 0);
+        assertEq(pool.exposed_getTick(posKey.lower).shortDelta, SD49x28.wrap(-0.01e28));
+        assertEq(pool.exposed_getTick(posKey.lower).shortDelta, SD49x28.wrap(-0.01e28));
+
+        tradeOnly(tradeSize.unwrap(), false);
+
+        assertEq(pool.getGlobalFeeRate().unwrap(), isCallTest ? 0.1875e28 : 187.5e28);
+        pool.exposed_depositFeeAndTicksUpdate(posKey, nearestBelowLower, nearestBelowUpper, ud(0.0 ether), tokenId);
+        assertEq(pool.getPositionFeeRate(posKey), isCallTest ? SD49x28.wrap(0.1875e28) : SD49x28.wrap(187.5e28));
+        vm.startPrank(users.lp);
+        pool.claim(posKey);
+        vm.stopPrank();
+        assertEq(token.balanceOf(users.lp), isCallTest ? 0.001875 ether : 1.875e6);
     }
 }

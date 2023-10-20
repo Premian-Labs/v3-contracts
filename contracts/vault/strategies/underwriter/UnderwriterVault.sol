@@ -9,6 +9,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
@@ -62,6 +63,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         POOL_DIAMOND = poolDiamond;
     }
 
+    /// @inheritdoc IVault
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -71,11 +73,34 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         return l.totalLockedAssets / totalAssets;
     }
 
+    /// @inheritdoc IVault
     function updateSettings(bytes memory settings) external {
-        if (msg.sender != VAULT_REGISTRY) revert Vault__SettingsNotFromRegistry();
+        _revertIfNotRegistryOwner(msg.sender);
 
         // Decode data and update storage variable
         UnderwriterVaultStorage.layout().updateSettings(settings);
+
+        emit UpdateSettings(settings);
+    }
+
+    /// @inheritdoc IVault
+    function getSettings() external view returns (bytes memory) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        UD60x18[] memory settings = new UD60x18[](10);
+
+        settings[0] = l.alphaCLevel;
+        settings[1] = l.hourlyDecayDiscount;
+        settings[2] = l.minCLevel;
+        settings[3] = l.maxCLevel;
+        settings[4] = l.minDTE;
+        settings[5] = l.maxDTE;
+        settings[6] = l.minDelta;
+        settings[7] = l.maxDelta;
+        settings[8] = l.performanceFeeRate;
+        settings[9] = l.managementFeeRate;
+
+        return abi.encode(settings);
     }
 
     /// @notice Gets the timestamp of the current block.
@@ -325,6 +350,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
+
+        emit PricePerShare(l.convertAssetToUD60x18(assetAmount) / ud(shareAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -334,7 +361,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
-        return super._deposit(assetAmount, receiver);
+        shareAmount = super._deposit(assetAmount, receiver);
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -392,6 +419,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     function _maxWithdrawUD60x18(
@@ -452,6 +481,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+
+        emit PricePerShare(pps);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -570,6 +601,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 decay = decayRate * duration;
 
         return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
+    }
+
+    function _revertIfNotRegistryOwner(address addr) internal view {
+        if (addr != IOwnable(VAULT_REGISTRY).owner()) revert Vault__NotAuthorized();
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
@@ -717,7 +752,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         // Compute output variables
         quote.premium = vars.price * args.size;
-        quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
+        quote.premium = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(quote.premium)); // Round down to align with token
+        quote.spread = (vars.cLevel - ONE) * quote.premium;
+        quote.spread = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(quote.spread)); // Round down to align with token
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
         if (revertIfPoolNotDeployed && quote.pool == address(0)) revert Vault__OptionPoolNotListed();
@@ -831,6 +868,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
+
+            emit Settle(pool, positionSize, ZERO);
         }
     }
 

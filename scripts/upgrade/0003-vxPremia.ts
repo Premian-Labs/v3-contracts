@@ -1,49 +1,27 @@
 import { VxPremia__factory, VxPremiaProxy__factory } from '../../typechain';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import {
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
-
-  //////////////////////////
-
-  let proxyManager: string;
-  let lzEndpoint: string;
-  let deployment: DeploymentInfos;
-  let setImplementation: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
-    deployment = arbitrumDeployment;
-    setImplementation = false;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    proxyManager = ethers.constants.AddressZero;
-    lzEndpoint = ethers.constants.AddressZero;
-    deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
+  const [deployer, proposer] = await ethers.getSigners();
+  const { deployment, proposeToMultiSig, proxyManager } = await initialize(
+    deployer,
+  );
 
   //////////////////////////
 
   const args = [
     proxyManager,
-    lzEndpoint,
+    deployment.addresses.lzEndpoint,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
-    deployment.ExchangeHelper.address,
-    deployment.VaultRegistryProxy.address,
+    deployment.core.ExchangeHelper.address,
+    deployment.core.VaultRegistryProxy.address,
   ];
   const implementation = await new VxPremia__factory(deployer).deploy(
     args[0],
@@ -53,22 +31,30 @@ async function main() {
     args[4],
     args[5],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VxPremiaImplementation,
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
-  if (setImplementation) {
-    const proxy = VxPremiaProxy__factory.connect(
-      deployment.VxPremiaProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = VxPremiaProxy__factory.connect(
+    deployment.core.VxPremiaProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [transaction],
+  );
 }
 
 main()

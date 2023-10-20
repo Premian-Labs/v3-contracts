@@ -1,6 +1,6 @@
 // Hardhat plugins
 import '@nomiclabs/hardhat-ethers';
-import '@nomiclabs/hardhat-etherscan';
+import '@nomicfoundation/hardhat-verify';
 import '@solidstate/hardhat-4byte-uploader';
 import '@typechain/hardhat';
 import Dotenv from 'dotenv';
@@ -23,18 +23,29 @@ function getRemappings() {
     .map((line: string) => line.trim().split('='));
 }
 
-const { API_KEY_ALCHEMY, API_KEY_ARBISCAN, PKEY_ETH_MAIN, PKEY_ETH_TEST } =
-  process.env;
+/**
+ * As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
+ * @param pKey PKEY to return or replace, if necessary
+ */
+function tryFetchPKey(pKey: string | undefined) {
+  return pKey == undefined || pKey.length == 0
+    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    : pKey;
+}
 
-// As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
-const pkeyMainnet =
-  PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
-    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    : PKEY_ETH_MAIN;
-const pkeyTestnet =
-  PKEY_ETH_TEST == undefined || PKEY_ETH_TEST.length == 0
-    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    : PKEY_ETH_TEST;
+const {
+  API_KEY_ALCHEMY,
+  API_KEY_ARBISCAN,
+  PKEY_DEPLOYER_MAIN,
+  PKEY_DEPLOYER_TEST,
+  PKEY_PROPOSER_MAIN,
+  PKEY_PROPOSER_TEST,
+} = process.env;
+
+const pkeyDeployerMainnet = tryFetchPKey(PKEY_DEPLOYER_MAIN);
+const pkeyDeployerTestnet = tryFetchPKey(PKEY_DEPLOYER_TEST);
+const pkeyProposerMainnet = tryFetchPKey(PKEY_PROPOSER_MAIN);
+const pkeyProposerTestnet = tryFetchPKey(PKEY_PROPOSER_TEST);
 
 export default {
   solidity: {
@@ -95,7 +106,7 @@ export default {
   networks: {
     anvil: {
       url: `http://127.0.0.1:8545`,
-      accounts: [pkeyTestnet],
+      accounts: [pkeyDeployerTestnet, pkeyProposerTestnet],
     },
     hardhat: {
       forking: {
@@ -107,22 +118,22 @@ export default {
     },
     arbitrum: {
       url: `https://arb-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
-      accounts: [pkeyMainnet],
+      accounts: [pkeyDeployerMainnet, pkeyProposerMainnet],
       timeout: 300000,
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [pkeyTestnet],
+      accounts: [pkeyDeployerTestnet, pkeyProposerTestnet],
       timeout: 300000,
     },
     arbitrumGoerli: {
       url: `https://arb-goerli.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
-      accounts: [pkeyTestnet],
+      accounts: [pkeyDeployerTestnet, pkeyProposerTestnet],
       timeout: 300000,
     },
     arbitrumNova: {
       url: `https://nova.arbitrum.io/rpc`,
-      accounts: [pkeyMainnet],
+      accounts: [pkeyDeployerMainnet, pkeyProposerMainnet],
       timeout: 300000,
     },
   },
@@ -137,6 +148,7 @@ export default {
   etherscan: {
     apiKey: {
       arbitrumOne: API_KEY_ARBISCAN,
+      arbitrumGoerli: API_KEY_ARBISCAN,
     },
   },
 

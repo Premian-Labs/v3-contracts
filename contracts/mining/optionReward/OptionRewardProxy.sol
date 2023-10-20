@@ -7,10 +7,12 @@ import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorag
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionRewardProxy is Proxy {
     IProxyManager private immutable MANAGER;
@@ -18,13 +20,15 @@ contract OptionRewardProxy is Proxy {
     constructor(
         IProxyManager manager,
         IOptionPS option,
-        address oracleAdapter,
-        address paymentSplitter,
+        IOracleAdapter oracleAdapter,
+        IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
         uint256 optionDuration,
         uint256 lockupDuration,
-        uint256 claimDuration
+        uint256 claimDuration,
+        UD60x18 fee,
+        address feeReceiver
     ) {
         MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
@@ -50,6 +54,9 @@ contract OptionRewardProxy is Proxy {
         l.penalty = penalty;
         l.lockupDuration = lockupDuration;
         l.claimDuration = claimDuration;
+
+        l.fee = fee;
+        l.feeReceiver = feeReceiver;
     }
 
     /// @inheritdoc Proxy

@@ -17,7 +17,6 @@ env:
 jobs:
   lint:
     runs-on: 'ubuntu-latest'
-
     steps:
       - name: 'Check out the repo'
         uses: 'actions/checkout@v3'
@@ -42,6 +41,7 @@ jobs:
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
   build:
+    needs: ['lint']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
@@ -65,12 +65,14 @@ jobs:
         run: 'forge config'
 
       - name: 'Build the contracts'
-        run: 'forge build'
+        run: 'forge build --deny-warnings --ignored-error-codes 3628 --ignored-error-codes 5574'
 
       - name: 'Cache the build so that it can be re-used by the other jobs'
         uses: 'actions/cache/save@v3'
         with:
-          path: 'out'
+          path: |
+            out
+            cache
           key: 'foundry-build-${{ github.sha }}'
 
       - name: 'Add build summary'
@@ -79,7 +81,7 @@ jobs:
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
 
   test:
-    needs: ['lint', 'build']
+    needs: ['build']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
@@ -104,7 +106,9 @@ jobs:
         with:
           fail-on-cache-miss: true
           key: 'foundry-build-${{ github.sha }}'
-          path: 'out'
+          path: |
+            out
+            cache
 
       - name: 'Run tests'
         run: 'yarn run test'

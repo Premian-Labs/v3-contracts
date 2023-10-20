@@ -53,7 +53,6 @@ contract MiningMock is IMiningAddRewards {
 }
 
 contract OptionRewardTest is Assertions, Test {
-    uint256 internal constant exercisePeriod = 7 days;
     UD60x18 internal constant discount = UD60x18.wrap(0.55e18);
     UD60x18 internal constant penalty = UD60x18.wrap(0.75e18);
     uint256 internal constant optionDuration = 30 days;
@@ -67,6 +66,7 @@ contract OptionRewardTest is Assertions, Test {
     OracleAdapterMock internal oracleAdapter;
     OptionPSFactory internal optionPSFactory;
     OptionReward internal optionReward;
+    OptionRewardFactory optionRewardFactory;
     VxPremia internal vxPremia;
     OptionPS internal option;
     address internal mining;
@@ -133,10 +133,10 @@ contract OptionRewardTest is Assertions, Test {
         ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
         oracleAdapter = OracleAdapterMock(address(proxy));
 
-        OptionReward optionRewardImplementation = new OptionReward(feeReceiverOptionReward, fee);
-        address optionRewardFactoryImpl = address(new OptionRewardFactory());
+        OptionReward optionRewardImplementation = new OptionReward();
+        address optionRewardFactoryImpl = address(new OptionRewardFactory(fee, feeReceiverOptionReward));
         ProxyUpgradeableOwnable optionRewardFactoryProxy = new ProxyUpgradeableOwnable(optionRewardFactoryImpl);
-        OptionRewardFactory optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
+        optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
         optionRewardFactory.setManagedProxyImplementation(address(optionRewardImplementation));
 
         option = OptionPS(
@@ -145,21 +145,23 @@ contract OptionRewardTest is Assertions, Test {
             )
         );
 
-        IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs({
+        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
             option: option,
-            oracleAdapter: address(oracleAdapter),
-            paymentSplitter: address(paymentSplitter),
+            oracleAdapter: oracleAdapter,
+            paymentSplitter: paymentSplitter,
             discount: discount,
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
-            claimDuration: claimDuration
+            claimDuration: claimDuration,
+            fee: fee,
+            feeReceiver: feeReceiverOptionReward
         });
 
-        optionReward = OptionReward(optionRewardFactory.deployProxy(args));
+        optionReward = OptionReward(optionRewardFactory.deployProxy(key));
 
         assertTrue(optionRewardFactory.isProxyDeployed(address(optionReward)));
-        (address _optionReward, ) = optionRewardFactory.getProxyAddress(args);
+        (address _optionReward, ) = optionRewardFactory.getProxyAddress(key);
         assertEq(address(optionReward), _optionReward);
 
         address[4] memory users = [underwriter, otherUnderwriter, longReceiver, otherLongReceiver];
@@ -195,6 +197,39 @@ contract OptionRewardTest is Assertions, Test {
 
     function _shortTokenId() internal view returns (uint256) {
         return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, ud(0.55e18));
+    }
+
+    function test_deployProxy_RevertIf_ProxyAlreadyDeployed() public {
+        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
+            option: option,
+            oracleAdapter: oracleAdapter,
+            paymentSplitter: paymentSplitter,
+            discount: discount,
+            penalty: penalty,
+            optionDuration: optionDuration,
+            lockupDuration: lockupDuration,
+            claimDuration: claimDuration,
+            fee: fee,
+            feeReceiver: feeReceiverOptionReward
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionRewardFactory.OptionRewardFactory__ProxyAlreadyDeployed.selector,
+                address(optionReward)
+            )
+        );
+        optionReward = OptionReward(optionRewardFactory.deployProxy(key));
+    }
+
+    function test_previewOptionParams_Success() public {
+        oracleAdapter.setPrice(spot);
+        vm.warp(1682155823); // Apr-22-2023 09:30:23 AM +UTC
+        uint256 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
+        uint256 expectedMaturity = timestamp8AMUTC + 30 days; // May-22-2023 08:00:00 AM +UTC
+        (UD60x18 _strike, uint64 _maturity) = optionReward.previewOptionParams();
+        assertEq(_strike, strike);
+        assertEq(_maturity, expectedMaturity);
     }
 
     function test_underwrite_Success() public {
@@ -262,12 +297,15 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + 1);
         vm.prank(longReceiver);
         UD60x18 exerciseSize = _size / ud(4e18);
         option.exercise(strike, maturity, exerciseSize);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
+
+        vm.prank(longReceiver);
+        option.settleLong(strike, maturity, exerciseSize);
+
         optionReward.settle(strike, maturity);
 
         UD60x18 exerciseCost = (strike * _size) / ud(4e18);
@@ -300,11 +338,14 @@ contract OptionRewardTest is Assertions, Test {
         spot = spot * ud(10e18);
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + 1);
         vm.prank(otherLongReceiver);
         option.exercise(strike, maturity, _size);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
+
+        vm.prank(otherLongReceiver);
+        option.settleLong(strike, maturity, _size);
+
         optionReward.settle(strike, maturity);
 
         UD60x18 intrinsicValue = (spot - strike) / spot;
@@ -319,11 +360,11 @@ contract OptionRewardTest is Assertions, Test {
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size / ud(2e18));
 
-        maturity = 5817600;
+        maturity = 5212800;
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         assertEq(base.balanceOf(address(optionReward)), optionReward.getTotalBaseReserved()); // We use excess base tokens from this settlement to fill the missing reserve amount
@@ -337,7 +378,7 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         vm.expectRevert(IOptionReward.OptionReward__InvalidSettlement.selector);
@@ -352,14 +393,8 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod - 1);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOptionReward.OptionReward__ExercisePeriodNotEnded.selector,
-                maturity,
-                maturity + exercisePeriod
-            )
-        );
+        vm.warp(maturity - 1);
+        vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__OptionNotExpired.selector, maturity));
         optionReward.settle(strike, maturity);
     }
 
@@ -369,7 +404,7 @@ contract OptionRewardTest is Assertions, Test {
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         optionReward.settle(strike, maturity);
     }
@@ -382,12 +417,14 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + 1);
         vm.prank(longReceiver);
         UD60x18 exerciseSize = _size / ud(4e18);
         option.exercise(strike, maturity, exerciseSize);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
+
+        vm.prank(longReceiver);
+        option.settleLong(strike, maturity, exerciseSize);
         optionReward.settle(strike, maturity);
 
         UD60x18 intrinsicValue = spot - strike;
@@ -413,7 +450,7 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         vm.warp(maturity + lockupDuration - 1);
@@ -434,7 +471,7 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         vm.warp(maturity + lockupDuration + claimDuration + 1);
@@ -458,7 +495,7 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         vm.warp(maturity + lockupDuration + 1);
@@ -476,7 +513,7 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
         optionReward.settle(strike, maturity);
 
         vm.warp(maturity + lockupDuration + 1);
@@ -516,12 +553,14 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + 1);
         vm.prank(longReceiver);
         UD60x18 exerciseSize = _size / ud(4e18);
         option.exercise(strike, maturity, exerciseSize);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
+
+        vm.prank(longReceiver);
+        option.settleLong(strike, maturity, exerciseSize);
         optionReward.settle(strike, maturity);
 
         UD60x18 intrinsicValue = spot - strike;
@@ -538,12 +577,14 @@ contract OptionRewardTest is Assertions, Test {
 
         oracleAdapter.setPriceAt(maturity, spot);
 
-        vm.warp(maturity + 1);
         vm.prank(longReceiver);
         UD60x18 exerciseSize = _size / ud(4e18);
         option.exercise(strike, maturity, exerciseSize);
 
-        vm.warp(maturity + exercisePeriod + 1);
+        vm.warp(maturity + 1);
+
+        vm.prank(longReceiver);
+        option.settleLong(strike, maturity, exerciseSize);
         optionReward.settle(strike, maturity);
 
         UD60x18 intrinsicValue = spot - strike;

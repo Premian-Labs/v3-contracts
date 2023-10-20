@@ -2,40 +2,25 @@ import {
   PoolFactory__factory,
   PoolFactoryProxy__factory,
 } from '../../typechain';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import {
+  initialize,
+  updateDeploymentMetadata,
+} from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const [deployer, proposer] = await ethers.getSigners();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
 
-  let deployment: DeploymentInfos;
   let premiaDiamond: string;
   let chainlinkAdapter: string;
-  let setImplementation: boolean;
 
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-    setImplementation = false;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
-
-  premiaDiamond = deployment.PremiaDiamond.address;
-  chainlinkAdapter = deployment.ChainlinkAdapterProxy.address;
+  premiaDiamond = deployment.core.PremiaDiamond.address;
+  chainlinkAdapter = deployment.core.ChainlinkAdapterProxy.address;
 
   //////////////////////////
 
@@ -43,7 +28,7 @@ async function main() {
     premiaDiamond,
     chainlinkAdapter,
     deployment.tokens.WETH,
-    deployment.PoolFactoryDeployer.address,
+    deployment.core.PoolFactoryDeployer.address,
   ];
   const implementation = await new PoolFactory__factory(deployer).deploy(
     args[0],
@@ -51,22 +36,30 @@ async function main() {
     args[2],
     args[3],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.PoolFactoryImplementation,
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
-  if (setImplementation) {
-    const proxy = PoolFactoryProxy__factory.connect(
-      deployment.PoolFactoryProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = PoolFactoryProxy__factory.connect(
+    deployment.core.PoolFactoryProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [transaction],
+  );
 }
 
 main()

@@ -32,6 +32,8 @@ interface IVaultRegistry {
     }
 
     // Events
+    event VaultImplementationSet(bytes32 indexed vaultType, address implementation);
+
     event VaultAdded(
         address indexed vault,
         address indexed asset,
@@ -154,16 +156,6 @@ interface IVaultRegistry {
     /// @param vaultType The vault type.
     /// @return All the vaults of type `vaultType`.
     function getVaultsByType(bytes32 vaultType) external view returns (Vault[] memory);
-
-    /// @notice Gets the settings for the vaultType.
-    /// @param vaultType The vault type.
-    /// @return The vault settings.
-    function getSettings(bytes32 vaultType) external view returns (bytes memory);
-
-    /// @notice Sets the settings for the vaultType.
-    /// @param vaultType The vault type.
-    /// @param updatedSettings The updated settings for the vault type.
-    function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external;
 
     /// @notice Gets the implementation for the vaultType.
     /// @param vaultType The vault type.
