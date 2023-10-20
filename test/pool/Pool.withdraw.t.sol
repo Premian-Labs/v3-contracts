@@ -3,6 +3,7 @@
 pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {sd} from "@prb/math/SD59x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -13,6 +14,7 @@ import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+import {IPosition} from "contracts/libraries/IPosition.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
@@ -278,6 +280,18 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         vm.expectRevert(IPoolInternal.Pool__ZeroSize.selector);
         pool.withdraw(posKey, ZERO, ZERO, ONE);
+    }
+
+    function test_withdraw_RevertIf_WithdrawSizeLargerThanDeposit() public {
+        UD60x18 depositSize = ud(1000 ether);
+        deposit(depositSize);
+        vm.warp(block.timestamp + 60);
+        vm.expectRevert(
+            abi.encodeWithSelector(IPosition.Position__InvalidPositionUpdate.selector, depositSize, sd(-2000 ether))
+        );
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, TWO * depositSize, ZERO, ONE);
+        vm.stopPrank();
     }
 
     function test_withdraw_RevertIf_Expired() public {

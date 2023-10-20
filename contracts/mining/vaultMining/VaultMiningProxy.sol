@@ -9,6 +9,9 @@ import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
 contract VaultMiningProxy is ProxyUpgradeableOwnable {
     constructor(address implementation, UD60x18 rewardsPerYear) ProxyUpgradeableOwnable(implementation) {
-        VaultMiningStorage.layout().rewardsPerYear = rewardsPerYear;
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+
+        l.lastUpdate = block.timestamp;
+        l.rewardsPerYear = rewardsPerYear;
     }
 }

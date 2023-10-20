@@ -23,7 +23,7 @@ interface IVaultMining {
         // Amount of votes for this vault
         UD60x18 votes;
         // Last timestamp at which distribution occurred
-        uint256 lastRewardTimestamp;
+        uint256 __deprecated_lastRewardTimestamp;
         // Accumulated rewards per share
         UD60x18 accRewardsPerShare;
     }
@@ -55,9 +55,17 @@ interface IVaultMining {
     /// @notice Return amount of rewards not yet allocated
     function getRewardsAvailable() external view returns (UD60x18);
 
-    /// @notice Return amount of pending rewards (not yet claimed) for a user.
-    ///         This accounts for `l.userRewards[user]` and pending rewards of all given vaults
-    function getPendingUserRewards(address user, address[] calldata vaults) external view returns (UD60x18);
+    /// @notice Return the amount of user rewards already allocated and available to claim.
+    ///         This only account for l.userRewards[user] and does NOT include pending reward updates.
+    function getUserRewards(address user) external view returns (UD60x18);
+
+    /// @notice Return amount of pending rewards (not yet claimed) for a user for a vault
+    ///         This DOES NOT account for `l.userRewards[user]` and only account for pending rewards of given vault
+    function getPendingUserRewardsFromVault(address user, address vault) external view returns (UD60x18);
+
+    /// @notice Return amount of total rewards (not yet claimed) for a user.
+    ///         This accounts for `l.userRewards[user]` and pending rewards of all vaults
+    function getTotalUserRewards(address user) external view returns (UD60x18);
 
     /// @notice Return the total amount of votes across all vaults (Used to calculate share of rewards allocation for each vault)
     function getTotalVotes() external view returns (UD60x18);
@@ -70,6 +78,13 @@ interface IVaultMining {
 
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
+
+    /// @notice `OptionReward.previewOptionParams` wrapper, returns the params for the option reward token. Note that the
+    ///         on-chain price is constantly updating, therefore, the strike price returned may not be the same as the
+    ///         strike price at the time of underwriting.
+    /// @return strike the option strike price (18 decimals)
+    /// @return maturity the option maturity timestamp
+    function previewOptionParams() external view returns (UD60x18 strike, uint64 maturity);
 
     /// @notice Allocate pending rewards for a list of vaults, and claim given amount of rewards.
     /// @param vaults The vaults for which to trigger allocation of pending rewards

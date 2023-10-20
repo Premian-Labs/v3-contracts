@@ -7,6 +7,7 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 import {UD50x28} from "../../libraries/UD50x28.sol";
+import {SD49x28} from "../../libraries/SD49x28.sol";
 
 import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
@@ -109,17 +110,35 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return l.liquidityRate;
     }
 
+    function getGlobalFeeRate() external view returns (UD50x28) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.globalFeeRate;
+    }
+
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory) {
         return _getTick(price);
     }
 
-    function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool) {
-        return _isRateNonTerminating(lower, upper);
+    function exposed_depositFeeAndTicksUpdate(
+        Position.Key memory p,
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        uint256 tokenId
+    ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.KeyInternal memory pI = Position.toKeyInternal(p, l.strike, l.isCallPool);
+        Position.Data storage pData = l.positions[Position.keyHash(p)];
+        _depositFeeAndTicksUpdate(l, pData, pI, belowLower, belowUpper, size, tokenId);
     }
 
     function getLongRate() external view returns (UD50x28) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.longRate;
+    }
+
+    function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool) {
+        return _isRateNonTerminating(lower, upper);
     }
 
     function getShortRate() external view returns (UD50x28) {
@@ -158,6 +177,12 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     function safeTransferIgnoreDust(address to, uint256 value) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
         IERC20(l.getPoolToken()).safeTransferIgnoreDust(to, value);
+    }
+
+    function getPositionFeeRate(Position.Key memory p) external view returns (SD49x28) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage pData = l.positions[Position.keyHash(p)];
+        return pData.lastFeeRate;
     }
 
     function exposed_roundDown(UD60x18 value) external view returns (uint256) {

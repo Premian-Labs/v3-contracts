@@ -9,11 +9,10 @@ import {IERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable
 interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     enum TokenType {
         Long,
-        Short
+        Short,
+        LongExercised
     }
 
-    error OptionPS__ExercisePeriodEnded(uint256 maturity, uint256 exercisePeriodEnd);
-    error OptionPS__ExercisePeriodNotEnded(uint256 maturity, uint256 exercisePeriodEnd);
     error OptionPS__OptionMaturityNot8UTC(uint256 maturity);
     error OptionPS__OptionExpired(uint256 maturity);
     error OptionPS__OptionNotExpired(uint256 maturity);
@@ -24,16 +23,31 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
         UD60x18 strike,
         uint256 maturity,
         UD60x18 contractSize,
-        UD60x18 exerciseValue,
         UD60x18 exerciseCost,
-        UD60x18 exerciseFee
+        UD60x18 fee
     );
 
-    event Settle(
+    event CancelExercise(
         address indexed user,
-        UD60x18 contractSize,
         UD60x18 strike,
         uint256 maturity,
+        UD60x18 contractSize,
+        UD60x18 exerciseCostRefunded
+    );
+
+    event SettleLong(
+        address indexed user,
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 contractSize,
+        UD60x18 exerciseValue
+    );
+
+    event SettleShort(
+        address indexed user,
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 contractSize,
         UD60x18 collateralAmount,
         UD60x18 exerciseTokenAmount
     );
@@ -51,9 +65,6 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @notice Returns the pair infos for this option
     function getSettings() external view returns (address base, address quote, bool isCall);
 
-    /// @notice Returns the length of time in seconds during which long holders can exercise their options after maturity
-    function getExerciseDuration() external pure returns (uint256);
-
     /// @notice Underwrite an option by depositing collateral
     /// @param strike the option strike price (18 decimals)
     /// @param longReceiver the address that will receive the long tokens
@@ -67,12 +78,40 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @param contractSize number of contracts to annihilate (18 decimals)
     function annihilate(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
 
-    /// @notice Exercises the long options held by the caller.
+    /// @notice Returns the amount of `exerciseToken` to pay to exercise the given amount of contracts
+    /// @param strike the option strike price (18 decimals)
+    /// @param contractSize number of long tokens to exercise (18 decimals)
+    /// @return totalExerciseCost the total amount of `exerciseToken` to pay, including fee (exerciseToken decimals)
+    /// @return fee the amount of `exerciseToken` to pay as fee (exerciseToken decimals)
+    function getExerciseCost(
+        UD60x18 strike,
+        UD60x18 contractSize
+    ) external view returns (uint256 totalExerciseCost, uint256 fee);
+
+    /// @notice Returns the amount of collateral that would be received for a given amount of long tokens
+    /// @param strike the option strike price (18 decimals)
+    /// @param contractSize number of long tokens to exercise (18 decimals)
+    /// @return the amount of collateral (collateral decimals)
+    function getExerciseValue(UD60x18 strike, UD60x18 contractSize) external view returns (uint256);
+
+    /// @notice Pay the exercise cost for a given amount contracts. The exercise value will be claimable after maturity.
     /// @param strike the option strike price (18 decimals)
     /// @param maturity the option maturity timestamp
-    /// @param contractSize number of long tokens to exercise (18 decimals)
+    /// @param contractSize amount of long tokens to exercise (18 decimals)
+    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
+
+    /// @notice Cancel an exercise before maturity, and recover the `exerciseToken` paid. (The fee paid during `exercise` is not recovered.
+    /// @param strike the option strike price (18 decimals)
+    /// @param maturity the option maturity timestamp
+    /// @param contractSize amount of long tokens for which cancel exercise (18 decimals)
+    function cancelExercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
+
+    /// @notice Settle the exercised long options held by the caller.
+    /// @param strike the option strike price (18 decimals)
+    /// @param maturity the option maturity timestamp
+    /// @param contractSize number of long tokens to settle (18 decimals)
     /// @return exerciseValue the amount of tokens transferred to the caller
-    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external returns (uint256 exerciseValue);
+    function settleLong(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external returns (uint256 exerciseValue);
 
     /// @notice Settles the short options held by the caller.
     /// @param strike the option strike price (18 decimals)
@@ -80,7 +119,7 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @param contractSize number of short tokens to settle (18 decimals)
     /// @return collateralAmount the amount of collateral transferred to the caller (base for calls, quote for puts)
     /// @return exerciseTokenAmount the amount of exerciseToken transferred to the caller (quote for calls, base for puts)
-    function settle(
+    function settleShort(
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
