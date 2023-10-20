@@ -184,4 +184,29 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         Position.Data storage pData = l.positions[Position.keyHash(p)];
         return pData.lastFeeRate;
     }
+
+    function exposed_roundDown(UD60x18 value) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.roundDown(value);
+    }
+
+    function exposed_roundDownUD60x18(UD60x18 value) external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.roundDownUD60x18(value);
+    }
+
+    function exposed_roundDownSD59x18(SD59x18 value) external view returns (SD59x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.roundDownSD59x18(value);
+    }
+
+    function exposed_roundUp(UD60x18 value) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.roundUp(value);
+    }
+
+    function exposed_roundUpUD60x18(UD60x18 value) external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.roundUpUD60x18(value);
+    }
 }

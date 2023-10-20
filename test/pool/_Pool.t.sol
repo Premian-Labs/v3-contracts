@@ -22,6 +22,7 @@ import {PoolTradeTest} from "./Pool.trade.t.sol";
 import {PoolTransferTest} from "./Pool.transfer.t.sol";
 import {PoolWithdrawTest} from "./Pool.withdraw.t.sol";
 import {PoolWriteFromTest} from "./Pool.writeFrom.t.sol";
+import {PoolStorageTest} from "./PoolStorage.t.sol";
 
 abstract contract PoolTest is
     PoolAnnihilateTest,
@@ -37,6 +38,7 @@ abstract contract PoolTest is
     PoolSettlePositionTest,
     PoolSmokeTest,
     PoolSmokeSpamTest,
+    PoolStorageTest,
     PoolStrandedTest,
     PoolTakerFeeTest,
     PoolTokenIdTest,

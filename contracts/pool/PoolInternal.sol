@@ -244,6 +244,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 vars.maxSize = pricing.maxTradeSize();
             }
         }
+        vars.totalPremium = isBuy ? l.roundUpUD60x18(vars.totalPremium) : l.roundDownUD60x18(vars.totalPremium);
+        vars.totalTakerFee = l.roundUpUD60x18(vars.totalTakerFee);
 
         return (
             l.toPoolTokenDecimals(
@@ -664,11 +666,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
-    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
+    /// @return premiumWithFees The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         TradeArgsInternal memory args
-    ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
+    ) internal returns (uint256 premiumWithFees, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _revertIfZeroSize(args.size);
@@ -736,7 +738,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     // is_buy: taker has to pay premium + fees
                     // ~is_buy: taker receives premium - fees
-                    vars.totalPremium = vars.totalPremium + (args.isBuy ? premium + takerFee : premium - takerFee);
+                    vars.totalPremium = vars.totalPremium + premium;
                     vars.totalTakerFees = vars.totalTakerFees + takerFee;
                     l.marketPrice = nextMarketPrice;
                 }
@@ -764,14 +766,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        totalPremium = l.toPoolTokenDecimals(vars.totalPremium);
+        vars.totalPremium = args.isBuy ? l.roundUpUD60x18(vars.totalPremium) : l.roundDownUD60x18(vars.totalPremium);
+        vars.totalTakerFees = l.roundUpUD60x18(vars.totalTakerFees);
 
-        _revertIfTradeAboveMaxSlippage(totalPremium, args.premiumLimit, args.isBuy);
+        vars.premiumWithFees = args.isBuy
+            ? vars.totalPremium + vars.totalTakerFees
+            : vars.totalPremium - vars.totalTakerFees;
+        premiumWithFees = l.toPoolTokenDecimals(vars.premiumWithFees);
+
+        _revertIfTradeAboveMaxSlippage(premiumWithFees, args.premiumLimit, args.isBuy);
 
         delta = _calculateAndUpdateUserAssets(
             l,
             args.user,
-            vars.totalPremium,
+            vars.premiumWithFees,
             args.size,
             args.isBuy,
             args.transferCollateralToUser
@@ -798,7 +806,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.user,
             args.size,
             delta,
-            args.isBuy ? vars.totalPremium - vars.totalTakerFees : vars.totalPremium,
+            vars.premiumWithFees,
             vars.totalTakerFees,
             vars.totalProtocolFees,
             l.marketPrice.intoUD60x18(),
@@ -876,6 +884,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else {
             delta.collateral = totalPremium.intoSD59x18() - PRBMathExtra.max(iShortCollateral, iZERO);
         }
+
+        delta.collateral = l.roundDownSD59x18(delta.collateral);
 
         return delta;
     }
