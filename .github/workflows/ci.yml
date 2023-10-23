@@ -15,7 +15,28 @@ env:
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
+  solhint:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --immutable'
+
+      - name: 'Lint contracts with solhint'
+        run: 'yarn lint'
+
   build:
+    needs: ['solhint']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
@@ -49,27 +70,6 @@ jobs:
             cache
           key: 'foundry-build-${{ github.sha }}'
 
-  solhint:
-    needs: ['build']
-    runs-on: 'ubuntu-latest'
-    steps:
-      - name: 'Check out the repo'
-        uses: 'actions/checkout@v3'
-        with:
-          submodules: 'recursive'
-
-      - name: 'Install Node.js'
-        uses: 'actions/setup-node@v3'
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      - name: 'Install Node.js packages'
-        run: 'yarn install --immutable'
-
-      - name: 'Lint contracts with solhint'
-        run: 'yarn lint'
-
   sol-linter:
     needs: ['build']
     runs-on: 'ubuntu-latest'
@@ -101,7 +101,7 @@ jobs:
         run: 'yarn sol-linter'
 
   test:
-    needs: ['solhint', 'sol-linter']
+    needs: ['sol-linter']
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Check out the repo'
