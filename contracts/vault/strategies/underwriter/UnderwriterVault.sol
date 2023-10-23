@@ -670,7 +670,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @notice Computes the `totalAssets` and `totalLockedAssets` after the settlement of expired options.
     ///         The `totalAssets` after settlement are the `totalAssets` less the exercise value of the call or put
-    ///         options that were sold. The `totalLockedAssets`
+    ///         options that were sold. The `totalLockedAssets` after settlement are the `totalLockedAssets` less
+    ///         the collateral unlocked by the call or put.
     /// @return totalAssets the total assets post settlement
     /// @return totalLockedAssets the total locked assets post settlement
     function _computeAssetsAfterSettlementOfExpiredOptions(
