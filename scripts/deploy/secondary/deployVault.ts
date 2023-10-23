@@ -15,10 +15,11 @@ import {
   initialize,
   updateDeploymentMetadata,
 } from '../../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const { network, deployment } = await initialize(deployer);
+  const [deployer, proposer] = await ethers.getSigners();
+  const { network, deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
   // Set those vars to the vault you want to deploy
@@ -108,20 +109,32 @@ async function main() {
     deployer,
   );
 
-  await vaultRegistry.addVault(
+  const addVaultTx = await vaultRegistry.populateTransaction.addVault(
     underwriterVaultProxy.address,
     isCall ? base : quote,
     vaultType,
     TradeSide.SELL,
     isCall ? OptionType.CALL : OptionType.PUT,
   );
-  await vaultRegistry.addSupportedTokenPairs(underwriterVaultProxy.address, [
-    {
-      base,
-      quote,
-      oracleAdapter,
-    },
-  ]);
+
+  const addSupportedTokenPairsTx =
+    await vaultRegistry.populateTransaction.addSupportedTokenPairs(
+      underwriterVaultProxy.address,
+      [
+        {
+          base,
+          quote,
+          oracleAdapter,
+        },
+      ],
+    );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [addVaultTx, addSupportedTokenPairsTx],
+  );
 }
 
 main()
