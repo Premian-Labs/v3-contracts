@@ -679,7 +679,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal view returns (UD60x18 totalAssets, UD60x18 totalLockedAssets) {
         uint256 timestamp = _getBlockTimestamp();
 
-        // Get last maturity before the current time
+        // Get last maturity before the next block timestamp
         uint256 lastExpired = timestamp >= l.maxMaturity
             ? l.maxMaturity
             : l.maturities.prev(l.getMaturityAfterTimestamp(timestamp));
@@ -902,7 +902,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         uint256 timestamp = _getBlockTimestamp();
 
-        // Get last maturity before the current time
+        // Get last maturity before the next block timestamp
         uint256 lastExpired = timestamp >= l.maxMaturity
             ? l.maxMaturity
             : l.maturities.prev(l.getMaturityAfterTimestamp(timestamp));
