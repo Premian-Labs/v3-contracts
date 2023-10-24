@@ -4,6 +4,10 @@ pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
+
 interface IOptionReward {
     error OptionReward__ClaimPeriodEnded(uint256 claimEnd);
     error OptionReward__ClaimPeriodNotEnded(uint256 claimEnd);
@@ -86,4 +90,21 @@ interface IOptionReward {
 
     /// @notice Returns the max amount of expired longs that a user can use to claim rewards for a given option
     function getRedeemableLongs(address user, UD60x18 strike, uint64 maturity) external view returns (UD60x18);
+
+    /// @notice Returns the option physically settled storage settings
+    function getSettings()
+        external
+        view
+        returns (
+            IOptionPS option,
+            IOracleAdapter oracleAdapter,
+            IPaymentSplitter paymentSplitter,
+            UD60x18 discount,
+            UD60x18 penalty,
+            uint256 optionDuration,
+            uint256 lockupDuration,
+            uint256 claimDuration,
+            UD60x18 fee,
+            address feeReceiver
+        );
 }
