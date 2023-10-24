@@ -963,7 +963,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Functionality to support the OB / OTC system. An LP can create a OB quote for which he will do an OTC
-    ///         trade through the exchange. Takers can buy from / sell to the LP then partially or fully while having
+    ///         trade through the exchange. Takers can buy from / sell to the LP partially or fully while having
     ///         the price guaranteed.
     /// @param args The fillQuoteOB parameters
     /// @param quoteOB The OB quote given by the provider

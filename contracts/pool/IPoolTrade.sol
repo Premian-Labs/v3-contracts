@@ -22,10 +22,9 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee);
 
-    /// @notice Functionality to support the OB / OTC system.
-    ///         An LP can create a OB quote for which he will do an OTC trade through
-    ///         the exchange. Takers can buy from / sell to the LP then partially or
-    ///         fully while having the price guaranteed.
+    /// @notice Functionality to support the OB / OTC system. An LP can create a OB quote for which he will do an OTC
+    ///         trade through the exchange. Takers can buy from / sell to the LP partially or fully while having
+    ///         the price guaranteed.
     /// @param quoteOB The OB quote given by the provider
     /// @param size The size to fill from the OB quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
