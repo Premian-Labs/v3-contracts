@@ -59,6 +59,11 @@ contract OptionRewardProxy is Proxy {
         l.feeReceiver = feeReceiver;
     }
 
+    /// @notice Return the implementation address of the proxy
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
+
     /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return MANAGER.getManagedProxyImplementation();

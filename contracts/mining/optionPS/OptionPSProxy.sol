@@ -32,6 +32,11 @@ contract OptionPSProxy is Proxy, ERC165BaseInternal {
         _setSupportsInterface(type(IERC1155).interfaceId, true);
     }
 
+    /// @notice Return the implementation address of the proxy
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
+
     /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return MANAGER.getManagedProxyImplementation();
