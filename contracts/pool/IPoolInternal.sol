@@ -122,9 +122,6 @@ interface IPoolInternal is IPosition, IPricing {
         // Tx will revert if total premium is above this value when buying, or below this value when selling.
         // (poolToken decimals)
         uint256 premiumLimit;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
-        // collateral is used for a swap
-        bool transferCollateralToUser;
     }
 
     struct ReferralVarsInternal {
@@ -187,9 +184,6 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
-        // collateral is used for a swap
-        bool transferCollateralToUser;
     }
 
     struct PremiumAndFeeInternal {

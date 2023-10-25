@@ -486,15 +486,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param size The position size to withdraw (18 decimals)
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) (18 decimals)
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
-    /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive.
-    ///        Should be false if that collateral is used for a swap
     /// @return delta The amount of collateral / longs / shorts withdrawn
     function _withdraw(
         Position.KeyInternal memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice,
-        bool transferCollateralToUser
+        UD60x18 maxMarketPrice
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionExpired(l);
@@ -557,7 +554,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 address(this),
                 p.operator,
-                transferCollateralToUser ? l.toPoolTokenDecimals(collateralToTransfer) : 0,
+                l.toPoolTokenDecimals(collateralToTransfer),
                 delta.longs.intoUD60x18(),
                 delta.shorts.intoUD60x18()
             );
@@ -775,16 +772,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         premiumWithFees = l.toPoolTokenDecimals(vars.premiumWithFees);
 
         _revertIfTradeAboveMaxSlippage(premiumWithFees, args.premiumLimit, args.isBuy);
-
-        delta = _calculateAndUpdateUserAssets(
-            l,
-            args.user,
-            vars.premiumWithFees,
-            args.size,
-            args.isBuy,
-            args.transferCollateralToUser
-        );
-
+        delta = _calculateAndUpdateUserAssets(l, args.user, vars.premiumWithFees, args.size, args.isBuy);
         _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
         vars.totalMintBurn = (vars.longDelta + vars.shortDelta).intoUD60x18();
@@ -849,11 +837,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         UD60x18 totalPremium,
         UD60x18 size,
-        bool isBuy,
-        bool transferCollateralToUser
+        bool isBuy
     ) internal returns (Position.Delta memory delta) {
         delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
-        _updateUserAssets(l, user, delta, transferCollateralToUser);
+        _updateUserAssets(l, user, delta);
     }
 
     /// @notice Calculate the asset update for `user`
@@ -892,12 +879,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Execute a trade by transferring the net change in short and long option contracts and collateral to /
     ///         from an agent.
-    function _updateUserAssets(
-        PoolStorage.Layout storage l,
-        address user,
-        Position.Delta memory delta,
-        bool transferCollateralToUser
-    ) internal {
+    function _updateUserAssets(PoolStorage.Layout storage l, address user, Position.Delta memory delta) internal {
         if (
             (delta.longs == iZERO && delta.shorts == iZERO) ||
             (delta.longs > iZERO && delta.shorts > iZERO) ||
@@ -909,7 +891,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // Transfer collateral
         if (deltaCollateral < 0) {
             IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), user, address(this), uint256(-deltaCollateral));
-        } else if (deltaCollateral > 0 && transferCollateralToUser) {
+        } else if (deltaCollateral > 0) {
             IERC20(l.getPoolToken()).safeTransferIgnoreDust(user, uint256(deltaCollateral));
         }
 
@@ -1007,8 +989,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 args.user,
                 premiumAndFee.premiumTaker,
                 args.size,
-                !quoteOB.isBuy,
-                args.transferCollateralToUser
+                !quoteOB.isBuy
             );
 
             _useReferral(
@@ -1025,8 +1006,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 quoteOB.provider,
                 premiumAndFee.premium,
                 args.size,
-                quoteOB.isBuy,
-                true
+                quoteOB.isBuy
             );
         }
 
