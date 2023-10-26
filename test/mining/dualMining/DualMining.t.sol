@@ -8,9 +8,11 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IDualMining} from "contracts/mining/dualMining/IDualMining.sol";
 import {DualMining} from "contracts/mining/dualMining/DualMining.sol";
 import {DualMiningProxy} from "contracts/mining/dualMining/DualMiningProxy.sol";
+import {ProxyManager} from "contracts/proxy/ProxyManager.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {VaultMiningSetup} from "../vaultMining/VaultMining.setup.t.sol";
+import "../../../contracts/mining/dualMining/DualMiningManager.sol";
 
 contract DualMiningTest is VaultMiningSetup {
     DualMining internal dualMining;
@@ -22,12 +24,8 @@ contract DualMiningTest is VaultMiningSetup {
         rewardToken = new ERC20Mock("REWARD", 18);
         UD60x18 rewardsPerYear = ud(365 * 25e18); // 10x less than vaultMining rewards rate
         DualMining implementation = new DualMining(address(vaultMining));
-        DualMiningProxy proxy = new DualMiningProxy(
-            address(implementation),
-            address(vaultA),
-            address(rewardToken),
-            rewardsPerYear
-        );
+        DualMiningManager manager = new DualMiningManager(address(implementation));
+        DualMiningProxy proxy = new DualMiningProxy(manager, address(vaultA), address(rewardToken), rewardsPerYear);
 
         dualMining = DualMining(address(proxy));
     }
