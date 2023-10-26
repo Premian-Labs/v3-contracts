@@ -70,6 +70,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         return _calculatePendingVaultRewardAmount(l, vInfo, rewardAmount);
     }
 
+    /// @notice Calculate amount of rewards to allocate to the vault since last update
     function _calculatePendingVaultRewardAmount(
         VaultMiningStorage.Layout storage l,
         VaultInfo storage vInfo,
@@ -86,6 +87,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         return VaultMiningStorage.layout().userRewards[user];
     }
 
+    /// @notice Calculate the amount of rewards to allocate across all vaults since last update
     function _calculateRewardsUpdate(VaultMiningStorage.Layout storage l) internal view returns (UD60x18 rewardAmount) {
         if (block.timestamp <= l.lastUpdate) return ZERO;
 
@@ -97,6 +99,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
+    /// @notice Calculate the new `accRewardsPerShare` for a vault, based on total rewards to allocate, and share of rewards that vault should get
     function _calculateAccRewardsPerShare(
         VaultMiningStorage.Layout storage l,
         VaultInfo storage vInfo,
@@ -165,6 +168,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         return VaultMiningStorage.layout().rewardsPerYear;
     }
 
+    /// @notice Update the yearly emission rate of rewards
     function setRewardsPerYear(UD60x18 rewardsPerYear) external onlyOwner {
         updateVaults();
 
@@ -172,6 +176,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
+    /// @notice Add a dual mining pool for a specific vault
     function addDualMiningPool(address vault, address dualMining) external onlyOwner {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
@@ -182,6 +187,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         emit AddDualMiningPool(vault, dualMining);
     }
 
+    /// @notice Removes a dual mining pool from a specific vault
     function removeDualMiningPool(address vault, address dualMining) external onlyOwner {
         VaultMiningStorage.layout().dualMining[vault].remove(dualMining);
         emit RemoveDualMiningPool(vault, dualMining);
@@ -217,6 +223,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _claimRewards(l, msg.sender, amount);
     }
 
+    /// @notice Claim rewards from all dualMining contracts of given vaults
     function _claimDualMiningRewards(address user, address[] calldata vaults) internal {
         for (uint256 i = 0; i < vaults.length; i++) {
             address[] memory dualMiningPools = getDualMiningPools(vaults[i]);
@@ -226,6 +233,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
+    /// @notice Claim option rewards
     function _claimRewards(VaultMiningStorage.Layout storage l, address user, UD60x18 amount) internal {
         if (l.userRewards[user] < amount) revert VaultMining__InsufficientRewards(user, l.userRewards[user], amount);
 
@@ -277,6 +285,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
+    /// @notice Allocate pending rewards from global reward emission
     function _allocatePendingRewards(VaultMiningStorage.Layout storage l) internal {
         if (l.lastUpdate == 0) {
             l.lastUpdate = block.timestamp;
@@ -323,6 +332,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _updateUser(user, vault);
     }
 
+    /// @notice Update user rewards for a specific vault
     function _updateUser(address user, address vault) internal {
         _revertIfNotVault(vault);
 
@@ -330,12 +340,14 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
     }
 
+    /// @notice Update user rewards for a list of vaults
     function _updateUser(address user, address[] calldata vaults) internal {
         for (uint256 i = 0; i < vaults.length; i++) {
             _updateUser(user, vaults[i]);
         }
     }
 
+    /// @notice Update user rewards for a specific vault
     function _updateUser(
         address user,
         address vault,
@@ -382,6 +394,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
+    /// @notice Update vault allocation based on votes and utilization rate
     function _updateVaultAllocation(
         VaultMiningStorage.Layout storage l,
         address vault,
@@ -391,6 +404,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilisationRate: utilisationRate}));
     }
 
+    /// @notice Set new vault votes, scaled by utilization rate
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
         if (data.vaultUtilisationRate < MIN_POINTS_MULTIPLIER) {
             data.vaultUtilisationRate = MIN_POINTS_MULTIPLIER;
@@ -404,7 +418,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilisationRate);
     }
 
-    function _revertIfNotVault(address caller) internal view {
-        if (IVaultRegistry(VAULT_REGISTRY).isVault(caller) == false) revert VaultMining__NotVault(caller);
+    /// @notice Revert if `addr` is not a vault
+    function _revertIfNotVault(address addr) internal view {
+        if (IVaultRegistry(VAULT_REGISTRY).isVault(addr) == false) revert VaultMining__NotVault(addr);
     }
 }
