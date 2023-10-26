@@ -215,8 +215,10 @@ contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
         // Calculate user pending rewards not yet allocated
         if (parentAccTotalRewardsSinceLastUpdate > ZERO) {
             // We need to subtract `reward` here as we just want the amount corresponding to the rewards pending and not yet allocated to the user
-            UD60x18 userNonAllocatedRewardsParent = IVaultMining(VAULT_MINING).getPendingUserRewards(user, l.vault) -
-                uInfoParent.reward;
+            UD60x18 userNonAllocatedRewardsParent = IVaultMining(VAULT_MINING).getPendingUserRewardsFromVault(
+                user,
+                l.vault
+            );
 
             UD60x18 userRewardPercentage = (userNonAllocatedRewardsParent - toSubtract) /
                 parentAccTotalRewardsSinceLastUpdate;

@@ -208,13 +208,13 @@ contract DualMiningTest is VaultMiningSetup {
         vaultList[0] = address(vaultA);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(bob);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(carol);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         assertApproxEqAbs(rewardToken.balanceOf(alice), 126.73992673992673e18, delta);
         assertApproxEqAbs(rewardToken.balanceOf(bob), 116.48351648351647e18, delta);
@@ -238,7 +238,7 @@ contract DualMiningTest is VaultMiningSetup {
         vaultList[0] = address(vaultA);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
         assertEq(dualMining.getPendingUserRewards(alice), 0);
         assertEq(rewardToken.balanceOf(alice), 1_000e18);
         assertEq(rewardToken.balanceOf(address(dualMining)), 0);
@@ -258,20 +258,20 @@ contract DualMiningTest is VaultMiningSetup {
         vaultA.mint(alice, 10e18);
         vm.warp(ts + 2 * ONE_DAY);
 
-        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(), 500e18, delta);
+        assertApproxEqAbs(vaultMining.getPendingUserRewardsFromVault(alice, address(vaultA)).unwrap(), 500e18, delta);
 
         vaultA.mint(bob, 20e18);
         vm.warp(ts + 3 * ONE_DAY);
 
         // 500 + (1 * 250 / 3) = 583.3333333333334
         assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(),
+            vaultMining.getPendingUserRewardsFromVault(alice, address(vaultA)).unwrap(),
             583.3333333333334e18,
             delta
         );
         // 2 * 250 / 3 = 166.66666666666666
         assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(bob, address(vaultA)).unwrap(),
+            vaultMining.getPendingUserRewardsFromVault(bob, address(vaultA)).unwrap(),
             166.66666666666666e18,
             delta
         );
@@ -323,16 +323,16 @@ contract DualMiningTest is VaultMiningSetup {
 
         vm.warp(ts + 10 * ONE_DAY);
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.warp(ts + 20 * ONE_DAY);
         vm.prank(bob);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.warp(ts + 100 * ONE_DAY);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.warp(ts + 300 * ONE_DAY);
 
@@ -349,13 +349,13 @@ contract DualMiningTest is VaultMiningSetup {
         assertApproxEqAbs(dualMining.getPendingUserRewards(carol).unwrap(), (3 * 1_000e18) / uint256(6), delta);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(bob);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(carol);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         assertApproxEqAbs(rewardToken.balanceOf(address(dualMining)), 0, delta);
         assertEq(dualMining.getRewardsAvailable().unwrap(), 0);
