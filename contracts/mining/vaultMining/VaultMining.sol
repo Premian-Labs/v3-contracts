@@ -203,6 +203,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         _allocatePendingRewards(l);
         _updateUser(msg.sender, vaults);
+        _claimDualMiningRewards(msg.sender, vaults);
         _claimRewards(l, msg.sender, l.userRewards[msg.sender]);
     }
 
@@ -212,7 +213,17 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         _allocatePendingRewards(l);
         _updateUser(msg.sender, vaults);
+        _claimDualMiningRewards(msg.sender, vaults);
         _claimRewards(l, msg.sender, amount);
+    }
+
+    function _claimDualMiningRewards(address user, address[] calldata vaults) internal {
+        for (uint256 i = 0; i < vaults.length; i++) {
+            address[] memory dualMiningPools = getDualMiningPools(vaults[i]);
+            for (uint256 j = 0; j < dualMiningPools.length; j++) {
+                IDualMining(dualMiningPools[j]).claim(user);
+            }
+        }
     }
 
     function _claimRewards(VaultMiningStorage.Layout storage l, address user, UD60x18 amount) internal {
@@ -222,12 +233,6 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         IERC20(PREMIA).approve(OPTION_REWARD, amount.unwrap());
         IOptionReward(OPTION_REWARD).underwrite(user, amount);
-
-        // ToDo : Update dualMining pools
-        //        address[] memory dualMiningPools = getDualMiningPools(vaults[i]);
-        //        for (uint256 j = 0; j < dualMiningPools.length; j++) {
-        //            IDualMining(dualMiningPools[j]).claim(msg.sender);
-        //        }
 
         emit Claim(user, amount);
     }
