@@ -5,16 +5,21 @@ import {
 } from '../../../typechain';
 import { ethers } from 'hardhat';
 import { ChainID, ContractType } from '../../../utils/deployment/types';
-import { solidityKeccak256 } from 'ethers/lib/utils';
+import {
+  defaultAbiCoder,
+  parseEther,
+  solidityKeccak256,
+} from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
 import {
   initialize,
   updateDeploymentMetadata,
 } from '../../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
-  const { network, deployment } = await initialize(deployer);
+  const [deployer, proposer] = await ethers.getSigners();
+  const { network, deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
   // Set those vars to the vault you want to deploy
@@ -47,6 +52,24 @@ async function main() {
   }`;
   const symbol = `pSV-${baseSymbol}/${quoteSymbol}-${isCall ? 'C' : 'P'}`;
 
+  const settings = defaultAbiCoder.encode(
+    ['uint256[]'],
+    [
+      [
+        parseEther('3'), // Alpha C Level
+        parseEther('0.005'), // Hourly decay discount
+        parseEther('1'), // Min C Level
+        parseEther('1.35'), // Max C Level
+        parseEther('3'), // Min DTE
+        parseEther('30'), // Max DTE
+        parseEther('0.2'), // Min Delta
+        parseEther('0.7'), // Max Delta
+        parseEther('0.2'), // Performance fee rate
+        parseEther('0.02'), // Management fee rate
+      ],
+    ],
+  );
+
   const args = [
     deployment.core.VaultRegistryProxy.address,
     base,
@@ -55,7 +78,9 @@ async function main() {
     name,
     symbol,
     isCall.toString(),
+    settings,
   ];
+
   const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
     deployer,
   ).deploy(
@@ -66,7 +91,9 @@ async function main() {
     args[4],
     args[5],
     args[6] === 'true',
+    args[7],
   );
+
   await updateDeploymentMetadata(
     deployer,
     `vaults.${symbol}`,
@@ -82,20 +109,32 @@ async function main() {
     deployer,
   );
 
-  await vaultRegistry.addVault(
+  const addVaultTx = await vaultRegistry.populateTransaction.addVault(
     underwriterVaultProxy.address,
     isCall ? base : quote,
     vaultType,
     TradeSide.SELL,
     isCall ? OptionType.CALL : OptionType.PUT,
   );
-  await vaultRegistry.addSupportedTokenPairs(underwriterVaultProxy.address, [
-    {
-      base,
-      quote,
-      oracleAdapter,
-    },
-  ]);
+
+  const addSupportedTokenPairsTx =
+    await vaultRegistry.populateTransaction.addSupportedTokenPairs(
+      underwriterVaultProxy.address,
+      [
+        {
+          base,
+          quote,
+          oracleAdapter,
+        },
+      ],
+    );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.addresses.treasury,
+    proposeToMultiSig ? proposer : deployer,
+    [addVaultTx, addSupportedTokenPairsTx],
+  );
 }
 
 main()
