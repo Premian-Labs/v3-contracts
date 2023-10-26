@@ -10,7 +10,7 @@ library DualMiningStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.DualMining");
 
     struct Layout {
-        // The vault address for which this mining is
+        // The vault address for which this is dual mining
         address vault;
         // Timestamp at which reward distribution started
         uint256 startTimestamp;
