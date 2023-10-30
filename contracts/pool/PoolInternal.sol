@@ -812,7 +812,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return Pricing.Args(l.liquidityRate, l.marketPrice, currentTick, l.tickIndex.next(currentTick), isBuy);
     }
 
-    /// @notice Compute the change in short / long option contracts of an agent in order to transfer the contracts and
+    /// @notice Compute the change in short / long option contracts of a user in order to transfer the contracts and
     ///         execute a trade
     function _getTradeDelta(
         address user,
@@ -878,7 +878,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Execute a trade by transferring the net change in short and long option contracts and collateral to /
-    ///         from an agent.
+    ///         from a user.
     function _updateUserAssets(PoolStorage.Layout storage l, address user, Position.Delta memory delta) internal {
         if (
             (delta.longs == iZERO && delta.shorts == iZERO) ||
