@@ -28,7 +28,8 @@ library OptionRewardStorage {
         address quote;
         IOracleAdapter oracleAdapter;
         IPaymentSplitter paymentSplitter;
-        // percentage of the asset spot price used to set the strike price
+        // percentage of the asset spot price used to set the strike price (ie 55% discount (0.55e18), means
+        // the strike price is 55% of the asset spot price)
         UD60x18 discount;
         // percentage of the intrinsic value that is reduced after lockup period (ie 80% penalty (0.80e18), means the
         // long holder receives 20% of the options intrinsic value, the remaining collateral is refunded).
