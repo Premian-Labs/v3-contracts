@@ -99,7 +99,7 @@ interface IOptionReward {
             IOptionPS option,
             IOracleAdapter oracleAdapter,
             IPaymentSplitter paymentSplitter,
-            UD60x18 discount,
+            UD60x18 percentOfSpot,
             UD60x18 penalty,
             uint256 optionDuration,
             uint256 lockupDuration,

@@ -22,7 +22,7 @@ contract OptionRewardProxy is Proxy {
         IOptionPS option,
         IOracleAdapter oracleAdapter,
         IPaymentSplitter paymentSplitter,
-        UD60x18 discount,
+        UD60x18 percentOfSpot,
         UD60x18 penalty,
         uint256 optionDuration,
         uint256 lockupDuration,
@@ -50,7 +50,7 @@ contract OptionRewardProxy is Proxy {
         l.oracleAdapter = oracleAdapter;
         l.paymentSplitter = paymentSplitter;
 
-        l.discount = discount;
+        l.percentOfSpot = percentOfSpot;
         l.penalty = penalty;
         l.lockupDuration = lockupDuration;
         l.claimDuration = claimDuration;

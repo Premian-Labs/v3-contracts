@@ -27,7 +27,7 @@ library OptionRewardFactoryStorage {
                     args.option,
                     args.oracleAdapter,
                     args.paymentSplitter,
-                    args.discount,
+                    args.percentOfSpot,
                     args.penalty,
                     args.optionDuration,
                     args.lockupDuration,

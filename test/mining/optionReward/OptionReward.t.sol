@@ -54,7 +54,7 @@ contract MiningMock is IMiningAddRewards {
 }
 
 contract OptionRewardTest is Assertions, Test {
-    UD60x18 internal constant discount = UD60x18.wrap(0.55e18);
+    UD60x18 internal constant percentOfSpot = UD60x18.wrap(0.55e18);
     UD60x18 internal constant penalty = UD60x18.wrap(0.75e18);
     uint256 internal constant optionDuration = 30 days;
     uint256 internal constant lockupDuration = 365 days;
@@ -99,7 +99,7 @@ contract OptionRewardTest is Assertions, Test {
         initialBaseBalance = 100e18;
         initialQuoteBalance = 1000e6;
         spot = ud(1e18);
-        strike = spot * discount;
+        strike = spot * percentOfSpot;
 
         underwriter = vm.addr(1);
         otherUnderwriter = vm.addr(2);
@@ -152,7 +152,7 @@ contract OptionRewardTest is Assertions, Test {
             option: option,
             oracleAdapter: oracleAdapter,
             paymentSplitter: paymentSplitter,
-            discount: discount,
+            percentOfSpot: percentOfSpot,
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
@@ -207,7 +207,7 @@ contract OptionRewardTest is Assertions, Test {
             option: option,
             oracleAdapter: oracleAdapter,
             paymentSplitter: paymentSplitter,
-            discount: discount,
+            percentOfSpot: percentOfSpot,
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
@@ -613,7 +613,7 @@ contract OptionRewardTest is Assertions, Test {
             IOptionPS _option,
             IOracleAdapter _oracleAdapter,
             IPaymentSplitter _paymentSplitter,
-            UD60x18 _discount,
+            UD60x18 _percentOfSpot,
             UD60x18 _penalty,
             uint256 _optionDuration,
             uint256 _lockupDuration,
@@ -625,7 +625,7 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(address(_option), address(key.option));
         assertEq(address(_oracleAdapter), address(key.oracleAdapter));
         assertEq(address(_paymentSplitter), address(key.paymentSplitter));
-        assertEq(_discount.unwrap(), key.discount.unwrap());
+        assertEq(_percentOfSpot.unwrap(), key.percentOfSpot.unwrap());
         assertEq(_penalty.unwrap(), key.penalty.unwrap());
         assertEq(_optionDuration, key.optionDuration);
         assertEq(_lockupDuration, key.lockupDuration);
