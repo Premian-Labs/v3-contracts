@@ -22,6 +22,8 @@ library VaultMiningStorage {
         mapping(address user => UD60x18) userRewards;
         // Timestamp of last update
         uint256 lastUpdate;
+        // Total rewards accumulated by a vault for each vote it has
+        UD60x18 globalAccRewardsPerVote;
     }
 
     function layout() internal pure returns (Layout storage l) {

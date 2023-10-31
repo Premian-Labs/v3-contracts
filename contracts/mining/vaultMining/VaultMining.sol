@@ -9,7 +9,9 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
-import {WAD, ZERO} from "../../libraries/Constants.sol";
+import {ZERO} from "../../libraries/Constants.sol";
+import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
+import {UD50x28, ud50x28} from "../../libraries/UD50x28.sol";
 
 import {IOptionReward} from "../optionReward/IOptionReward.sol";
 
@@ -22,6 +24,7 @@ import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
 contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using VaultMiningStorage for VaultMiningStorage.Layout;
+    using PRBMathExtra for UD60x18;
 
     /// @notice Address of the vault registry
     address internal immutable VAULT_REGISTRY;
@@ -62,8 +65,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     function _calculateRewardsUpdate(VaultMiningStorage.Layout storage l) internal view returns (UD60x18 rewardAmount) {
         if (block.timestamp <= l.lastUpdate) return ZERO;
 
-        UD60x18 yearsElapsed = ud((block.timestamp - l.lastUpdate) * WAD) / ud(365 days * WAD);
-        rewardAmount = yearsElapsed * l.rewardsPerYear;
+        UD50x28 yearsElapsed = ud50x28((block.timestamp - l.lastUpdate) * 1e28) / ud50x28(365 days * 1e28);
+        rewardAmount = (yearsElapsed * l.rewardsPerYear.intoUD50x28()).intoUD60x18();
 
         if (rewardAmount > l.rewardsAvailable) {
             rewardAmount = l.rewardsAvailable;
@@ -77,7 +80,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     ) internal view returns (UD60x18 accRewardsPerShare) {
         accRewardsPerShare = vInfo.accRewardsPerShare;
         if (vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
-            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
+            UD60x18 globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
+            UD60x18 vaultRewardAmount = globalAccRewardsPerVote * vInfo.votes - vInfo.rewardDebt;
             accRewardsPerShare = accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
         }
     }
@@ -227,31 +231,26 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         if (rewardAmount == ZERO) return;
 
-        IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
-        for (uint256 i = 0; i < vaults.length; i++) {
-            address vault = vaults[i].vault;
-            VaultInfo storage vInfo = l.vaultInfo[vault];
-
-            if (vInfo.votes == ZERO) continue;
-
-            UD60x18 vaultRewardAmount = (rewardAmount * vInfo.votes) / l.totalVotes;
-
-            // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
-            if (vInfo.totalShares == ZERO) {
-                l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
-                continue;
-            }
-
-            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
-        }
+        l.globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
     }
 
     function _updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
+        UD60x18 vaultRewardAmount = l.globalAccRewardsPerVote * vInfo.votes - vInfo.rewardDebt;
+
+        if (vInfo.totalShares == ZERO) {
+            // If vault has 0 totalShares, we reallocate vault rewards to available vault rewards, as nobody could claim vault rewards
+            l.rewardsAvailable = l.rewardsAvailable + vaultRewardAmount;
+        } else {
+            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (vaultRewardAmount / vInfo.totalShares);
+        }
+
         vInfo.totalShares = newTotalShares;
         _updateVaultAllocation(l, vault, utilisationRate);
+
+        vInfo.rewardDebt = vInfo.votes * l.globalAccRewardsPerVote;
     }
 
     /// @inheritdoc IVaultMining
