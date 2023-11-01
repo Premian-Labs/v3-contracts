@@ -12,3 +12,7 @@
 | `pSV-LINK/USDCe-P`   |             | `0x8CEbe7380Bbe5e680Fa31a5fe0229F638580dbf3` | [🔗](https://arbiscan.io/address/0x8CEbe7380Bbe5e680Fa31a5fe0229F638580dbf3) |
 | `pSV-wstETH/USDCe-C` |             | `0xe0C92F15eE2947C81e8d72864AC62331bAf8D77d` | [🔗](https://arbiscan.io/address/0xe0C92F15eE2947C81e8d72864AC62331bAf8D77d) |
 | `pSV-wstETH/USDCe-P` |             | `0xe330C090e2A5CEB4C39d3fB1dF82c773Efa55dcF` | [🔗](https://arbiscan.io/address/0xe330C090e2A5CEB4C39d3fB1dF82c773Efa55dcF) |
+| `pSV-GMX/USDCe-C`    |             | `0x2E98Ed9983747ab93F14503cde4Cd0f1EAcBD098` | [🔗](https://arbiscan.io/address/0x2E98Ed9983747ab93F14503cde4Cd0f1EAcBD098) |
+| `pSV-GMX/USDCe-P`    |             | `0xB5ECA2280dD6a58C9E17f613F292Cb35E5260f21` | [🔗](https://arbiscan.io/address/0xB5ECA2280dD6a58C9E17f613F292Cb35E5260f21) |
+| `pSV-MAGIC/USDCe-C`  |             | `0xA181F7ce9820b074960C4Ee11d5202F159C87AFB` | [🔗](https://arbiscan.io/address/0xA181F7ce9820b074960C4Ee11d5202F159C87AFB) |
+| `pSV-MAGIC/USDCe-P`  |             | `0xe56BF5a095f98c3Ad93ec4C8aa0A5C9bA780b615` | [🔗](https://arbiscan.io/address/0xe56BF5a095f98c3Ad93ec4C8aa0A5C9bA780b615) |
