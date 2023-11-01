@@ -15,11 +15,14 @@ import {IDualMining} from "./IDualMining.sol";
 import {IVaultMining} from "../vaultMining/IVaultMining.sol";
 
 import {OptionMath} from "../../libraries/OptionMath.sol";
-import {WAD, ZERO} from "../../libraries/Constants.sol";
+import {ZERO} from "../../libraries/Constants.sol";
+import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
+import {UD50x28, ud50x28} from "../../libraries/UD50x28.sol";
 
 contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
     using DualMiningStorage for DualMiningStorage.Layout;
     using SafeERC20 for IERC20;
+    using PRBMathExtra for UD60x18;
 
     address internal immutable VAULT_MINING;
 
@@ -48,8 +51,11 @@ contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
 
         _revertIfMiningEnded(l);
 
-        IERC20(l.rewardToken).safeTransferFrom(msg.sender, address(this), amount.unwrap());
-        l.rewardsAvailable = l.rewardsAvailable + amount;
+        uint256 amountToTransfer = OptionMath.scaleDecimals(amount.unwrap(), 18, l.rewardTokenDecimals);
+        IERC20(l.rewardToken).safeTransferFrom(msg.sender, address(this), amountToTransfer);
+
+        UD60x18 amountRounded = ud(OptionMath.scaleDecimals(amountToTransfer, l.rewardTokenDecimals, 18));
+        l.rewardsAvailable = l.rewardsAvailable + amountRounded;
     }
 
     /// @inheritdoc IDualMining
@@ -235,8 +241,8 @@ contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
     }
 
     function _calculateRewardsUpdate(DualMiningStorage.Layout storage l) internal view returns (UD60x18 rewardAmount) {
-        UD60x18 yearsElapsed = ud((block.timestamp - l.lastRewardTimestamp) * WAD) / ud(365 days * WAD);
-        rewardAmount = yearsElapsed * l.rewardsPerYear;
+        UD50x28 yearsElapsed = ud50x28((block.timestamp - l.lastRewardTimestamp) * 1e28) / ud50x28(365 days * 1e28);
+        rewardAmount = (yearsElapsed * l.rewardsPerYear.intoUD50x28()).intoUD60x18();
 
         // If we are running out of rewards to distribute, distribute whats left
         if (rewardAmount > l.rewardsAvailable) {
