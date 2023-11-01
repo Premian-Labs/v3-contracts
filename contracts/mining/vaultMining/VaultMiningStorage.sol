@@ -27,7 +27,7 @@ library VaultMiningStorage {
         // Total rewards accumulated by a vault for each vote it has
         UD60x18 globalAccRewardsPerVote;
         // Dual mining pools
-        mapping(address pool => EnumerableSet.AddressSet) dualMining;
+        mapping(address vault => EnumerableSet.AddressSet pools) dualMining;
     }
 
     function layout() internal pure returns (Layout storage l) {

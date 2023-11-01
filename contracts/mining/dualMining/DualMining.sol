@@ -59,9 +59,12 @@ contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IDualMining
     function updatePool(UD60x18 poolRewards, UD60x18 accRewardsPerShare) external nonReentrant {
-        _revertIfNotVaultMining(msg.sender);
+        DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
-        _updatePool(DualMiningStorage.layout(), poolRewards, accRewardsPerShare);
+        _revertIfNotVaultMining(msg.sender);
+        _revertIfNotInitialized(l);
+
+        _updatePool(l, poolRewards, accRewardsPerShare);
     }
 
     function _updatePool(
@@ -69,8 +72,6 @@ contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
         UD60x18 parentPoolRewards,
         UD60x18 accRewardsPerShare
     ) internal {
-        _revertIfNotInitialized(l);
-
         // Already up to date
         if (block.timestamp <= l.lastRewardTimestamp) return;
         // Mining ended

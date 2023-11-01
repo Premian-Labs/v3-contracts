@@ -31,4 +31,10 @@ contract DualMiningProxy is Proxy {
     function _getImplementation() internal view override returns (address) {
         return MANAGER.getManagedProxyImplementation();
     }
+
+    /// @notice get address of implementation contract
+    /// @return implementation address
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
+    }
 }
