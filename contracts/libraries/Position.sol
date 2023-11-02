@@ -24,9 +24,9 @@ library Position {
     using PRBMathExtra for UD60x18;
 
     struct Key {
-        // The Agent that owns the exposure change of the Position
+        // The user that owns the exposure change of the Position
         address owner;
-        // The Agent that can control modifications to the Position
+        // The user that can control modifications to the Position
         address operator;
         // The lower tick normalized price of the range order (18 decimals)
         UD60x18 lower;
@@ -37,9 +37,9 @@ library Position {
 
     /// @notice All the data used to calculate the key of the position
     struct KeyInternal {
-        // The Agent that owns the exposure change of the Position
+        // The user that owns the exposure change of the Position
         address owner;
-        // The Agent that can control modifications to the Position
+        // The user that can control modifications to the Position
         address operator;
         // The lower tick normalized price of the range order (18 decimals)
         UD60x18 lower;
@@ -291,7 +291,7 @@ library Position {
 
     /// @notice Calculate the update for the Position. Either increments them in case withdraw is False (i.e. in case
     ///         there is a deposit) and otherwise decreases them. Returns the change in collateral, longs, shorts. These
-    ///         are transferred to (withdrawal)or transferred from (deposit) the Agent (Position.operator).
+    ///         are transferred to (withdrawal)or transferred from (deposit) Position.operator.
     /// @param currentBalance The current balance of tokens (18 decimals)
     /// @param amount The number of tokens deposited or withdrawn (18 decimals)
     /// @param price The current market price, used to compute the change in collateral, long and shorts due to the

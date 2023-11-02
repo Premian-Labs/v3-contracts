@@ -84,7 +84,7 @@ contract PoolDepositWithdraw is IPoolDepositWithdraw, PoolInternal, ReentrancyGu
 
         _revertIfOperatorNotAuthorized(p.operator);
 
-        return _withdraw(p.toKeyInternal(l.strike, l.isCallPool), size, minMarketPrice, maxMarketPrice, true);
+        return _withdraw(p.toKeyInternal(l.strike, l.isCallPool), size, minMarketPrice, maxMarketPrice);
     }
 
     /// @inheritdoc IPoolDepositWithdraw

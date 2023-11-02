@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -39,8 +39,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
         UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
         _revertIfPriceIsZero(price);
-        // Applies discount to spot price and rounds to nearest strike interval
-        strike = OptionMath.roundToStrikeInterval(price * l.discount);
+        // Applies percentage to spot price and rounds to nearest strike interval
+        strike = OptionMath.roundToStrikeInterval(price * l.percentOfSpot);
     }
 
     /// @inheritdoc IOptionReward
@@ -215,7 +215,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             IOptionPS option,
             IOracleAdapter oracleAdapter,
             IPaymentSplitter paymentSplitter,
-            UD60x18 discount,
+            UD60x18 percentOfSpot,
             UD60x18 penalty,
             uint256 optionDuration,
             uint256 lockupDuration,
@@ -230,7 +230,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             l.option,
             l.oracleAdapter,
             l.paymentSplitter,
-            l.discount,
+            l.percentOfSpot,
             l.penalty,
             l.optionDuration,
             l.lockupDuration,

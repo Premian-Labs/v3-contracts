@@ -16,7 +16,6 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize(UD60x18 size, UD60x18 quoteSize);
     error Pool__AboveMaxSlippage(uint256 value, uint256 minimum, uint256 maximum);
     error Pool__ActionNotAuthorized(address user, address sender, IUserSettings.Action action);
-    error Pool__AgentNotAuthorized();
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
     error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCostInWrappedNative);
     error Pool__DifferenceOfSizeAndContractDeltaTooLarge(UD60x18 diff, UD60x18 size);
@@ -122,9 +121,6 @@ interface IPoolInternal is IPosition, IPricing {
         // Tx will revert if total premium is above this value when buying, or below this value when selling.
         // (poolToken decimals)
         uint256 premiumLimit;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
-        // collateral is used for a swap
-        bool transferCollateralToUser;
     }
 
     struct ReferralVarsInternal {
@@ -187,9 +183,6 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
-        // collateral is used for a swap
-        bool transferCollateralToUser;
     }
 
     struct PremiumAndFeeInternal {
