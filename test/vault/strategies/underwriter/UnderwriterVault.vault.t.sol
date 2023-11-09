@@ -509,7 +509,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
-        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+        // /IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
 
         // Underwriter performs sell-to-open
         token.approve(address(vault), collateral);
@@ -568,7 +568,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         size = ud(4 ether);
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
-        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+        // IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
 
         // Underwriter performs sell-to-open
         token.approve(address(vault), collateral);
