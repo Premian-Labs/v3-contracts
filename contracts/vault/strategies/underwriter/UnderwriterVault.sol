@@ -587,6 +587,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal view returns (UD60x18 cLevel) {
         // Compute C-level
         UD60x18 utilisationBefore = totalLockedAssets / totalAssets;
+        
+        // If utilisation is a function of premium, and we want to use that to compute the premium we get an
+        // implicit equation. For this function, there is no explicit solution enabling us to include premiums.
+        // Therefore, this is the current approximation we are using.
         UD60x18 utilisationAfter = (totalLockedAssets + orderSize) / totalAssets;
 
         UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
