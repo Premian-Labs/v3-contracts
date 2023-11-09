@@ -6,14 +6,16 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/UnderwriterVaultMock.sol";
 import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
-
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+
+import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
+
 import {console} from "forge-std/console.sol";
 
 abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
@@ -74,6 +76,53 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             isCallTest ? 0.163577618244386010e18 : 486.203629e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
+    }
+
+    function test_getQuote_Success_Sell() public {
+        setup();
+
+        UD60x18 tradeSize = ud(3e18);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        IERC20 token = IERC20(getPoolToken());
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        emit log_named_decimal_uint(
+            "Buy Side Premium",
+            toTokenDecimals(fromTokenDecimals(totalPremium) / tradeSize),
+            isCallTest ? 18 : 6
+        );
+
+        // it should return the correct quote
+        UD60x18 size = ud(3 ether);
+        uint256 premium = vault.getQuote(poolKey, size, false, address(0));
+
+        UD60x18 tau = ud(maturity - timestamp) / ud(365 days);
+        UD60x18 sigma = volOracle.getVolatility(address(base), spot, strike, tau);
+        UD60x18 bsPremium = vault.getBlackScholesPrice(
+            spot,
+            strike,
+            tau,
+            sigma,
+            volOracle.getRiskFreeRate(),
+            isCallTest
+        );
+
+        UD60x18 avgPremium = vault.getAveragePremium(strike, maturity);
+
+        UD60x18 expected = fromTokenDecimals(toTokenDecimals(size * PRBMathExtra.min(bsPremium, avgPremium)));
+
+        // Check quote
+        assertEq(expected, fromTokenDecimals(premium));
+    }
+
+    function test_getQuote_RevertIf_InsufficientShorts() public {
+        vm.expectRevert(IVault.Vault__InsufficientShorts.selector);
+        vault.getQuote(poolKey, ud(3 ether), false, address(0));
     }
 
     function test_getQuote_ReturnCorrectQuote_ForPoolNotDeployed() public {
@@ -142,13 +191,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
         vault.getQuote(poolKey, ud(3e18), true, address(0));
-    }
-
-    function test_getQuote_RevertIf_TryingToSellToVault() public {
-        setup();
-
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.getQuote(poolKey, ud(3e18), false, address(0));
     }
 
     function test_getQuote_RevertIf_TryingToBuyExpiredOption() public {
@@ -391,6 +433,195 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         UD60x18 protocolFee
     );
 
+    function test_trade_Success_SellToClose() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(4 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        // trader: Sell-To-Close
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 traderAssetsBefore = token.balanceOf(users.trader);
+
+        UD60x18 size = ud(2 ether);
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+
+        // Trader performs sell-to-close
+        pool.setApprovalForAll(address(vault), true);
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+
+        // it should annihilate the shorts and longs from the trader and the vault
+        assertEq(pool.balanceOf(address(vault), PoolStorage.SHORT), 2 ether);
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 2 ether);
+
+        // it should release the collateral to the vault after annihilation and subtract the premium given to trader
+        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - toTokenDecimals(quote.premium));
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.trader), traderAssetsBefore + toTokenDecimals(quote.premium));
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(2 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // todo: add event emits
+    }
+
+    function test_trade_Success_SellToOpen() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(4 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // underwriter: Sell-To-Open
+        vm.startPrank(users.underwriter);
+
+        UD60x18 size = ud(2 ether);
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+        deal(address(token), users.underwriter, collateral);
+
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+
+        // Underwriter performs sell-to-open
+        token.approve(address(vault), collateral);
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        // it should collect the (collateral - premium) from the underwriter
+        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - totalPremium);
+
+        // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(2 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // todo: add event emits
+    }
+
+    function test_trade_Success_SellToCloseThenSellToOpen() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(2 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // Underwriter
+        vm.startPrank(users.underwriter);
+
+        UD60x18 size = ud(2 ether);
+        totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+        deal(address(token), users.underwriter, collateral + totalPremium);
+
+        // underwriter: Buy-To-Open
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, size, true, totalPremium + totalPremium / 10, address(0));
+
+        // underwriter: Sell-To-Close and Sell-To-Open
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+
+        size = ud(4 ether);
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+
+        // Underwriter performs sell-to-open
+        token.approve(address(vault), collateral);
+        pool.setApprovalForAll(address(vault), true);
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        // it should collect the (collateral - premium) from the underwriter
+        assertEq(vault.totalAssets(), totalAssetsBefore + 2 * collateral - totalPremium);
+
+        // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(0 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - 2 * collateral));
+
+        // todo: add event emits
+    }
+
+    // todo: add tests for spread on sell side
+
+    function test_trade_RevertIf_AboveSlippage_Sell() public {
+        setup();
+
+        UD60x18 tradeSize = ud(3 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        IERC20 token = IERC20(getPoolToken());
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        // Sell-To-Close
+        totalPremium = vault.getQuote(poolKey, tradeSize, false, address(0));
+
+        pool.setApprovalForAll(address(vault), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IVault.Vault__AboveMaxSlippage.selector,
+                fromTokenDecimals(totalPremium),
+                fromTokenDecimals(totalPremium + totalPremium / 10)
+            )
+        );
+        vault.trade(poolKey, tradeSize, false, totalPremium + totalPremium / 10, address(0));
+    }
+
     function test_trade_UseLongReceiverAsTaker() public {
         setup();
 
@@ -505,17 +736,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
         vault.trade(poolKey, tradeSize, true, 1000e18, address(0));
-    }
-
-    function test_trade_RevertIf_TryingToSellToVault() public {
-        setup();
-
-        UD60x18 tradeSize = ud(3e18);
-
-        vm.startPrank(users.trader);
-
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.trade(poolKey, tradeSize, false, 1000e18, address(0));
     }
 
     function test_trade_RevertIf_TryingToBuyExpiredOption() public {

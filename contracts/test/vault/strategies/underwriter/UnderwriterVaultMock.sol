@@ -13,6 +13,7 @@ import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.so
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";
 import {IPool} from "../../../../pool/IPool.sol";
+import {IPoolFactory} from "../../../../factory/IPoolFactory.sol";
 import {UnderwriterVault} from "../../../../vault/strategies/underwriter/UnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "../../../../vault/strategies/underwriter/UnderwriterVaultStorage.sol";
 
@@ -196,6 +197,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.maxMaturity = current;
     }
 
+    function getAveragePremium(UD60x18 strike, uint256 maturity) external view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.avgPremium[maturity][strike];
+    }
+
     function clearListingsAndSizes() external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -339,9 +345,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getSpotPrice();
     }
 
-    function getSettlementPrice(uint256 timestamp) public view returns (UD60x18) {
-        return _getSettlementPrice(UnderwriterVaultStorage.layout(), timestamp);
-    }
+    //    function getSettlementPrice(uint256 timestamp) public view returns (UD60x18) {
+    //        return _getSettlementPrice(UnderwriterVaultStorage.layout(), timestamp);
+    //    }
 
     function getTradeBounds() public view returns (UD60x18, UD60x18, UD60x18, UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
@@ -426,8 +432,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalAssets = l.totalAssets - mintingFee;
     }
 
-    function revertIfNotTradeableWithVault(bool isCallVault, bool isCallOption, bool isBuy) external pure {
-        _revertIfNotTradeableWithVault(isCallVault, isCallOption, isBuy);
+    function revertIfNotTradeableWithVault(bool isCallVault, bool isCallOption) external pure {
+        _revertIfNotTradeableWithVault(isCallVault, isCallOption);
     }
 
     function revertIfOptionInvalid(UD60x18 strike, uint256 maturity) external view {
@@ -454,7 +460,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 maxCLevel,
         UD60x18 decayRate
     ) external pure returns (UD60x18) {
-        return _computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
+        return OptionMath.computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
     }
 
     function setProtocolFees(UD60x18 value) external {
@@ -510,6 +516,27 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function exposed_computeAssetsAfterSettlementOfExpiredOptions() external view returns (UD60x18, UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeAssetsAfterSettlementOfExpiredOptions(l);
+    }
+
+    function exposed_getQuoteInternal(
+        IPoolFactory.PoolKey calldata poolKey,
+        UD60x18 size,
+        bool isBuy,
+        address taker
+    ) external view returns (QuoteInternal memory) {
+        QuoteInternal memory quote = _getQuoteInternal(
+            UnderwriterVaultStorage.layout(),
+            QuoteArgsInternal({
+                strike: poolKey.strike,
+                maturity: poolKey.maturity,
+                isCall: poolKey.isCallPool,
+                size: size,
+                isBuy: isBuy,
+                taker: taker
+            }),
+            false
+        );
+        return quote;
     }
 
     function setPendingAssetsDeposit(uint256 depositAmount) external {

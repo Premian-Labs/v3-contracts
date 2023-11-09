@@ -96,6 +96,10 @@ library UnderwriterVaultStorage {
         // When `getUtilisation` is called here, we want it to return the new utilisation after the deposit, not the current one.
         // As `_beforeTokenTransfer` know the share amount change, but not the asset amount change, we need to store it here temporarily.
         uint256 pendingAssetsDeposit;
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Sell Variables
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        mapping(uint256 => mapping(UD60x18 => UD60x18)) avgPremium;
     }
 
     function layout() internal pure returns (Layout storage l) {

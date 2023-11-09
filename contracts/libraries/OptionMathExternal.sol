@@ -45,4 +45,24 @@ library OptionMathExternal {
     ) public pure returns (UD60x18) {
         return OptionMath.blackScholesPrice(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
     }
+
+    /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
+    ///         (https://www.desmos.com/calculator/0uzv50t7jy)
+    /// @param utilisation The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return The C-level corresponding to the post-utilisation value.
+    function computeCLevel(
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) public pure returns (UD60x18) {
+        return OptionMath.computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
+    }
 }

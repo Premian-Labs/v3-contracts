@@ -6,6 +6,8 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
+import {PRBMathExtra} from "./PRBMathExtra.sol";
+
 import {ZERO, ONE, TWO, iZERO, iONE, iTWO, iFOUR, iNINE} from "./Constants.sol";
 
 library OptionMath {
@@ -34,6 +36,7 @@ library OptionMath {
     error OptionMath__NonPositiveVol();
     error OptionMath__OutOfBoundsPrice(UD60x18 min, UD60x18 max, UD60x18 price);
     error OptionMath__Underflow();
+    error OptionMath__UtilisationOutOfBounds();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x The input to the normal CDF (18 decimals)
@@ -303,5 +306,34 @@ library OptionMath {
         }
 
         return count;
+    }
+
+    /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
+    ///         (https://www.desmos.com/calculator/0uzv50t7jy)
+    /// @param utilisation The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return The C-level corresponding to the post-utilisation value.
+    function computeCLevel(
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) internal pure returns (UD60x18) {
+        if (utilisation > ONE) revert OptionMath__UtilisationOutOfBounds();
+
+        UD60x18 posExp = (alpha * (ONE - utilisation)).exp();
+        UD60x18 alphaExp = alpha.exp();
+        UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - ONE);
+
+        UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 decay = decayRate * duration;
+
+        return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
     }
 }
