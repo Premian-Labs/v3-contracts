@@ -127,7 +127,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         vault.setTimestamp(startTime + 1 days);
         vm.expectEmit();
         emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
-        vault.afterBuy(strike, t0, size, spread, premium);
+        vault.afterTrade(true, strike, t0, size, spread, premium);
 
         // (1,24 / 7 + 5,56 / 10 + 11,2 / 14 + (10 * 0,95) / 6) / (24 * 60 * 60) = 0,000036070326278658
         assertEq(vault.spreadUnlockingRate(), 36070326278658);

@@ -486,14 +486,17 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         emit UpdateQuotes();
     }
 
-    /// @notice An internal hook inside the buy function that is called after
-    ///         logic inside the buy function is run to update state variables
+    /// @notice An internal hook inside the trade function that is called after
+    ///         logic inside the trade function is run to update state variables
+    /// @param isBuy Whether this is a buy or a sell
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
     /// @param size The amount of contracts.
     /// @param spread The spread added on to the premium due to C-level
-    function _afterBuy(
+    /// @param premium The base premium that is charged
+    function _afterTrade(
         UnderwriterVaultStorage.Layout storage l,
+        bool isBuy,
         UD60x18 strike,
         uint256 maturity,
         UD60x18 size,
@@ -502,62 +505,34 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal {
         // spread state needs to be updated otherwise spread dispersion is inconsistent
         _updateState(l);
+
         UD60x18 spreadProtocol = spread * l.performanceFeeRate;
         UD60x18 spreadLP = spread - spreadProtocol;
 
         UD60x18 spreadRateLP = spreadLP / ud((maturity - _getBlockTimestamp()) * WAD);
-
-        l.totalAssets = l.totalAssets + premium + spreadLP;
-        l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRateLP;
-        l.spreadUnlockingTicks[maturity] = l.spreadUnlockingTicks[maturity] + spreadRateLP;
-        l.totalLockedSpread = l.totalLockedSpread + spreadLP;
-        l.totalLockedAssets = l.totalLockedAssets + l.collateral(size, strike);
-
-        // Updated weighted average for premiums
-        UD60x18 avgPremium = l.avgPremium[maturity][strike];
-        l.avgPremium[maturity][strike] =
-            (avgPremium * l.positionSizes[maturity][strike] + premium) /
-            (l.positionSizes[maturity][strike] + size);
-
-        l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
-        l.lastTradeTimestamp = _getBlockTimestamp();
-        // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
-        l.protocolFees = l.protocolFees + spreadProtocol;
-
-        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol));
-    }
-
-    /// @notice An internal hook inside the buy function that is called after
-    ///         logic inside the buy function is run to update state variables
-    /// @param strike The strike price of the option.
-    /// @param maturity The maturity of the option.
-    /// @param size The amount of contracts.
-    /// @param spread The spread added on to the premium due to C-level
-    function _afterSell(
-        UnderwriterVaultStorage.Layout storage l,
-        UD60x18 strike,
-        uint256 maturity,
-        UD60x18 size,
-        UD60x18 spread,
-        UD60x18 premium
-    ) internal {
-        // spread state needs to be updated otherwise spread dispersion is inconsistent
-        _updateState(l);
-        UD60x18 spreadProtocol = spread * l.performanceFeeRate;
-        UD60x18 spreadLP = spread - spreadProtocol;
-
-        UD60x18 spreadRateLP = spreadLP / ud((maturity - _getBlockTimestamp()) * WAD);
-
-        // Decrease totalLockedAssets due to released collateral
-        l.totalLockedAssets = l.totalLockedAssets - l.collateral(size, strike);
-
-        l.totalAssets = l.totalAssets + l.collateral(size, strike) - premium - spreadProtocol;
+        UD60x18 collateral = l.collateral(size, strike);
 
         l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRateLP;
         l.spreadUnlockingTicks[maturity] = l.spreadUnlockingTicks[maturity] + spreadRateLP;
         l.totalLockedSpread = l.totalLockedSpread + spreadLP;
 
-        l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
+        if (isBuy) {
+            l.totalAssets = l.totalAssets + premium + spreadLP;
+            l.totalLockedAssets = l.totalLockedAssets + collateral;
+
+            // Updated weighted average for premiums
+            UD60x18 avgPremium = l.avgPremium[maturity][strike];
+            l.avgPremium[maturity][strike] =
+                (avgPremium * l.positionSizes[maturity][strike] + premium) /
+                (l.positionSizes[maturity][strike] + size);
+
+            l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
+            l.lastTradeTimestamp = _getBlockTimestamp();
+        } else {
+            l.totalAssets = l.totalAssets + collateral - premium - spreadProtocol;
+            l.totalLockedAssets = l.totalLockedAssets - collateral;
+            l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
+        }
 
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
@@ -803,7 +778,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             IPool(quote.pool).writeFrom(address(this), msg.sender, size, referrer);
 
             // Handle the premiums and spread capture generated
-            _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
+            _afterTrade(l, true, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
 
             // Annihilate shorts and longs for user
             UD60x18 shorts = ud(IPool(quote.pool).balanceOf(msg.sender, PoolStorage.SHORT));
@@ -853,7 +828,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             }
 
             // Handle the premiums and spread capture generated
-            _afterSell(l, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
+            _afterTrade(l, false, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
         }
 
         // Emit trade event

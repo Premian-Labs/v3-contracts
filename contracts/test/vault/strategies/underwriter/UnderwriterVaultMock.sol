@@ -337,8 +337,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getPoolAddress(UnderwriterVaultStorage.layout(), strike, maturity);
     }
 
-    function afterBuy(UD60x18 strike, uint256 maturity, UD60x18 size, UD60x18 spread, UD60x18 premium) external {
-        _afterBuy(UnderwriterVaultStorage.layout(), strike, maturity, size, spread, premium);
+    function afterTrade(
+        bool isBuy,
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 size,
+        UD60x18 spread,
+        UD60x18 premium
+    ) external {
+        _afterTrade(UnderwriterVaultStorage.layout(), isBuy, strike, maturity, size, spread, premium);
     }
 
     function getSpotPrice() public view returns (UD60x18) {
