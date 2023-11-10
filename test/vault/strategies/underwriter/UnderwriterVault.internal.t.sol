@@ -17,8 +17,6 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
-    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged);
-
     function setupSpreadVault() internal {
         startTime = 1678435200 + 500 * 7 days;
         t0 = startTime + 7 days;

@@ -352,9 +352,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getSpotPrice();
     }
 
-    //    function getSettlementPrice(uint256 timestamp) public view returns (UD60x18) {
-    //        return _getSettlementPrice(UnderwriterVaultStorage.layout(), timestamp);
-    //    }
+    function getPerformanceFeeRate() public view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().performanceFeeRate;
+    }
 
     function getTradeBounds() public view returns (UD60x18, UD60x18, UD60x18, UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();

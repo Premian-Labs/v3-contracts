@@ -19,6 +19,20 @@ import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/Unde
 import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
+    event UpdateQuotes();
+
+    event Trade(
+        address indexed user,
+        address indexed pool,
+        UD60x18 contractSize,
+        bool isBuy,
+        UD60x18 premium,
+        UD60x18 takerFee,
+        UD60x18 makerRebate,
+        UD60x18 vaultFee
+    );
+    event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
+
     uint256 startTime = 100000;
 
     uint256 t0 = startTime + 7 days;

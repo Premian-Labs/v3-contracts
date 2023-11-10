@@ -13,6 +13,7 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+import {WAD, ZERO} from "contracts/libraries/Constants.sol";
 
 import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
 
@@ -37,6 +38,11 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
         volOracle.setVolatility(base, spot, ud(1100e18), ud(19178082191780821), ud(1.54e18));
         volOracle.setVolatility(base, spot, ud(1100e18), ud(134246575342465753), ud(1.54e18));
+
+        volOracle.setVolatility(base, spot - ud(500 ether), strike, ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot - ud(500 ether), strike, ud(134246575342465753), ud(1.54e18));
+        volOracle.setVolatility(base, spot + ud(500 ether), strike, ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot + ud(500 ether), strike, ud(134246575342465753), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -433,7 +439,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         UD60x18 protocolFee
     );
 
-    function test_trade_Success_SellToClose() public {
+    function test_trade_Success_SellToClose_NoSpread() public {
         setup();
 
         IERC20 token = IERC20(getPoolToken());
@@ -478,11 +484,86 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
-
-        // todo: add event emits
     }
 
-    function test_trade_Success_SellToOpen() public {
+    function test_trade_Success_SellToClose_WithSpread() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(4 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        // Update spot to be lower if call and higher if put
+        UD60x18 spotPrice = vault.getSpotPrice();
+        vault.setSpotPrice(isCallTest ? spotPrice - ud(500 ether) : spotPrice + ud(500 ether));
+
+        // trader: Sell-To-Close
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 traderAssetsBefore = token.balanceOf(users.trader);
+        UD60x18 protocolFeesBefore = vault.getProtocolFees();
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
+
+        UD60x18 size = ud(2 ether);
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+        UD60x18 performanceFee = fromTokenDecimals(toTokenDecimals((vault.getPerformanceFeeRate() * quote.spread)));
+
+        // Trader performs sell-to-close
+        pool.setApprovalForAll(address(vault), true);
+        vm.expectEmit();
+        emit ClaimProtocolFees(FEE_RECEIVER, toTokenDecimals(protocolFeesBefore));
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(performanceFee));
+        emit Trade(msg.sender, address(pool), size, false, quote.premium, ZERO, ZERO, quote.spread);
+        emit UpdateQuotes();
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+
+        // it should annihilate the shorts and longs from the trader and the vault
+        assertEq(pool.balanceOf(address(vault), PoolStorage.SHORT), 2 ether);
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 2 ether);
+
+        // it should release the collateral to the vault after annihilation and subtract the premium given to trader
+        assertEq(
+            vault.totalAssets(),
+            totalAssetsBefore + collateral - toTokenDecimals(quote.premium) - toTokenDecimals(performanceFee)
+        );
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.trader), traderAssetsBefore + toTokenDecimals(quote.premium));
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(2 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // it should increase the total locked spread
+        UD60x18 spread = quote.spread - performanceFee;
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpread = vault.getLockedSpreadInternal();
+        assertEq(lockedSpread.totalLockedSpread, lockedSpreadBefore.totalLockedSpread + spread);
+
+        // it should increase the total spread unlocking rate
+        UD60x18 rate = spread / ud((maturity - timestamp) * WAD);
+        assertEq(lockedSpread.spreadUnlockingRate, lockedSpreadBefore.spreadUnlockingRate + rate);
+
+        // it should update the timestamp of the last trade
+        assertEq(lockedSpread.lastSpreadUnlockUpdate, timestamp);
+
+        // it should increase the the protocol fees by the performance fee
+        assertEq(vault.getProtocolFees(), performanceFee);
+    }
+
+    function test_trade_Success_SellToOpen_NoSpread() public {
         setup();
 
         IERC20 token = IERC20(getPoolToken());
@@ -509,7 +590,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
-        // /IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
 
         // Underwriter performs sell-to-open
         token.approve(address(vault), collateral);
@@ -529,11 +609,81 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
-
-        // todo: add event emits
     }
 
-    function test_trade_Success_SellToCloseThenSellToOpen() public {
+    function test_trade_Success_SellToOpen_WithSpread() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(4 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // underwriter: Sell-To-Open
+        vm.startPrank(users.underwriter);
+
+        UD60x18 size = ud(2 ether);
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+        deal(address(token), users.underwriter, collateral);
+
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+        UD60x18 protocolFeesBefore = vault.getProtocolFees();
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+        UD60x18 performanceFee = fromTokenDecimals(toTokenDecimals((vault.getPerformanceFeeRate() * quote.spread)));
+
+        // Underwriter performs sell-to-open
+        token.approve(address(vault), collateral);
+        vm.expectEmit();
+        emit ClaimProtocolFees(FEE_RECEIVER, toTokenDecimals(protocolFeesBefore));
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(performanceFee));
+        emit Trade(msg.sender, address(pool), size, false, quote.premium, ZERO, ZERO, quote.spread);
+        emit UpdateQuotes();
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        // it should collect the (collateral - premium) from the underwriter
+        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - totalPremium);
+
+        // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(2 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // it should increase the total locked spread
+        UD60x18 spread = quote.spread - performanceFee;
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpread = vault.getLockedSpreadInternal();
+        assertEq(lockedSpread.totalLockedSpread, lockedSpreadBefore.totalLockedSpread + spread);
+
+        // it should increase the total spread unlocking rate
+        UD60x18 rate = spread / ud((maturity - timestamp) * WAD);
+        assertEq(lockedSpread.spreadUnlockingRate, lockedSpreadBefore.spreadUnlockingRate + rate);
+
+        // it should update the timestamp of the last trade
+        assertEq(lockedSpread.lastSpreadUnlockUpdate, timestamp);
+
+        // it should increase the the protocol fees by the performance fee
+        assertEq(vault.getProtocolFees(), performanceFee);
+    }
+
+    function test_trade_Success_SellToCloseThenSellToOpen_NoSpread() public {
         setup();
 
         IERC20 token = IERC20(getPoolToken());
@@ -593,7 +743,86 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // todo: add event emits
     }
 
-    // todo: add tests for spread on sell side
+    function test_trade_Success_SellToCloseThenSellToOpen_WithSpread() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(2 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // Underwriter
+        vm.startPrank(users.underwriter);
+
+        UD60x18 size = ud(2 ether);
+        totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+        uint256 collateral = isCallTest ? size.unwrap() : toTokenDecimals(size * strike);
+        deal(address(token), users.underwriter, collateral + totalPremium);
+
+        // underwriter: Buy-To-Open
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, size, true, totalPremium + totalPremium / 10, address(0));
+
+        // underwriter: Sell-To-Close and Sell-To-Open
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+        UD60x18 protocolFeesBefore = vault.getProtocolFees();
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
+
+        size = ud(4 ether);
+
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+        IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
+        UD60x18 performanceFee = fromTokenDecimals(toTokenDecimals((vault.getPerformanceFeeRate() * quote.spread)));
+
+        // Underwriter performs sell-to-open
+        token.approve(address(vault), collateral);
+        pool.setApprovalForAll(address(vault), true);
+        vm.expectEmit();
+        emit ClaimProtocolFees(FEE_RECEIVER, toTokenDecimals(protocolFeesBefore));
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(performanceFee));
+        emit Trade(msg.sender, address(pool), size, false, quote.premium, ZERO, ZERO, quote.spread);
+        emit UpdateQuotes();
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        // it should collect the (collateral - premium) from the underwriter
+        assertEq(vault.totalAssets(), totalAssetsBefore + 2 * collateral - totalPremium);
+
+        // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(0 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - 2 * collateral));
+
+        // it should increase the total locked spread
+        UD60x18 spread = quote.spread - performanceFee;
+        IUnderwriterVault.LockedSpreadInternal memory lockedSpread = vault.getLockedSpreadInternal();
+        assertEq(lockedSpread.totalLockedSpread, lockedSpreadBefore.totalLockedSpread + spread);
+
+        // it should increase the total spread unlocking rate
+        UD60x18 rate = spread / ud((maturity - timestamp) * WAD);
+        assertEq(lockedSpread.spreadUnlockingRate, lockedSpreadBefore.spreadUnlockingRate + rate);
+
+        // it should update the timestamp of the last trade
+        assertEq(lockedSpread.lastSpreadUnlockUpdate, timestamp);
+
+        // it should increase the the protocol fees by the performance fee
+        assertEq(vault.getProtocolFees(), performanceFee);
+    }
 
     function test_trade_RevertIf_AboveSlippage_Sell() public {
         setup();

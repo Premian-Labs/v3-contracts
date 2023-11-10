@@ -505,7 +505,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // spread state needs to be updated otherwise spread dispersion is inconsistent
         _updateState(l);
 
-        UD60x18 spreadProtocol = spread * l.performanceFeeRate;
+        UD60x18 spreadProtocol = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(spread * l.performanceFeeRate));
         UD60x18 spreadLP = spread - spreadProtocol;
 
         UD60x18 spreadRateLP = spreadLP / ud((maturity - _getBlockTimestamp()) * WAD);
@@ -526,12 +526,17 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 (l.positionSizes[maturity][strike] + size);
 
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
-            l.lastTradeTimestamp = _getBlockTimestamp();
         } else {
             l.totalAssets = l.totalAssets + collateral - premium - spreadProtocol;
             l.totalLockedAssets = l.totalLockedAssets - collateral;
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
+
+            // If the vault holds no short positions for this listing it will be removed
+            if (l.positionSizes[maturity][strike] == ZERO) l.removeListing(strike, maturity);
         }
+
+        // Update the timestamp of latest trade
+        l.lastTradeTimestamp = _getBlockTimestamp();
 
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
@@ -683,7 +688,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         quote.spread = args.isBuy
             ? (vars.cLevel - ONE) * quote.premium
-            : (vars.price - l.avgPremium[args.maturity][args.strike]) * args.size;
+            : (l.avgPremium[args.maturity][args.strike] - vars.price) * args.size;
+
         quote.spread = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(quote.spread)); // Round down to align with token
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
@@ -776,9 +782,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             // Mint option and allocate long token
             IPool(quote.pool).writeFrom(address(this), msg.sender, size, referrer);
 
-            // Handle the premiums and spread capture generated
-            _afterTrade(l, true, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
-
             // Annihilate shorts and longs for user
             UD60x18 shorts = ud(IPool(quote.pool).balanceOf(msg.sender, PoolStorage.SHORT));
             UD60x18 longs = ud(IPool(quote.pool).balanceOf(msg.sender, PoolStorage.LONG));
@@ -792,6 +795,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
             // Trader: Sell-To-Close, Vault: Buy-To-Close
             if (annihilateSize > ZERO) {
+                // Transfer long positions from user to the vault
                 IPool(quote.pool).safeTransferFrom(
                     msg.sender,
                     address(this),
@@ -805,6 +809,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             // Transfer collateral from user (if required) then send them the short contracts
             // Trader: Sell-To-Open, Vault: Buy-To-Close
             if (size - annihilateSize > ZERO) {
+                // Transfer short positions to the user
                 IPool(quote.pool).safeTransferFrom(
                     address(this),
                     msg.sender,
@@ -815,7 +820,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
                 UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
                 if (quote.premium > collateral)
+                    // Transfer to the user if the required collateral is less than the premiums
                     IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
+                    // Transfer the collateral from the user if the required funds is greater than the
+                    // premiums are receiving.
                 else
                     IERC20(_asset()).transferFrom(
                         msg.sender,
@@ -823,12 +831,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                         l.convertAssetFromUD60x18(collateral - quote.premium)
                     );
             } else {
+                // Transfer the premiums to the user
                 IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium));
             }
-
-            // Handle the premiums and spread capture generated
-            _afterTrade(l, false, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
         }
+
+        // Handle the premiums and spread capture generated
+        _afterTrade(l, isBuy, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
 
         // Emit trade event
         emit Trade(msg.sender, quote.pool, size, isBuy, totalPremium, quote.mintingFee, ZERO, quote.spread);
@@ -1051,6 +1060,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (!isBuy && totalPremium < premiumLimit) revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
+    /// @notice Ensures there is sufficient shorts for processing a sell trade.
+    /// @param maturity The maturity.
+    /// @param strike The strike price.
+    /// @param size The amount of contracts.
     function _revertIfInsufficientShorts(
         UnderwriterVaultStorage.Layout storage l,
         uint256 maturity,
