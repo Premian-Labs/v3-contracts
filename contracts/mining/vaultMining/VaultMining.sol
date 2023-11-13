@@ -235,6 +235,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
     /// @notice Claim option rewards
     function _claimRewards(VaultMiningStorage.Layout storage l, address user, UD60x18 amount) internal {
+        if (amount == ZERO) return;
+
         if (l.userRewards[user] < amount) revert VaultMining__InsufficientRewards(user, l.userRewards[user], amount);
 
         l.userRewards[user] = l.userRewards[user] - amount;
