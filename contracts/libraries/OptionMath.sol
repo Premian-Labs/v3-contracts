@@ -22,6 +22,7 @@ library OptionMath {
     UD60x18 internal constant ATM_MONEYNESS = UD60x18.wrap(0.5e18);
     uint256 internal constant NEAR_TERM_TTM = 14 days;
     uint256 internal constant ONE_YEAR_TTM = 365 days;
+    uint256 internal constant ONE_HOUR = 1 hours;
     UD60x18 internal constant FEE_SCALAR = UD60x18.wrap(100e18);
 
     SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
@@ -335,5 +336,30 @@ library OptionMath {
         UD60x18 decay = decayRate * duration;
 
         return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
+    }
+
+    /// @notice Calculates the geo-mean C-level given a utilisation before and after collateral is utilised.
+    /// @param utilisationBefore The utilisation before some collateral is utilised.
+    /// @param utilisationAfter The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return The C-level corresponding to the geo-mean of the utilisation value before and after collateral is utilised.
+    function computeCLevelGeoMean(
+        UD60x18 utilisationBefore,
+        UD60x18 utilisationAfter,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) internal pure returns (UD60x18 cLevel) {
+        UD60x18 cLevelBefore = computeCLevel(utilisationBefore, ZERO, alpha, minCLevel, maxCLevel, decayRate);
+
+        UD60x18 cLevelAfter = computeCLevel(utilisationAfter, duration, alpha, minCLevel, maxCLevel, decayRate);
+
+        cLevel = (cLevelBefore * cLevelAfter).sqrt();
     }
 }

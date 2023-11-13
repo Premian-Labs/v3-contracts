@@ -65,4 +65,34 @@ library OptionMathExternal {
     ) public pure returns (UD60x18) {
         return OptionMath.computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
     }
+
+    /// @notice Calculates the geo-mean C-level given a utilisation before and after collateral is utilised.
+    /// @param utilisationBefore The utilisation before some collateral is utilised.
+    /// @param utilisationAfter The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return The C-level corresponding to the geo-mean of the utilisation value before and after collateral is utilised.
+    function computeCLevelGeoMean(
+        UD60x18 utilisationBefore,
+        UD60x18 utilisationAfter,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) public pure returns (UD60x18 cLevel) {
+        return
+            OptionMath.computeCLevelGeoMean(
+                utilisationBefore,
+                utilisationAfter,
+                duration,
+                alpha,
+                minCLevel,
+                maxCLevel,
+                decayRate
+            );
+    }
 }

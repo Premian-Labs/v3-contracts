@@ -629,21 +629,22 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 totalAssets - totalLockedAssets - _getLockedSpreadInternal(l).totalLockedSpread
             );
 
-            {
-                // Compute C-level
-                UD60x18 utilisation = (totalLockedAssets + l.collateral(args.size, args.strike)) / totalAssets;
+            // Compute C-level
 
-                UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
+            // If utilisation is a function of premium, and we want to use that to compute the premium we get an
+            // implicit equation. For this function, there is no explicit solution enabling us to include premiums.
+            // Therefore, this is the current approximation we are using.
+            UD60x18 utilisationAfter = (totalLockedAssets + l.collateral(args.size, args.strike)) / totalAssets;
 
-                vars.cLevel = OptionMathExternal.computeCLevel(
-                    utilisation,
-                    hoursSinceLastTx,
-                    l.alphaCLevel,
-                    l.minCLevel,
-                    l.maxCLevel,
-                    l.hourlyDecayDiscount
-                );
-            }
+            vars.cLevel = OptionMathExternal.computeCLevelGeoMean({
+                utilisationBefore: totalLockedAssets / totalAssets,
+                utilisationAfter: utilisationAfter,
+                duration: ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD),
+                alpha: l.alphaCLevel,
+                minCLevel: l.minCLevel,
+                maxCLevel: l.maxCLevel,
+                decayRate: l.hourlyDecayDiscount
+            });
         } else {
             _revertIfInsufficientShorts(l, args.maturity, args.strike, args.size);
             vars.cLevel = ONE;
