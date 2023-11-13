@@ -43,6 +43,7 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
         vault.setListingsAndSizes(infos);
         assertEq(vault.getMaturityAfterTimestamp(50000), infos[0].maturity);
         assertEq(vault.getMaturityAfterTimestamp(150000), infos[1].maturity);
+        assertEq(vault.getMaturityAfterTimestamp(200000), infos[2].maturity);
         assertEq(vault.getMaturityAfterTimestamp(250000), infos[2].maturity);
     }
 

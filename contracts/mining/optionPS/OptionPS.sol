@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
@@ -9,6 +9,7 @@ import {ERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/ERC1
 import {ERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155EnumerableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
@@ -33,6 +34,31 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
     constructor(address feeReceiver) {
         FEE_RECEIVER = feeReceiver;
+    }
+
+    /// @inheritdoc IOptionPS
+    function name() external view returns (string memory) {
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+        return string(abi.encodePacked("Option Physically Settled", " - ", _symbol(l)));
+    }
+
+    /// @inheritdoc IOptionPS
+    function symbol() external view returns (string memory) {
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+        return string(abi.encodePacked("PS-", _symbol(l)));
+    }
+
+    function _symbol(OptionPSStorage.Layout storage l) internal view returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    IERC20Metadata(l.base).symbol(),
+                    "/",
+                    IERC20Metadata(l.quote).symbol(),
+                    "-",
+                    l.isCall ? "C" : "P"
+                )
+            );
     }
 
     /// @inheritdoc IOptionPS

@@ -282,6 +282,11 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_mint.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isRateNonTerminating.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_roundDown.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_roundDownUD60x18.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_roundDownSD59x18.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_roundUp.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_roundUpUD60x18.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getGlobalFeeRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
@@ -546,6 +551,16 @@ contract DeployTest is Test, Assertions {
     function toTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
+    }
+
+    /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
+    function roundUpToTokenDecimals(UD60x18 amount) internal view returns (uint256) {
+        UD60x18 amountRoundedDown = fromTokenDecimals(toTokenDecimals(amount));
+        if (amountRoundedDown != amount) {
+            return toTokenDecimals(amount) + uint256(1);
+        } else {
+            return toTokenDecimals(amount);
+        }
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
-import "forge-std/console2.sol";
-
 import {IERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/IERC1155BaseInternal.sol";
 
 import {Test} from "forge-std/Test.sol";
@@ -26,6 +24,7 @@ import {OptionRewardFactory} from "contracts/mining/optionReward/OptionRewardFac
 import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
 
 import {PaymentSplitter} from "contracts/mining/PaymentSplitter.sol";
+import {IPaymentSplitter} from "contracts/mining/IPaymentSplitter.sol";
 
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
@@ -37,6 +36,8 @@ import {IOptionPS} from "contracts/mining/optionPS/IOptionPS.sol";
 import {OptionPS} from "contracts/mining/optionPS/OptionPS.sol";
 import {OptionPSStorage} from "contracts/mining/optionPS/OptionPSStorage.sol";
 import {IMiningAddRewards} from "contracts/mining/IMiningAddRewards.sol";
+
+import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 
 import {Assertions} from "../../Assertions.sol";
 
@@ -53,7 +54,7 @@ contract MiningMock is IMiningAddRewards {
 }
 
 contract OptionRewardTest is Assertions, Test {
-    UD60x18 internal constant discount = UD60x18.wrap(0.55e18);
+    UD60x18 internal constant percentOfSpot = UD60x18.wrap(0.55e18);
     UD60x18 internal constant penalty = UD60x18.wrap(0.75e18);
     uint256 internal constant optionDuration = 30 days;
     uint256 internal constant lockupDuration = 365 days;
@@ -70,6 +71,8 @@ contract OptionRewardTest is Assertions, Test {
     VxPremia internal vxPremia;
     OptionPS internal option;
     address internal mining;
+
+    IOptionRewardFactory.OptionRewardKey internal key;
 
     ERC20Mock internal base;
     ERC20Mock internal quote;
@@ -96,7 +99,7 @@ contract OptionRewardTest is Assertions, Test {
         initialBaseBalance = 100e18;
         initialQuoteBalance = 1000e6;
         spot = ud(1e18);
-        strike = spot * discount;
+        strike = spot * percentOfSpot;
 
         underwriter = vm.addr(1);
         otherUnderwriter = vm.addr(2);
@@ -145,11 +148,11 @@ contract OptionRewardTest is Assertions, Test {
             )
         );
 
-        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
+        key = IOptionRewardFactory.OptionRewardKey({
             option: option,
             oracleAdapter: oracleAdapter,
             paymentSplitter: paymentSplitter,
-            discount: discount,
+            percentOfSpot: percentOfSpot,
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
@@ -200,11 +203,11 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_deployProxy_RevertIf_ProxyAlreadyDeployed() public {
-        IOptionRewardFactory.OptionRewardKey memory key = IOptionRewardFactory.OptionRewardKey({
+        IOptionRewardFactory.OptionRewardKey memory _key = IOptionRewardFactory.OptionRewardKey({
             option: option,
             oracleAdapter: oracleAdapter,
             paymentSplitter: paymentSplitter,
-            discount: discount,
+            percentOfSpot: percentOfSpot,
             penalty: penalty,
             optionDuration: optionDuration,
             lockupDuration: lockupDuration,
@@ -219,7 +222,7 @@ contract OptionRewardTest is Assertions, Test {
                 address(optionReward)
             )
         );
-        optionReward = OptionReward(optionRewardFactory.deployProxy(key));
+        optionReward = OptionReward(optionRewardFactory.deployProxy(_key));
     }
 
     function test_previewOptionParams_Success() public {
@@ -603,5 +606,31 @@ contract OptionRewardTest is Assertions, Test {
         vm.warp(maturity + lockupDuration + claimDuration + 1);
         vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__NoBaseReserved.selector, strike, maturity));
         optionReward.releaseRewardsNotClaimed(strike, maturity);
+    }
+
+    function test_getSettings_Success() public {
+        (
+            IOptionPS _option,
+            IOracleAdapter _oracleAdapter,
+            IPaymentSplitter _paymentSplitter,
+            UD60x18 _percentOfSpot,
+            UD60x18 _penalty,
+            uint256 _optionDuration,
+            uint256 _lockupDuration,
+            uint256 _claimDuration,
+            UD60x18 _fee,
+            address _feeReceiver
+        ) = optionReward.getSettings();
+
+        assertEq(address(_option), address(key.option));
+        assertEq(address(_oracleAdapter), address(key.oracleAdapter));
+        assertEq(address(_paymentSplitter), address(key.paymentSplitter));
+        assertEq(_percentOfSpot.unwrap(), key.percentOfSpot.unwrap());
+        assertEq(_penalty.unwrap(), key.penalty.unwrap());
+        assertEq(_optionDuration, key.optionDuration);
+        assertEq(_lockupDuration, key.lockupDuration);
+        assertEq(_claimDuration, key.claimDuration);
+        assertEq(_fee.unwrap(), key.fee.unwrap());
+        assertEq(_feeReceiver, key.feeReceiver);
     }
 }

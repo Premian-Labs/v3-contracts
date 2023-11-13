@@ -11,8 +11,7 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolDepositWithdraw is IPoolInternal {
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
     ///         contracts) into the pool. Tx will revert if market price is not between `minMarketPrice` and
-    ///         `maxMarketPrice`. If the pool uses WETH as collateral, it is possible to send ETH to this function and
-    ///         it will be wrapped into WETH. Any excess ETH sent will be refunded to the `msg.sender` as WETH.
+    ///         `maxMarketPrice`.
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain,
     ///        passed as arg and validated on-chain to save gas (18 decimals)
@@ -33,8 +32,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
     ///         contracts) into the pool. Tx will revert if market price is not between `minMarketPrice` and
-    ///         `maxMarketPrice`. If the pool uses WETH as collateral, it is possible to send ETH to this function and
-    ///         it will be wrapped into WETH. Any excess ETH sent will be refunded to the `msg.sender` as WETH.
+    ///         `maxMarketPrice`.
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain,
     ///        passed as arg and validated on-chain to save gas (18 decimals)

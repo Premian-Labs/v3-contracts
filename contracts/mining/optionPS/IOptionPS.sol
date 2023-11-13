@@ -62,6 +62,12 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
 
     event Annihilate(address indexed annihilator, UD60x18 strike, uint256 maturity, UD60x18 contractSize);
 
+    /// @notice Returns the name of the physically settled option token
+    function name() external view returns (string memory);
+
+    /// @notice Returns the symbol of the physically settled option token
+    function symbol() external view returns (string memory);
+
     /// @notice Returns the pair infos for this option
     function getSettings() external view returns (address base, address quote, bool isCall);
 

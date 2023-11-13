@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -61,7 +61,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
                     args.option,
                     args.oracleAdapter,
                     args.paymentSplitter,
-                    args.discount,
+                    args.percentOfSpot,
                     args.penalty,
                     args.optionDuration,
                     args.lockupDuration,
@@ -85,7 +85,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
                 key.option,
                 key.oracleAdapter,
                 key.paymentSplitter,
-                key.discount,
+                key.percentOfSpot,
                 key.penalty,
                 key.optionDuration,
                 key.lockupDuration,
@@ -102,7 +102,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
             key.option,
             key.oracleAdapter,
             key.paymentSplitter,
-            key.discount,
+            key.percentOfSpot,
             key.penalty,
             key.optionDuration,
             key.lockupDuration,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
@@ -22,7 +22,7 @@ contract OptionRewardProxy is Proxy {
         IOptionPS option,
         IOracleAdapter oracleAdapter,
         IPaymentSplitter paymentSplitter,
-        UD60x18 discount,
+        UD60x18 percentOfSpot,
         UD60x18 penalty,
         uint256 optionDuration,
         uint256 lockupDuration,
@@ -50,13 +50,18 @@ contract OptionRewardProxy is Proxy {
         l.oracleAdapter = oracleAdapter;
         l.paymentSplitter = paymentSplitter;
 
-        l.discount = discount;
+        l.percentOfSpot = percentOfSpot;
         l.penalty = penalty;
         l.lockupDuration = lockupDuration;
         l.claimDuration = claimDuration;
 
         l.fee = fee;
         l.feeReceiver = feeReceiver;
+    }
+
+    /// @notice Return the implementation address of the proxy
+    function getImplementation() external view returns (address) {
+        return _getImplementation();
     }
 
     /// @inheritdoc Proxy

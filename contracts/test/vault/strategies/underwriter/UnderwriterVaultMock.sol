@@ -90,20 +90,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.getNumberOfUnexpiredListings(timestamp);
     }
 
-    function getTotalLiabilitiesExpired() external view returns (UD60x18) {
-        return _getTotalLiabilitiesExpired(UnderwriterVaultStorage.layout());
-    }
-
     function getTotalLiabilitiesUnexpired() external view returns (UD60x18) {
         return _getTotalLiabilitiesUnexpired(UnderwriterVaultStorage.layout());
-    }
-
-    function getTotalLiabilities() external view returns (UD60x18) {
-        return _getTotalLiabilities(UnderwriterVaultStorage.layout());
-    }
-
-    function getTotalFairValue() external view returns (UD60x18) {
-        return _getTotalFairValue(UnderwriterVaultStorage.layout());
     }
 
     function getNumberOfListings() external view returns (uint256) {
@@ -517,5 +505,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function computeManagementFees() external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeManagementFee(l, _getBlockTimestamp());
+    }
+
+    function exposed_computeAssetsAfterSettlementOfExpiredOptions() external view returns (UD60x18, UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return _computeAssetsAfterSettlementOfExpiredOptions(l);
+    }
+
+    function setPendingAssetsDeposit(uint256 depositAmount) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        l.pendingAssetsDeposit = depositAmount;
     }
 }

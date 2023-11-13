@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -12,11 +12,14 @@ import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
+
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionReward is IOptionReward, ReentrancyGuard {
     using OptionRewardStorage for IERC20;
@@ -36,8 +39,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
         UD60x18 price = l.oracleAdapter.getPrice(l.base, l.quote);
         _revertIfPriceIsZero(price);
-        // Applies discount to spot price and rounds to nearest strike interval
-        strike = OptionMath.roundToStrikeInterval(price * l.discount);
+        // Applies percentage to spot price and rounds to nearest strike interval
+        strike = OptionMath.roundToStrikeInterval(price * l.percentOfSpot);
     }
 
     /// @inheritdoc IOptionReward
@@ -202,6 +205,39 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     /// @inheritdoc IOptionReward
     function getRedeemableLongs(address user, UD60x18 strike, uint64 maturity) external view returns (UD60x18) {
         return OptionRewardStorage.layout().redeemableLongs[user][strike][maturity];
+    }
+
+    /// @inheritdoc IOptionReward
+    function getSettings()
+        external
+        view
+        returns (
+            IOptionPS option,
+            IOracleAdapter oracleAdapter,
+            IPaymentSplitter paymentSplitter,
+            UD60x18 percentOfSpot,
+            UD60x18 penalty,
+            uint256 optionDuration,
+            uint256 lockupDuration,
+            uint256 claimDuration,
+            UD60x18 fee,
+            address feeReceiver
+        )
+    {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+
+        return (
+            l.option,
+            l.oracleAdapter,
+            l.paymentSplitter,
+            l.percentOfSpot,
+            l.penalty,
+            l.optionDuration,
+            l.lockupDuration,
+            l.claimDuration,
+            l.fee,
+            l.feeReceiver
+        );
     }
 
     /// @notice Revert if price is zero

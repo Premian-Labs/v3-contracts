@@ -53,6 +53,7 @@ export async function proposeSafeTransaction(
   // Create a Safe transaction with the provided parameters
   const safeTransaction = await safeSdk.createTransaction({
     safeTransactionData,
+    onlyCalls: true,
     options,
   });
 

@@ -51,7 +51,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         Signature calldata signature,
         address referrer
     ) external nonReentrant returns (uint256 premiumTaker, Position.Delta memory delta) {
-        return _fillQuoteOB(FillQuoteOBArgsInternal(msg.sender, referrer, size, signature, true), quoteOB);
+        return _fillQuoteOB(FillQuoteOBArgsInternal(msg.sender, referrer, size, signature), quoteOB);
     }
 
     /// @inheritdoc IPoolTrade
@@ -61,7 +61,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         uint256 premiumLimit,
         address referrer
     ) external nonReentrant returns (uint256 totalPremium, Position.Delta memory delta) {
-        return _trade(TradeArgsInternal(msg.sender, referrer, size, isBuy, premiumLimit, true));
+        return _trade(TradeArgsInternal(msg.sender, referrer, size, isBuy, premiumLimit));
     }
 
     /// @inheritdoc IPoolTrade
@@ -83,12 +83,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteOBHash = _quoteOBHash(quoteOB);
         return
-            _areQuoteOBAndBalanceValid(
-                l,
-                FillQuoteOBArgsInternal(user, address(0), size, sig, true),
-                quoteOB,
-                quoteOBHash
-            );
+            _areQuoteOBAndBalanceValid(l, FillQuoteOBArgsInternal(user, address(0), size, sig), quoteOB, quoteOBHash);
     }
 
     /// @inheritdoc IPoolTrade

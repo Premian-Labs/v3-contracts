@@ -84,6 +84,17 @@ abstract contract OptionPSTest is Assertions, Test {
         return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, strike);
     }
 
+    function test_name_Success() public {
+        assertEq(
+            option.name(),
+            isCall ? "Option Physically Settled - WETH/USDC-C" : "Option Physically Settled - WETH/USDC-P"
+        );
+    }
+
+    function test_symbol_Success() public {
+        assertEq(option.symbol(), isCall ? "PS-WETH/USDC-C" : "PS-WETH/USDC-P");
+    }
+
     function test_deployProxy_RevertIf_ProxyAlreadyDeployed() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionPSFactory.OptionPSFactory__ProxyAlreadyDeployed.selector, address(option))
