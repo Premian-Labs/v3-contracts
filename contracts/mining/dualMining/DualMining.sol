@@ -4,7 +4,6 @@ pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
@@ -19,7 +18,7 @@ import {ZERO} from "../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "../../libraries/UD50x28.sol";
 
-contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
+contract DualMining is IDualMining, ReentrancyGuard {
     using DualMiningStorage for DualMiningStorage.Layout;
     using SafeERC20 for IERC20;
     using PRBMathExtra for UD60x18;
