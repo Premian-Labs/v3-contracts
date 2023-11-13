@@ -66,12 +66,51 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         }
     }
 
+    function test_cLevelGeoMean_ReturnCorrectOutput() public {
+        vault.setAlphaCLevel(ud(0.15 ether));
+        vault.setMinCLevel(ud(1.05 ether));
+        vault.setMaxCLevel(ud(1.2 ether));
+        vault.setHourlyDecayDiscount(ud(0.005 ether));
+
+        UD60x18 size = ud(4.3 ether);
+
+        UD60x18[6] memory totalAssets = [ud(10e18), ud(12e18), ud(12.5e18), ud(13e18), ud(14e18), ud(18e18)];
+        UD60x18[6] memory totalLockedAssets = [ud(0e18), ud(0e18), ud(7.21e18), ud(8.1e18), ud(3e18), ud(13e18)];
+
+        vault.setLastTradeTimestamp(82800);
+        vault.setTimestamp(165600);
+
+        UD60x18[6] memory expected = [
+            ud(1.05e18),
+            ud(1.05e18),
+            ud(1.1025950417585488e18),
+            ud(1.1087367093170641e18),
+            ud(1.0650306024789773e18),
+            ud(1.1167254362471732e18)
+        ];
+
+        for (uint256 i = 0; i < 2; i++) {
+            if (i == 0) {
+                vault.setIsCall(true);
+            } else {
+                vault.setIsCall(false);
+            }
+            for (uint256 j = 0; j < totalAssets.length; j++) {
+                assertApproxEqAbs(
+                    vault.computeCLevelGeoMean(totalAssets[j], totalLockedAssets[j], size).unwrap(),
+                    expected[j].unwrap(),
+                    1000
+                );
+            }
+        }
+    }
+
     function test_getQuote_ReturnCorrectQuote() public {
         setup();
 
         assertApproxEqAbs(
             fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
-            isCallTest ? 0.163577618244386010e18 : 486.203629e18,
+            isCallTest ? 0.161791878138208136e18 : 480.701186e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
     }
@@ -83,7 +122,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         assertApproxEqAbs(
             fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
-            isCallTest ? 0.163577618244386010e18 : 486.203629e18,
+            isCallTest ? 0.161791878138208136e18 : 480.701186e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
     }
@@ -448,8 +487,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IVault.Vault__AboveMaxSlippage.selector,
-                isCallTest ? 0.163577618244386010e18 : 486203629000000000000,
-                isCallTest ? 0.081788809122193005e18 : 243101814000000000000
+                isCallTest ? 0.161791878138208136e18 : 480.701186e18,
+                isCallTest ? 0.080895939069104068e18 : 240.350593e18
             )
         );
         vault.trade(poolKey, tradeSize, true, totalPremium / 2, address(0));
