@@ -4,6 +4,8 @@ pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+
 import {IVaultMining} from "./IVaultMining.sol";
 
 library VaultMiningStorage {
@@ -24,6 +26,8 @@ library VaultMiningStorage {
         uint256 lastUpdate;
         // Total rewards accumulated by a vault for each vote it has
         UD60x18 globalAccRewardsPerVote;
+        // Dual mining pools
+        mapping(address vault => EnumerableSet.AddressSet pools) dualMining;
     }
 
     function layout() internal pure returns (Layout storage l) {
