@@ -99,6 +99,9 @@ library UnderwriterVaultStorage {
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Sell Variables
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // The timestamp that selling was enabled at.
+        mapping(uint256 => mapping(UD60x18 => UD60x18)) positionSizesSinceEnabled;
+        // Average premium for every strike and maturity
         mapping(uint256 => mapping(UD60x18 => UD60x18)) avgPremium;
     }
 

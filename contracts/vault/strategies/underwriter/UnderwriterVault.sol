@@ -525,10 +525,14 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 (avgPremium * l.positionSizes[maturity][strike] + premium) /
                 (l.positionSizes[maturity][strike] + size);
 
+            l.positionSizesSinceEnabled[maturity][strike] = l.positionSizesSinceEnabled[maturity][strike] + size;
+
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
         } else {
             l.totalAssets = l.totalAssets + collateral - premium - spreadProtocol;
             l.totalLockedAssets = l.totalLockedAssets - collateral;
+
+            l.positionSizesSinceEnabled[maturity][strike] = l.positionSizesSinceEnabled[maturity][strike] - size;
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
 
             // If the vault holds no short positions for this listing it will be removed
@@ -1071,6 +1075,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 strike,
         UD60x18 size
     ) internal view {
-        if (l.positionSizes[maturity][strike] < size) revert Vault__InsufficientShorts();
+        if (l.positionSizesSinceEnabled[maturity][strike] < size) revert Vault__InsufficientShorts();
     }
 }
