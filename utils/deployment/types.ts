@@ -14,6 +14,7 @@ export interface DeploymentMetadata {
     dao: ContractDeploymentMetadata;
   };
   core: { [key in ContractKey]: ContractDeploymentMetadata };
+  dualMining: { [name: string]: ContractDeploymentMetadata };
   optionPS: { [name: string]: ContractDeploymentMetadata };
   optionReward: { [name: string]: ContractDeploymentMetadata };
   vaults: { [name: string]: ContractDeploymentMetadata };
@@ -22,6 +23,8 @@ export interface DeploymentMetadata {
 export enum ContractKey {
   ChainlinkAdapterImplementation = 'ChainlinkAdapterImplementation',
   ChainlinkAdapterProxy = 'ChainlinkAdapterProxy',
+  DualMiningImplementation = 'DualMiningImplementation',
+  DualMiningManager = 'DualMiningManager',
   PremiaDiamond = 'PremiaDiamond',
   PoolFactoryImplementation = 'PoolFactoryImplementation',
   PoolFactoryProxy = 'PoolFactoryProxy',
