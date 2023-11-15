@@ -16,6 +16,7 @@ import {
 } from '../../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../../utils/safe';
 import { BigNumber, PopulatedTransaction } from 'ethers';
+import _ from 'lodash';
 
 interface DualMiningArgs {
   vaultName: string;
@@ -27,7 +28,7 @@ interface DualMiningArgs {
 function getName(vaultName: string, deployment: DeploymentMetadata) {
   let i = 1;
   let name = `${vaultName}-${i}`;
-  while (deployment.dualMining[name]) {
+  while (_.get(deployment, `dualMining.${name}`)) {
     i++;
     name = `${vaultName}-${i}`;
   }

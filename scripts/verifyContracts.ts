@@ -16,6 +16,8 @@ const optionRewardProxyPath =
   'contracts/mining/optionReward/OptionRewardProxy.sol:OptionRewardProxy';
 const underwriterVaultProxyPath =
   'contracts/vault/strategies/underwriter/UnderwriterVaultProxy.sol:UnderwriterVaultProxy';
+const dualMiningProxyPath =
+  'contracts/mining/dualMining/DualMiningProxy.sol:DualMiningProxy';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -26,7 +28,8 @@ async function main() {
       category !== 'core' &&
       category !== 'optionPS' &&
       category !== 'optionReward' &&
-      category !== 'vaults'
+      category !== 'vaults' &&
+      category !== 'dualMining'
     )
       continue;
 
@@ -80,11 +83,10 @@ async function main() {
         contractPath = optionPsProxyPath;
       } else if (contract === 'PREMIA/USDC') {
         contractPath = optionRewardProxyPath;
-      } else if (contract.includes('pSV-')) {
+      } else if (category === 'dualMining') {
+        contractPath = dualMiningProxyPath;
+      } else if (category === 'vaults' && contract.includes('pSV-')) {
         contractPath = underwriterVaultProxyPath;
-      } else {
-        console.log('Skipping...');
-        continue;
       }
 
       try {
