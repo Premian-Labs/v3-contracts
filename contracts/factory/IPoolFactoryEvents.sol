@@ -7,8 +7,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 interface IPoolFactoryEvents {
-    event SetDiscountPerPool(UD60x18 indexed discountPerPool);
-    event SetFeeReceiver(address indexed feeReceiver);
     event PoolDeployed(
         address indexed base,
         address indexed quote,

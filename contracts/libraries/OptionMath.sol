@@ -6,7 +6,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {ZERO, ONE, TWO, iZERO, iONE, iTWO, iFOUR, iNINE} from "./Constants.sol";
+import {ZERO, ONE, TWO, iZERO, iONE, iTWO, iNINE} from "./Constants.sol";
 
 library OptionMath {
     struct BlackScholesPriceVarsInternal {
@@ -15,12 +15,6 @@ library OptionMath {
         int256 timeScaledVar;
         int256 timeScaledRiskFreeRate;
     }
-
-    UD60x18 internal constant INITIALIZATION_ALPHA = UD60x18.wrap(5e18);
-    UD60x18 internal constant ATM_MONEYNESS = UD60x18.wrap(0.5e18);
-    uint256 internal constant NEAR_TERM_TTM = 14 days;
-    uint256 internal constant ONE_YEAR_TTM = 365 days;
-    UD60x18 internal constant FEE_SCALAR = UD60x18.wrap(100e18);
 
     SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
     SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
@@ -242,33 +236,6 @@ library OptionMath {
         uint256 lower = interval * (_strike / interval);
         uint256 upper = interval * ((_strike / interval) + 1);
         return (_strike - lower < upper - _strike) ? ud(lower) : ud(upper);
-    }
-
-    /// @notice Calculate the log moneyness of a strike/spot price pair
-    /// @param spot The spot price (18 decimals)
-    /// @param strike The strike price (18 decimals)
-    /// @return The log moneyness of the strike price (18 decimals)
-    function logMoneyness(UD60x18 spot, UD60x18 strike) internal pure returns (UD60x18) {
-        return (spot / strike).intoSD59x18().ln().abs().intoUD60x18();
-    }
-
-    /// @notice Calculate the initialization fee for a pool
-    /// @param spot The spot price (18 decimals)
-    /// @param strike The strike price (18 decimals)
-    /// @param maturity The maturity timestamp of the option
-    /// @return The initialization fee (18 decimals)
-    function initializationFee(UD60x18 spot, UD60x18 strike, uint256 maturity) internal view returns (UD60x18) {
-        UD60x18 moneyness = logMoneyness(spot, strike);
-        uint256 timeToMaturity = calculateTimeToMaturity(maturity);
-        UD60x18 kBase = moneyness < ATM_MONEYNESS
-            ? (ATM_MONEYNESS - moneyness).intoSD59x18().pow(iFOUR).intoUD60x18()
-            : moneyness - ATM_MONEYNESS;
-        uint256 tBase = timeToMaturity < NEAR_TERM_TTM
-            ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
-            : timeToMaturity;
-        UD60x18 scaledT = (ud(tBase * 1e18) / ud(ONE_YEAR_TTM * 1e18)).sqrt();
-
-        return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
     }
 
     /// @notice Converts a number with `inputDecimals`, to a number with given amount of decimals

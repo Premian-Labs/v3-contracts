@@ -1169,7 +1169,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address holder
     ) internal returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral) {
         _revertIfOptionNotExpired(l);
-        _removeInitFeeDiscount(l);
 
         uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
         size = _balanceOfUD60x18(holder, tokenId);
@@ -1252,7 +1251,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (uint256 collateral, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionNotExpired(l);
-        _removeInitFeeDiscount(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
@@ -1728,17 +1726,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (l.currentTick <= PoolStorage.MIN_TICK_PRICE) revert Pool__TickOutOfRange(l.currentTick);
             l.currentTick = l.tickIndex.prev(l.currentTick);
         }
-    }
-
-    /// @notice Removes the initialization fee discount for the pool
-    function _removeInitFeeDiscount(PoolStorage.Layout storage l) internal {
-        if (l.initFeeDiscountRemoved) return;
-
-        l.initFeeDiscountRemoved = true;
-
-        IPoolFactory(FACTORY).removeDiscount(
-            IPoolFactory.PoolKey(l.base, l.quote, l.oracleAdapter, l.strike, l.maturity, l.isCallPool)
-        );
     }
 
     /// @notice Calculates the growth and exposure change between the lower and upper Ticks of a Position.

@@ -56,7 +56,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         assertEq(isCallPool, poolKey.isCallPool);
     }
 
-    function test_deployPool_NoRefund() public {
+    function test_deployPool_FullRefund() public {
         maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
         vm.warp(maturity - 1 hours);
 
@@ -65,48 +65,15 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
 
         uint256 fee = factory.initializationFee(poolKey).unwrap();
 
-        assertEq(fee, 109188259456203059);
-        assertEq(address(factory).balance, 0);
-
-        uint256 lpBalanceBefore = users.lp.balance;
-        factory.deployPool{value: fee}(poolKey);
-
-        assertEq(users.lp.balance, lpBalanceBefore - fee);
-        assertEq(FEE_RECEIVER.balance, fee);
-        assertEq(address(factory).balance, 0);
-    }
-
-    function test_deployPool_PartialRefund() public {
-        maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
-        vm.warp(maturity - 1 hours);
-
-        poolKey.strike = ud(2000 ether);
-        poolKey.maturity = maturity + 24 hours;
-
-        uint256 fee = factory.initializationFee(poolKey).unwrap();
-
-        assertEq(fee, 109188259456203059);
+        assertEq(fee, 0);
         assertEq(address(factory).balance, 0);
 
         uint256 lpBalanceBefore = users.lp.balance;
         factory.deployPool{value: 1 ether}(poolKey);
 
-        assertEq(users.lp.balance, lpBalanceBefore - fee);
-        assertEq(FEE_RECEIVER.balance, fee);
+        assertEq(users.lp.balance, lpBalanceBefore);
+        assertEq(FEE_RECEIVER.balance, 0);
         assertEq(address(factory).balance, 0);
-    }
-
-    function test_deployPool_RevertIf_InitializationFeeRequired() public {
-        maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
-        vm.warp(maturity - 1 hours);
-
-        poolKey.strike = ud(2000 ether);
-        poolKey.maturity = maturity + 24 hours;
-
-        uint256 fee = factory.initializationFee(poolKey).unwrap();
-
-        vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__InitializationFeeRequired.selector, 0, fee));
-        factory.deployPool{value: 0}(poolKey);
     }
 
     function test_deployPool_RevertIf_BaseAndQuoteEqual() public {
