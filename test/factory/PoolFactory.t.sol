@@ -38,7 +38,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     // deployPool
 
     function test_deployPool_DeployPool() public {
-        address pool = factory.deployPool{value: 1 ether}(poolKey);
+        address pool = factory.deployPool(poolKey);
         (
             address base,
             address quote,
@@ -80,42 +80,42 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         vm.expectRevert(IPoolFactory.PoolFactory__IdenticalAddresses.selector);
 
         poolKey.base = poolKey.quote;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_QuoteZeroAddress() public {
         poolKey.quote = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_BaseZeroAddress() public {
         poolKey.base = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_OracleAddress() public {
         poolKey.oracleAdapter = address(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_StrikeIsZero() public {
         poolKey.strike = ud(0);
 
         vm.expectRevert(IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector);
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_AlreadyDeployed() public {
-        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
+        address poolAddress = factory.deployPool(poolKey);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector, poolAddress));
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
@@ -129,7 +129,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
                 abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionStrikeInvalid.selector, strike[i], interval[i])
             );
 
-            factory.deployPool{value: 1 ether}(poolKey);
+            factory.deployPool(poolKey);
         }
     }
 
@@ -137,7 +137,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         poolKey.maturity = 1679758930;
 
         vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionExpired.selector, poolKey.maturity));
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_MaturityNot8UTC() public {
@@ -146,21 +146,21 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         poolKey.maturity = 1688572800;
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         poolKey.maturity = 1688601600;
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public {
@@ -169,7 +169,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNotFriday.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_MaturityMonthlyNotLastFriday() public {
@@ -178,7 +178,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNotLastFriday.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     function test_deployPool_RevertIf_MaturityExceedsOneYear() public {
@@ -187,7 +187,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector, poolKey.maturity)
         );
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
     }
 
     // getPoolAddress
@@ -200,7 +200,7 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     }
 
     function test_getPoolAddress_ReturnIsDeployedTrue() public {
-        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
+        address poolAddress = factory.deployPool(poolKey);
 
         (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
         assertEq(pool, poolAddress);

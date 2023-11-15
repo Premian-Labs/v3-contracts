@@ -12,7 +12,7 @@ contract UnderwriterVaultPutTest is UnderwriterVaultTest {
 
         isCallTest = false;
         poolKey.isCallPool = false;
-        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        pool = IPoolMock(factory.deployPool(poolKey));
         vault = putVault;
     }
 }

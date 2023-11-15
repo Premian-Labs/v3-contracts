@@ -125,9 +125,9 @@ abstract contract PoolFlashLoanTest is DeployTest {
             isCallPool: poolKey.isCallPool
         });
 
-        IPoolMock poolTwo = IPoolMock(factory.deployPool{value: 1 ether}(poolKeyTwo));
+        IPoolMock poolTwo = IPoolMock(factory.deployPool(poolKeyTwo));
 
-        IPoolMock poolThree = IPoolMock(factory.deployPool{value: 1 ether}(poolKeyThree));
+        IPoolMock poolThree = IPoolMock(factory.deployPool(poolKeyThree));
 
         //
 

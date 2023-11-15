@@ -12,6 +12,6 @@ contract PoolPutTest is PoolTest {
 
         isCallTest = false;
         poolKey.isCallPool = false;
-        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        pool = IPoolMock(factory.deployPool(poolKey));
     }
 }
