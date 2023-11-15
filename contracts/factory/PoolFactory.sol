@@ -103,7 +103,8 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolFactory
-    function initializationFee(IPoolFactory.PoolKey calldata k) public view returns (UD60x18) {
+    function initializationFee(IPoolFactory.PoolKey calldata k) public pure returns (UD60x18) {
+        k; // silence unused variable compiler warning
         return ZERO;
     }
 
