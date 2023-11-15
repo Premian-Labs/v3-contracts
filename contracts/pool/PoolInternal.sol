@@ -16,7 +16,6 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
-import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IUserSettings} from "../settings/IUserSettings.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
 import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
