@@ -609,5 +609,6 @@
       "txHash": "0x9e6b9abb08aed1b565a7965eac3e343433aa6bb728ec2a9d4792b5d0ac003cb0",
       "owner": ""
     }
-  }
+  },
+  "dualMining": {}
 }
