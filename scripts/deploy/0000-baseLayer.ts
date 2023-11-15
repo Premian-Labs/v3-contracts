@@ -4,7 +4,6 @@ import {
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { arbitrumFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
-import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import {
   ChainID,
@@ -25,7 +24,6 @@ async function main() {
   let weth: string;
   let wbtc: string;
   let vxPremia: string | undefined;
-  let feeReceiver: string;
   let chainlinkAdapter: string;
 
   weth = deployment.tokens.WETH;
@@ -78,16 +76,12 @@ async function main() {
 
   //////////////////////////
 
-  const discountPerPool = parseEther('0.1'); // 10%
   const log = true;
 
   await PoolUtil.deploy(
     deployer,
     weth,
-    chainlinkAdapter,
     deployment.feeConverter.main.address,
-    deployment.addresses.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
-    discountPerPool,
     log,
     vxPremia,
     deployment.tokens.PREMIA,
