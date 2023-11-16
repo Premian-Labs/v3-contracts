@@ -63,6 +63,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         _revertIfOptionStrikeInvalid(k.strike);
         _revertIfOptionMaturityInvalid(k.maturity);
 
+        // TODO: convert function type to non-payable and remove refund
         // Refunds any native tokens sent to the contract
         if (msg.value > 0) _safeTransferNativeToken(msg.sender, msg.value);
 

@@ -12,12 +12,12 @@ library PoolFactoryStorage {
     struct Layout {
         mapping(bytes32 key => address pool) pools;
         mapping(address pool => bool) isPool;
-        mapping(bytes32 key => uint256 count) deprecated_strikeCount;
-        mapping(bytes32 key => uint256 count) deprecated_maturityCount;
+        mapping(bytes32 key => uint256 count) __deprecated_strikeCount;
+        mapping(bytes32 key => uint256 count) __deprecated_maturityCount;
         // Discount % per neighboring strike/maturity (18 decimals)
-        UD60x18 deprecated_discountPerPool;
+        UD60x18 __deprecated_discountPerPool;
         // Initialization fee receiver
-        address deprecated_feeReceiver;
+        address __deprecated_feeReceiver;
     }
 
     function layout() internal pure returns (Layout storage l) {

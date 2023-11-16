@@ -66,7 +66,7 @@ library PoolStorage {
         // Size of OB quotes already filled
         mapping(address provider => mapping(bytes32 hash => UD60x18 amountFilled)) quoteOBAmountFilled;
         // Set to true after maturity, to remove factory initialization discount
-        bool deprecated_initFeeDiscountRemoved;
+        bool __deprecated_initFeeDiscountRemoved;
         EnumerableSet.UintSet tokenIds;
     }
 
