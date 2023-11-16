@@ -125,6 +125,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_getQuote_Success_Sell() public {
         setup();
+        enableSell();
 
         UD60x18 tradeSize = ud(3e18);
 
@@ -135,12 +136,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.startPrank(users.trader);
         token.approve(address(vault), totalPremium + totalPremium / 10);
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
-
-        emit log_named_decimal_uint(
-            "Buy Side Premium",
-            toTokenDecimals(fromTokenDecimals(totalPremium) / tradeSize),
-            isCallTest ? 18 : 6
-        );
 
         // it should return the correct quote
         UD60x18 size = ud(3 ether);
@@ -163,6 +158,24 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // Check quote
         assertEq(expected, fromTokenDecimals(premium));
+    }
+
+    function test_getQuote_RevertIf_SellIsDisabled() public {
+        setup();
+
+        UD60x18 tradeSize = ud(3e18);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        IERC20 token = IERC20(getPoolToken());
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        // it revert if sell is disabled
+        vm.expectRevert(IVault.Vault__SellDisabled.selector);
+        vault.getQuote(poolKey, ud(1 ether), false, address(0));
     }
 
     function test_getQuote_RevertIf_InsufficientShorts() public {
@@ -478,8 +491,15 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         UD60x18 protocolFee
     );
 
+    function enableSell() internal {
+        settings[10] = 1;
+
+        vault.updateSettings(abi.encode(settings));
+    }
+
     function test_trade_Success_SellToClose_NoSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -527,6 +547,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_trade_Success_SellToClose_WithSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -604,6 +625,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_trade_Success_SellToOpen_NoSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -652,6 +674,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_trade_Success_SellToOpen_WithSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -724,6 +747,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_trade_Success_SellToCloseThenSellToOpen_NoSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -778,12 +802,11 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - 2 * collateral));
-
-        // todo: add event emits
     }
 
     function test_trade_Success_SellToCloseThenSellToOpen_WithSpread() public {
         setup();
+        enableSell();
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -865,6 +888,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
     function test_trade_RevertIf_AboveSlippage_Sell() public {
         setup();
+        enableSell();
 
         UD60x18 tradeSize = ud(3 ether);
 
@@ -1071,7 +1095,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     function test_getSettings_ReturnExpectedValue() public {
         assertEq(vault.getSettings(), abi.encode(settings));
 
-        uint256[] memory newSettings = new uint256[](10);
+        uint256[] memory newSettings = new uint256[](11);
 
         for (uint256 i = 0; i < settings.length; i++) {
             newSettings[i] = settings[i] * 2;
@@ -1086,6 +1110,13 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vm.prank(users.trader);
 
         vm.expectRevert(IVault.Vault__NotAuthorized.selector);
+        vault.updateSettings(abi.encode(settings));
+    }
+
+    function test_updateSettings_RevertIf_InvalidSettings_EnableSell() public {
+        settings[10] = 2;
+
+        vm.expectRevert(IVault.Vault__InvalidSettingsUpdate.selector);
         vault.updateSettings(abi.encode(settings));
     }
 }

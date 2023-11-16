@@ -99,10 +99,9 @@ library UnderwriterVaultStorage {
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Sell Variables
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        // The timestamp that selling was enabled at.
-        mapping(uint256 => mapping(UD60x18 => UD60x18)) positionSizesSinceEnabled;
         // Average premium for every strike and maturity
-        mapping(uint256 => mapping(UD60x18 => UD60x18)) avgPremium;
+        bool enableSell;
+        mapping(uint256 maturity => mapping(UD60x18 strike => UD60x18)) avgPremium;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -118,6 +117,8 @@ library UnderwriterVaultStorage {
         UD60x18[] memory arr = abi.decode(settings, (UD60x18[]));
         // minCLevel cannot be less than one
         if (arr[2] < ONE) revert IVault.Vault__InvalidSettingsUpdate();
+        // enableSell must be 0 or 1
+        if (arr[10].unwrap() > 1) revert IVault.Vault__InvalidSettingsUpdate();
 
         l.alphaCLevel = arr[0];
         l.hourlyDecayDiscount = arr[1];
@@ -129,6 +130,7 @@ library UnderwriterVaultStorage {
         l.maxDelta = arr[7];
         l.performanceFeeRate = arr[8];
         l.managementFeeRate = arr[9];
+        l.enableSell = (arr[10].unwrap() == 1);
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {

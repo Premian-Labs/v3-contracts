@@ -22,6 +22,7 @@ interface IVault is ISolidStateERC4626 {
     error Vault__OptionTypeMismatchWithVault();
     error Vault__OutOfDeltaBounds();
     error Vault__OutOfDTEBounds();
+    error Vault__SellDisabled();
     error Vault__SettingsNotFromRegistry();
     error Vault__SettingsUpdateIsEmpty();
     error Vault__StrikeZero();

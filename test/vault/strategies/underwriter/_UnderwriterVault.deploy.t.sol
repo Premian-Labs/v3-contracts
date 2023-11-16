@@ -86,7 +86,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         vaultType = keccak256("UnderwriterVault");
 
         // Update settings
-        settings = new uint256[](10);
+        settings = new uint256[](11);
 
         settings[0] = 3e18;
         settings[1] = 0.005e18;
@@ -98,6 +98,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         settings[7] = 0.7e18;
         settings[8] = 0.05e18;
         settings[9] = 0.02e18;
+        settings[10] = 0;
 
         // Deploy and set vault implementation
         address vaultImpl = address(

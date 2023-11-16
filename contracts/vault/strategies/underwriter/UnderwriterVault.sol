@@ -94,7 +94,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     function getSettings() external view returns (bytes memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        UD60x18[] memory settings = new UD60x18[](10);
+        UD60x18[] memory settings = new UD60x18[](11);
 
         settings[0] = l.alphaCLevel;
         settings[1] = l.hourlyDecayDiscount;
@@ -106,6 +106,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         settings[7] = l.maxDelta;
         settings[8] = l.performanceFeeRate;
         settings[9] = l.managementFeeRate;
+        settings[10] = l.enableSell ? ud(1) : ud(0);
 
         return abi.encode(settings);
     }
@@ -524,15 +525,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             l.avgPremium[maturity][strike] =
                 (avgPremium * l.positionSizes[maturity][strike] + premium) /
                 (l.positionSizes[maturity][strike] + size);
-
-            l.positionSizesSinceEnabled[maturity][strike] = l.positionSizesSinceEnabled[maturity][strike] + size;
-
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
         } else {
             l.totalAssets = l.totalAssets + collateral - premium - spreadProtocol;
             l.totalLockedAssets = l.totalLockedAssets - collateral;
 
-            l.positionSizesSinceEnabled[maturity][strike] = l.positionSizesSinceEnabled[maturity][strike] - size;
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
 
             // If the vault holds no short positions for this listing it will be removed
@@ -651,6 +648,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             });
         } else {
             _revertIfInsufficientShorts(l, args.maturity, args.strike, args.size);
+            _revertIfSellIsDisabled(l.enableSell);
             vars.cLevel = ONE;
         }
 
@@ -811,6 +809,19 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 IPool(quote.pool).annihilate(annihilateSize);
             }
 
+            UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
+            if (quote.premium > collateral) {
+                // Transfer to the user if the required collateral is less than the premiums
+                IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
+                // Transfer the collateral from the user if the required funds is greater than the
+                // premiums are receiving.
+            } else {
+                IERC20(_asset()).transferFrom(
+                    msg.sender,
+                    address(this),
+                    l.convertAssetFromUD60x18(collateral - quote.premium)
+                );
+            }
             // Transfer collateral from user (if required) then send them the short contracts
             // Trader: Sell-To-Open, Vault: Buy-To-Close
             if (size - annihilateSize > ZERO) {
@@ -822,22 +833,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                     (size - annihilateSize).unwrap(),
                     ""
                 );
-
-                UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
-                if (quote.premium > collateral)
-                    // Transfer to the user if the required collateral is less than the premiums
-                    IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
-                    // Transfer the collateral from the user if the required funds is greater than the
-                    // premiums are receiving.
-                else
-                    IERC20(_asset()).transferFrom(
-                        msg.sender,
-                        address(this),
-                        l.convertAssetFromUD60x18(collateral - quote.premium)
-                    );
-            } else {
-                // Transfer the premiums to the user
-                IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium));
             }
         }
 
@@ -1075,6 +1070,12 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UD60x18 strike,
         UD60x18 size
     ) internal view {
-        if (l.positionSizesSinceEnabled[maturity][strike] < size) revert Vault__InsufficientShorts();
+        if (l.positionSizes[maturity][strike] < size) revert Vault__InsufficientShorts();
+    }
+
+    /// @notice Ensures that the vault can't buy-to-close unless it is enabled.
+    /// @param enableSell Whether sell is enabled or not.
+    function _revertIfSellIsDisabled(bool enableSell) internal pure {
+        if (!enableSell) revert Vault__SellDisabled();
     }
 }
