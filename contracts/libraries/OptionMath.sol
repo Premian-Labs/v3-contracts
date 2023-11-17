@@ -18,14 +18,14 @@ library OptionMath {
         int256 timeScaledRiskFreeRate;
     }
 
-    SD59x18 internal constant ALPHA = sd(-6.37309208e18);
-    SD59x18 internal constant LAMBDA = sd(-0.61228883e18);
-    SD59x18 internal constant S1 = sd(-0.11105481e18);
-    SD59x18 internal constant S2 = sd(0.44334159e18);
+    SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
+    SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
+    SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);
+    SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
-    UD60x18 internal constant MIN_INPUT_PRICE = ud(1e1);
-    UD60x18 internal constant MAX_INPUT_PRICE = ud(1e34);
+    UD60x18 internal constant MIN_INPUT_PRICE = UD60x18.wrap(1e1);
+    UD60x18 internal constant MAX_INPUT_PRICE = UD60x18.wrap(1e34);
 
     error OptionMath__NonPositiveVol();
     error OptionMath__OutOfBoundsPrice(UD60x18 min, UD60x18 max, UD60x18 price);
