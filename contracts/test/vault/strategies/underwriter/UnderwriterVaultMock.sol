@@ -8,7 +8,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 
-import {ZERO} from "../../../../libraries/Constants.sol";
+import {ZERO, WAD, ONE_HOUR, ONE_YEAR} from "../../../../libraries/Constants.sol";
 import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";

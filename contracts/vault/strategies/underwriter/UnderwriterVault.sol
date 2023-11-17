@@ -14,7 +14,7 @@ import {IOwnable} from "@solidstate/contracts/access/ownable/IOwnable.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {ZERO, ONE} from "../../../libraries/Constants.sol";
+import {ZERO, ONE, WAD, ONE_HOUR, ONE_YEAR} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
@@ -33,10 +33,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
-
-    uint256 internal constant WAD = 1e18;
-    uint256 internal constant ONE_YEAR = 365 days;
-    uint256 internal constant ONE_HOUR = 1 hours;
 
     address internal immutable VAULT_REGISTRY;
     address internal immutable FEE_RECEIVER;
@@ -812,11 +808,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
             if (quote.premium > collateral) {
                 // Transfer to the user if the required collateral is less than the premiums
-                IERC20(_asset()).transfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
+                IERC20(_asset()).safeTransfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
                 // Transfer the collateral from the user if the required funds is greater than the
                 // premiums are receiving.
             } else {
-                IERC20(_asset()).transferFrom(
+                IERC20(_asset()).safeTransferFrom(
                     msg.sender,
                     address(this),
                     l.convertAssetFromUD60x18(collateral - quote.premium)
