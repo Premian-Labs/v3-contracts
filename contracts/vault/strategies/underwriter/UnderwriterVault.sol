@@ -165,7 +165,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             while (current <= l.maxMaturity && current != 0) {
                 for (uint256 j = 0; j < l.maturityToStrikes[current].length(); j++) {
                     vars.strikes[i] = l.maturityToStrikes[current].at(j);
-                    vars.timeToMaturities[i] = ud((current - timestamp) * WAD) / ud(OptionMath.ONE_YEAR_TTM * WAD);
+                    vars.timeToMaturities[i] = ud((current - timestamp) * WAD) / ud(ONE_YEAR * WAD);
                     vars.maturities[i] = current;
                     i++;
                 }
@@ -587,7 +587,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) internal view returns (UD60x18 cLevel) {
         // Compute C-level
         UD60x18 utilisationBefore = totalLockedAssets / totalAssets;
-        
+
         // If utilisation is a function of premium, and we want to use that to compute the premium we get an
         // implicit equation. For this function, there is no explicit solution enabling us to include premiums.
         // Therefore, this is the current approximation we are using.
@@ -970,8 +970,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (l.totalAssets == ZERO) {
             managementFeeInShares = ZERO;
         } else {
-            UD60x18 timeSinceLastDeposit = ud((timestamp - l.lastManagementFeeTimestamp) * WAD) /
-                ud(OptionMath.ONE_YEAR_TTM * WAD);
+            UD60x18 timeSinceLastDeposit = ud((timestamp - l.lastManagementFeeTimestamp) * WAD) / ud(ONE_YEAR * WAD);
             // gamma is the percentage we charge in management fees from the totalAssets resulting in the new pps
             // newPPS = A * (1 - gamma) / S = A / ( S * ( 1 / (1 - gamma) )
             // from this we can compute the shares that need to be minted

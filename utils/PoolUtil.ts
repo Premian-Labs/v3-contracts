@@ -26,8 +26,7 @@ import {
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { BigNumber, constants } from 'ethers';
-import { parseEther } from 'ethers/lib/utils';
+import { constants } from 'ethers';
 import { updateDeploymentMetadata } from './deployment/deployment';
 import { ContractKey, ContractType } from './deployment/types';
 
@@ -210,10 +209,7 @@ export class PoolUtil {
   static async deploy(
     deployer: SignerWithAddress,
     wrappedNativeToken: string,
-    chainlinkAdapter: string,
     feeReceiver: string,
-    insuranceFund: string,
-    discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     vxPremiaAddress?: string,
     premiaAddress?: string,
@@ -248,18 +244,10 @@ export class PoolUtil {
 
     //////////////////////////////////////////////
 
-    const poolFactoryProxyArgs = [
-      placeholder.address,
-      discountPerPool.toString(),
-      insuranceFund,
-    ];
+    const poolFactoryProxyArgs = [placeholder.address];
     const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
-    ).deploy(
-      poolFactoryProxyArgs[0],
-      poolFactoryProxyArgs[1],
-      poolFactoryProxyArgs[2],
-    );
+    ).deploy(poolFactoryProxyArgs[0]);
     await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryProxy,
@@ -291,15 +279,11 @@ export class PoolUtil {
 
     const poolFactoryImplArgs = [
       premiaDiamond.address,
-      chainlinkAdapter,
-      wrappedNativeToken,
       poolFactoryDeployer.address,
     ];
     const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
       poolFactoryImplArgs[0],
       poolFactoryImplArgs[1],
-      poolFactoryImplArgs[2],
-      poolFactoryImplArgs[3],
     );
     await updateDeploymentMetadata(
       deployer,

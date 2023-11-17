@@ -2,8 +2,6 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity =0.8.19;
 
-import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
@@ -12,30 +10,22 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {IPoolFactoryDeployer} from "./IPoolFactoryDeployer.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
-import {PoolStorage} from "../pool/PoolStorage.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ZERO, ONE} from "../libraries/Constants.sol";
+import {ZERO} from "../libraries/Constants.sol";
 
 contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
-    using PoolStorage for PoolStorage.Layout;
 
     address internal immutable DIAMOND;
-    // Chainlink price oracle for the WrappedNative/USD pair
-    address internal immutable CHAINLINK_ADAPTER;
-    // Wrapped native token address (eg WETH, WFTM, etc)
-    address internal immutable WRAPPED_NATIVE_TOKEN;
     // Address of the contract handling the proxy deployment.
     // This is in a separate contract so that we can upgrade this contract without having deterministic address calculation change
     address internal immutable POOL_FACTORY_DEPLOYER;
 
-    constructor(address diamond, address chainlinkAdapter, address wrappedNativeToken, address poolFactoryDeployer) {
+    constructor(address diamond, address poolFactoryDeployer) {
         DIAMOND = diamond;
-        CHAINLINK_ADAPTER = chainlinkAdapter;
-        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         POOL_FACTORY_DEPLOYER = poolFactoryDeployer;
     }
 
@@ -65,21 +55,6 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolFactory
-    function setDiscountPerPool(UD60x18 discountPerPool) external onlyOwner {
-        if (discountPerPool == ZERO || discountPerPool >= ONE) revert PoolFactory__InvalidInput();
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-        l.discountPerPool = discountPerPool;
-        emit SetDiscountPerPool(discountPerPool);
-    }
-
-    /// @inheritdoc IPoolFactory
-    function setFeeReceiver(address feeReceiver) external onlyOwner {
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-        l.feeReceiver = feeReceiver;
-        emit SetFeeReceiver(feeReceiver);
-    }
-
-    /// @inheritdoc IPoolFactory
     function deployPool(PoolKey calldata k) external payable nonReentrant returns (address poolAddress) {
         _revertIfAddressInvalid(k);
 
@@ -88,25 +63,18 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         _revertIfOptionStrikeInvalid(k.strike);
         _revertIfOptionMaturityInvalid(k.maturity);
 
+        // TODO: convert function type to non-payable and remove refund
+        // Refunds any native tokens sent to the contract
+        if (msg.value > 0) _safeTransferNativeToken(msg.sender, msg.value);
+
         bytes32 poolKey = k.poolKey();
-        uint256 fee = initializationFee(k).unwrap();
-
-        if (fee == 0) revert PoolFactory__InitializationFeeIsZero();
-        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
-
         address _poolAddress = _getPoolAddress(poolKey);
         if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
-
-        _safeTransferNativeToken(PoolFactoryStorage.layout().feeReceiver, fee);
-        if (msg.value > fee) _safeTransferNativeToken(msg.sender, msg.value - fee);
-
         poolAddress = IPoolFactoryDeployer(POOL_FACTORY_DEPLOYER).deployPool(k);
 
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.pools[poolKey] = poolAddress;
         l.isPool[poolAddress] = true;
-        l.strikeCount[k.strikeKey()] += 1;
-        l.maturityCount[k.maturityKey()] += 1;
 
         emit PoolDeployed(k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool, poolAddress);
 
@@ -136,38 +104,9 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolFactory
-    function removeDiscount(PoolKey calldata k) external nonReentrant {
-        if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
-
-        if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender) revert PoolFactory__NotAuthorized();
-
-        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
-        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
-    }
-
-    /// @inheritdoc IPoolFactory
-    function initializationFee(IPoolFactory.PoolKey calldata k) public view returns (UD60x18) {
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-
-        uint256 discountFactor = l.maturityCount[k.maturityKey()] + l.strikeCount[k.strikeKey()];
-        UD60x18 discount = (ONE - l.discountPerPool).intoSD59x18().powu(discountFactor).intoUD60x18();
-
-        UD60x18 spot = _getSpotPrice(k.oracleAdapter, k.base, k.quote);
-        UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-
-        return (fee * discount) / _getWrappedNativeUSDSpotPrice();
-    }
-
-    /// @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
-    ///         This is used in the calculation of the initializationFee
-    function _getSpotPrice(address oracleAdapter, address base, address quote) internal view returns (UD60x18) {
-        return IOracleAdapter(oracleAdapter).getPrice(base, quote);
-    }
-
-    /// @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
-    ///         This is used to convert the initializationFee from USD to native token
-    function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
-        return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
+    function initializationFee(IPoolFactory.PoolKey calldata k) public pure returns (UD60x18) {
+        k; // silence unused variable compiler warning
+        return ZERO;
     }
 
     /// @notice Safely transfer native token to the given address

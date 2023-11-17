@@ -44,7 +44,7 @@ abstract contract Referral_Integration_Shared_Test is Base_Test {
             isCallPool: true
         });
 
-        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        pool = IPoolMock(factory.deployPool(poolKey));
     }
 
     function getStartTimestamp() internal virtual override returns (uint256) {

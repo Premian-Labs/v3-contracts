@@ -25,7 +25,6 @@ abstract contract Constants {
     SD59x18 internal constant iZERO = SD59x18.wrap(0);
     SD59x18 internal constant iONE = SD59x18.wrap(1e18);
     SD59x18 internal constant iTWO = SD59x18.wrap(2e18);
-    SD59x18 internal constant iFOUR = SD59x18.wrap(4e18);
     SD59x18 internal constant iNINE = SD59x18.wrap(9e18);
 
     UD50x28 internal constant UD50_ZERO = UD50x28.wrap(0);
