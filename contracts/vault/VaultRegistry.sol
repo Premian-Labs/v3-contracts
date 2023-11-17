@@ -150,6 +150,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         for (uint256 i = 0; i < tokenPairs.length; i++) {
             l.supportedTokenPairs[vault].push(tokenPairs[i]);
             l.vaultsByTokenPair[tokenPairs[i].base][tokenPairs[i].quote][tokenPairs[i].oracleAdapter].add(vault);
+            emit SupportedTokenPairAdded(vault, tokenPairs[i].base, tokenPairs[i].quote, tokenPairs[i].oracleAdapter);
         }
     }
 
@@ -180,6 +181,13 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             .vaultsByTokenPair[tokenPairsToRemove[i].base][tokenPairsToRemove[i].quote][
                 tokenPairsToRemove[i].oracleAdapter
             ].remove(vault);
+
+            emit SupportedTokenPairRemoved(
+                vault,
+                tokenPairsToRemove[i].base,
+                tokenPairsToRemove[i].quote,
+                tokenPairsToRemove[i].oracleAdapter
+            );
         }
 
         uint256 length = l.supportedTokenPairs[vault].length;

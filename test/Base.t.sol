@@ -189,15 +189,10 @@ abstract contract Base_Test is Test, Assertions, Constants, Utils, Fuzzers {
         diamond = new Premia();
 
         Placeholder placeholder = new Placeholder();
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(placeholder), ud(0.1 ether), FEE_RECEIVER);
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(placeholder));
 
         PoolFactoryDeployer poolFactoryDeployer = new PoolFactoryDeployer(address(diamond), address(factoryProxy));
-        PoolFactory factoryImpl = new PoolFactory(
-            address(diamond),
-            address(oracleAdapter),
-            address(base),
-            address(poolFactoryDeployer)
-        );
+        PoolFactory factoryImpl = new PoolFactory(address(diamond), address(poolFactoryDeployer));
         factoryProxy.setImplementation(address(factoryImpl));
 
         flashLoanMock = new FlashLoanMock();

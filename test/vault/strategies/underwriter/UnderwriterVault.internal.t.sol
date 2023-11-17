@@ -180,15 +180,15 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         poolKey.maturity = t0;
         poolKey.strike = strike1;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         poolKey.maturity = t0;
         poolKey.strike = strike2;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         poolKey.maturity = t1;
         poolKey.strike = strike1;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         oracleAdapter.setPriceAt(t0, ud(1500e18));
 
@@ -276,7 +276,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
                 poolKey.maturity = infos[i].maturity;
                 poolKey.strike = infos[i].strikes[j];
 
-                factory.deployPool{value: 1 ether}(poolKey);
+                factory.deployPool(poolKey);
 
                 vm.prank(users.caller);
                 vault.mintFromPool(infos[i].strikes[j], infos[i].maturity, infos[i].sizes[j]);

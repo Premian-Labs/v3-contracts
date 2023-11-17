@@ -23,10 +23,7 @@ async function main() {
     isCallPool: true,
   };
 
-  const initFee = await poolFactory.initializationFee(poolKey);
-
   await poolFactory.deployPool(poolKey, {
-    value: initFee.add(initFee.div(20)), // Fails for some reason if we pass the exact init fee
     gasLimit: 1200000, // Fails to properly estimate gas limit
   });
 }

@@ -7,19 +7,17 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 
 library PoolFactoryStorage {
-    using PoolFactoryStorage for PoolFactoryStorage.Layout;
-
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.PoolFactory");
 
     struct Layout {
         mapping(bytes32 key => address pool) pools;
         mapping(address pool => bool) isPool;
-        mapping(bytes32 key => uint256 count) strikeCount;
-        mapping(bytes32 key => uint256 count) maturityCount;
+        mapping(bytes32 key => uint256 count) __deprecated_strikeCount;
+        mapping(bytes32 key => uint256 count) __deprecated_maturityCount;
         // Discount % per neighboring strike/maturity (18 decimals)
-        UD60x18 discountPerPool;
+        UD60x18 __deprecated_discountPerPool;
         // Initialization fee receiver
-        address feeReceiver;
+        address __deprecated_feeReceiver;
     }
 
     function layout() internal pure returns (Layout storage l) {

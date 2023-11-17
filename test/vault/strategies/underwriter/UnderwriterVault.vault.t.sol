@@ -28,7 +28,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     function setup() internal {
         poolKey.maturity = maturity;
         poolKey.strike = strike;
-        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        pool = IPoolMock(factory.deployPool(poolKey));
 
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
@@ -266,7 +266,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         poolKey.maturity = maturity;
         poolKey.strike = strike;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
@@ -292,7 +292,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         poolKey.maturity = maturity;
         poolKey.strike = strike;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
@@ -1048,7 +1048,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         poolKey.maturity = maturity;
         poolKey.strike = strike;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
@@ -1074,7 +1074,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         poolKey.maturity = maturity;
         poolKey.strike = strike;
-        factory.deployPool{value: 1 ether}(poolKey);
+        factory.deployPool(poolKey);
 
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);

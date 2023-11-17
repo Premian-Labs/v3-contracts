@@ -8,10 +8,6 @@ import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__IdenticalAddresses();
-    error PoolFactory__InitializationFeeIsZero();
-    error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
-    error PoolFactory__InvalidInput();
-    error PoolFactory__NotAuthorized();
     error PoolFactory__OptionExpired(uint256 maturity);
     error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
     error PoolFactory__OptionMaturityNot8UTC(uint256 maturity);
@@ -20,7 +16,6 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__OptionStrikeEqualsZero();
     error PoolFactory__OptionStrikeInvalid(UD60x18 strike, UD60x18 strikeInterval);
     error PoolFactory__PoolAlreadyDeployed(address poolAddress);
-    error PoolFactory__PoolNotExpired();
     error PoolFactory__TransferNativeTokenFailed();
     error PoolFactory__ZeroAddress();
 
@@ -51,24 +46,12 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return isDeployed Whether the pool has been deployed
     function getPoolAddress(PoolKey calldata k) external view returns (address pool, bool isDeployed);
 
-    /// @notice Set the discountPerPool for new pools - only callable by owner
-    /// @param discountPerPool The new discount percentage (18 decimals)
-    function setDiscountPerPool(UD60x18 discountPerPool) external;
-
-    /// @notice Set the feeReceiver for initialization fees - only callable by owner
-    /// @param feeReceiver The new fee receiver address
-    function setFeeReceiver(address feeReceiver) external;
-
     /// @notice Deploy a new option pool
     /// @param k The pool key
     /// @return poolAddress The address of the deployed pool
     function deployPool(PoolKey calldata k) external payable returns (address poolAddress);
 
-    /// @notice Removes the discount caused by an existing pool, can only be called by the pool after maturity
-    /// @param k The pool key
-    function removeDiscount(PoolKey calldata k) external;
-
-    /// @notice Calculates the initialization fee for a pool
+    /// @notice DEPRECATED: Calculates the initialization fee for a pool
     /// @param k The pool key
     /// @return The initialization fee (18 decimals)
     function initializationFee(PoolKey calldata k) external view returns (UD60x18);

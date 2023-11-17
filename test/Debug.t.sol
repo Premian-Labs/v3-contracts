@@ -129,12 +129,7 @@ contract Debug_Test is Base_Test {
         PoolFactoryProxy factoryProxy = PoolFactoryProxy(payable(getAddress("PoolFactoryProxy")));
 
         PoolFactoryDeployer poolFactoryDeployer = new PoolFactoryDeployer(address(diamond), address(factoryProxy));
-        PoolFactory factoryImpl = new PoolFactory(
-            address(diamond),
-            address(oracleAdapter),
-            getTokenAddress("WETH"),
-            address(poolFactoryDeployer)
-        );
+        PoolFactory factoryImpl = new PoolFactory(address(diamond), address(poolFactoryDeployer));
 
         changePrank(factoryProxy.owner());
         factoryProxy.setImplementation(address(factoryImpl));
