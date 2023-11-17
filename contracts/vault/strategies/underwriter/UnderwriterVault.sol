@@ -5,7 +5,6 @@ pragma solidity =0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155Receiver} from "@solidstate/contracts/interfaces/IERC1155Receiver.sol";
-import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
@@ -898,17 +897,10 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         _settle(UnderwriterVaultStorage.layout());
     }
 
-    /// @inheritdoc IERC165
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == type(IERC1155Receiver).interfaceId;
-    }
-
-    /// @inheritdoc IERC1155Receiver
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
         return IERC1155Receiver.onERC1155Received.selector;
     }
 
-    /// @inheritdoc IERC1155Receiver
     function onERC1155BatchReceived(
         address,
         address,

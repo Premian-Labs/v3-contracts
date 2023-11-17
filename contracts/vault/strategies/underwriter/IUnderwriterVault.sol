@@ -5,11 +5,9 @@ pragma solidity ^0.8.19;
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IERC1155Receiver} from "@solidstate/contracts/interfaces/IERC1155Receiver.sol";
-
 import {IVault} from "../../../vault/IVault.sol";
 
-interface IUnderwriterVault is IVault, IERC1155Receiver {
+interface IUnderwriterVault is IVault {
     // Errors
     error Vault__UtilisationOutOfBounds();
 
