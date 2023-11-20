@@ -145,12 +145,12 @@ library UnderwriterVaultStorage {
         return OptionMath.truncate(value, l.assetDecimals());
     }
 
-    function toUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
-        return OptionMath.toUD60x18(value, l.assetDecimals());
+    function fromTokenDecimals(Layout storage l, uint256 value) internal view returns (UD60x18) {
+        return OptionMath.fromTokenDecimals(value, l.assetDecimals());
     }
 
-    function fromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
-        return OptionMath.fromUD60x18(value, l.assetDecimals());
+    function toTokenDecimals(Layout storage l, UD60x18 value) internal view returns (uint256) {
+        return OptionMath.toTokenDecimals(value, l.assetDecimals());
     }
 
     /// @notice Gets the nearest maturity after the given timestamp, exclusive

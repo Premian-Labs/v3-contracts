@@ -18,12 +18,12 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
         UD60x18 value = ud(11.2334e18);
         uint256 valueScaled = toTokenDecimals(value);
 
-        assertEq(vault.toUD60x18(valueScaled), value);
+        assertEq(vault.fromTokenDecimals(valueScaled), value);
     }
 
     function test_convertAssetFromUD60x18_ReturnExpectedValue() public {
         UD60x18 value = ud(11.2334e18);
-        assertEq(fromTokenDecimals(vault.fromUD60x18(value)), value);
+        assertEq(fromTokenDecimals(vault.toTokenDecimals(value)), value);
     }
 
     function test_getMaturityAfterTimestamp_Success_WhenLengthEqualOne() public {

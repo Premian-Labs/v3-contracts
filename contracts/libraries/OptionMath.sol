@@ -269,7 +269,7 @@ library OptionMath {
     /// @param value The value to convert
     /// @param decimals The amount of decimals the value has
     /// @return The number as a UD60x18
-    function toUD60x18(uint256 value, uint8 decimals) internal pure returns (UD60x18) {
+    function fromTokenDecimals(uint256 value, uint8 decimals) internal pure returns (UD60x18) {
         return ud(scaleDecimals(value, decimals, 18));
     }
 
@@ -277,7 +277,7 @@ library OptionMath {
     /// @param value The value to convert
     /// @param decimals The amount of decimals the value has
     /// @return The number as a scaled down uint256
-    function fromUD60x18(UD60x18 value, uint8 decimals) internal pure returns (uint256) {
+    function toTokenDecimals(UD60x18 value, uint8 decimals) internal pure returns (uint256) {
         return scaleDecimals(value.unwrap(), 18, decimals);
     }
 
@@ -286,7 +286,7 @@ library OptionMath {
     /// @param decimals The amount of decimals the value has
     /// @return The truncated UD60x18 number
     function truncate(UD60x18 value, uint8 decimals) internal pure returns (UD60x18) {
-        return toUD60x18(fromUD60x18(value, decimals), decimals);
+        return fromTokenDecimals(toTokenDecimals(value, decimals), decimals);
     }
 
     /// @notice Performs a naive log10 calculation on `input` returning the floor of the result

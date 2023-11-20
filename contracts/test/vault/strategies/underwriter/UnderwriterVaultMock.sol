@@ -71,14 +71,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.assetDecimals();
     }
 
-    function toUD60x18(uint256 value) external view returns (UD60x18) {
+    function fromTokenDecimals(uint256 value) external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.toUD60x18(value);
+        return l.fromTokenDecimals(value);
     }
 
-    function fromUD60x18(UD60x18 value) external view returns (uint256) {
+    function toTokenDecimals(UD60x18 value) external view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.fromUD60x18(value);
+        return l.toTokenDecimals(value);
     }
 
     function getMaturityAfterTimestamp(uint256 timestamp) external view returns (uint256) {
@@ -254,7 +254,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function increaseTotalLockedAssets(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         l.totalLockedAssets = l.totalLockedAssets + value;
-        uint256 transfer = l.fromUD60x18(value);
+        uint256 transfer = l.toTokenDecimals(value);
         IERC20(_asset()).transfer(address(1), transfer);
     }
 
@@ -439,7 +439,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         }
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
 
-        UD60x18 mintingFee = l.toUD60x18(IPool(pool).takerFee(address(0), size, l.fromUD60x18(ZERO), true, false));
+        UD60x18 mintingFee = l.fromTokenDecimals(IPool(pool).takerFee(address(0), size, 0, true, false));
 
         IPool(pool).writeFrom(address(this), msg.sender, size, address(0));
 
