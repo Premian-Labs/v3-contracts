@@ -141,12 +141,16 @@ library UnderwriterVaultStorage {
         return l.isCall ? size : size * strike;
     }
 
-    function convertAssetToUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
-        return UD60x18.wrap(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
+    function truncate(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
+        return OptionMath.truncate(value, l.assetDecimals());
     }
 
-    function convertAssetFromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
-        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
+    function toUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
+        return OptionMath.toUD60x18(value, l.assetDecimals());
+    }
+
+    function fromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
+        return OptionMath.fromUD60x18(value, l.assetDecimals());
     }
 
     /// @notice Gets the nearest maturity after the given timestamp, exclusive

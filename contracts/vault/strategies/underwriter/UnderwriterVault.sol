@@ -69,7 +69,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 totalLockedAfterSettlement
         ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
 
-        UD60x18 totalAssets = totalAssetsAfterSettlement + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        UD60x18 totalAssets = totalAssetsAfterSettlement + l.toUD60x18(l.pendingAssetsDeposit);
         if (totalAssets == ZERO) return ZERO;
 
         return totalLockedAfterSettlement / totalAssets;
@@ -115,7 +115,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     /// @inheritdoc ERC4626BaseInternal
     function _totalAssets() internal view override returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.convertAssetFromUD60x18(l.totalAssets);
+        return l.fromUD60x18(l.totalAssets);
     }
 
     /// @notice Gets the spot price at the current time
@@ -277,10 +277,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     /// @inheritdoc ERC4626BaseInternal
     function _convertToShares(uint256 assetAmount) internal view override returns (uint256 shareAmount) {
         return
-            _convertToSharesUD60x18(
-                UnderwriterVaultStorage.layout().convertAssetToUD60x18(assetAmount),
-                _getPricePerShareUD60x18()
-            ).unwrap();
+            _convertToSharesUD60x18(UnderwriterVaultStorage.layout().toUD60x18(assetAmount), _getPricePerShareUD60x18())
+                .unwrap();
     }
 
     function _convertToAssetsUD60x18(UD60x18 shareAmount, UD60x18 pps) internal view returns (UD60x18 assetAmount) {
@@ -292,7 +290,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     /// @inheritdoc ERC4626BaseInternal
     function _convertToAssets(uint256 shareAmount) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _convertToAssetsUD60x18(ud(shareAmount), _getPricePerShareUD60x18());
-        assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(assets);
+        assetAmount = UnderwriterVaultStorage.layout().fromUD60x18(assets);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -310,7 +308,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
 
-        emit PricePerShare(l.convertAssetToUD60x18(assetAmount) / ud(shareAmount));
+        emit PricePerShare(l.toUD60x18(assetAmount) / ud(shareAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -333,7 +331,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     /// @inheritdoc ERC4626BaseInternal
     function _previewMint(uint256 shareAmount) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _previewMintUD60x18(ud(shareAmount));
-        assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(assets);
+        assetAmount = UnderwriterVaultStorage.layout().fromUD60x18(assets);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -382,7 +380,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         _revertIfMaximumAmountExceeded(maxRedeem, shares);
 
-        assetAmount = l.convertAssetFromUD60x18(shares * pps);
+        assetAmount = l.fromUD60x18(shares * pps);
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
 
@@ -406,7 +404,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     function _maxWithdraw(address owner) internal view virtual override returns (uint256 withdrawableAssets) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        withdrawableAssets = l.convertAssetFromUD60x18(_maxWithdrawUD60x18(l, owner, _getPricePerShareUD60x18()));
+        withdrawableAssets = l.fromUD60x18(_maxWithdrawUD60x18(l, owner, _getPricePerShareUD60x18()));
     }
 
     function _previewWithdrawUD60x18(
@@ -423,8 +421,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     function _previewWithdraw(uint256 assetAmount) internal view virtual override returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        shareAmount = _previewWithdrawUD60x18(l, l.convertAssetToUD60x18(assetAmount), _getPricePerShareUD60x18())
-            .unwrap();
+        shareAmount = _previewWithdrawUD60x18(l, l.toUD60x18(assetAmount), _getPricePerShareUD60x18()).unwrap();
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -439,7 +436,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // charge management fees such that vault share holder pays management fees due
         _chargeManagementFees();
 
-        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+        UD60x18 assets = l.toUD60x18(assetAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxWithdraw = _maxWithdrawUD60x18(l, owner, pps);
 
@@ -462,7 +459,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         // Add assetAmount deposited to user's balance
         // This is needed to compute average price per share
-        l.totalAssets = l.totalAssets + l.convertAssetToUD60x18(assetAmount);
+        l.totalAssets = l.totalAssets + l.toUD60x18(assetAmount);
 
         emit UpdateQuotes();
     }
@@ -476,7 +473,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Remove the assets from totalAssets
-        l.totalAssets = l.totalAssets - l.convertAssetToUD60x18(assetAmount);
+        l.totalAssets = l.totalAssets - l.toUD60x18(assetAmount);
 
         emit UpdateQuotes();
     }
@@ -501,7 +498,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // spread state needs to be updated otherwise spread dispersion is inconsistent
         _updateState(l);
 
-        UD60x18 spreadProtocol = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(spread * l.performanceFeeRate));
+        UD60x18 spreadProtocol = l.truncate(spread * l.performanceFeeRate);
         UD60x18 spreadLP = spread - spreadProtocol;
 
         UD60x18 spreadRateLP = spreadLP / ud((maturity - _getBlockTimestamp()) * WAD);
@@ -537,7 +534,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
 
-        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol));
+        emit PerformanceFeePaid(FEE_RECEIVER, l.fromUD60x18(spreadProtocol));
     }
 
     /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
@@ -682,13 +679,13 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         // Compute output variables
         quote.premium = vars.price * args.size;
-        quote.premium = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(quote.premium)); // Round down to align with token
+        quote.premium = l.truncate(quote.premium); // Round down to align with token
 
         quote.spread = args.isBuy
             ? (vars.cLevel - ONE) * quote.premium
             : (l.avgPremium[args.maturity][args.strike] - vars.price) * args.size;
 
-        quote.spread = l.convertAssetToUD60x18(l.convertAssetFromUD60x18(quote.spread)); // Round down to align with token
+        quote.spread = l.truncate(quote.spread); // Round down to align with token
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
         if (revertIfPoolNotDeployed && quote.pool == address(0)) revert Vault__OptionPoolNotListed();
@@ -729,7 +726,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             false
         );
 
-        premium = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(
+        premium = UnderwriterVaultStorage.layout().fromUD60x18(
             isBuy ? quote.premium + quote.spread + quote.mintingFee : quote.premium
         );
     }
@@ -761,19 +758,17 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         UD60x18 totalPremium = (isBuy) ? quote.premium + quote.spread + quote.mintingFee : quote.premium;
 
-        _revertIfAboveTradeMaxSlippage(totalPremium, l.convertAssetToUD60x18(premiumLimit), isBuy);
+        _revertIfAboveTradeMaxSlippage(totalPremium, l.toUD60x18(premiumLimit), isBuy);
 
         if (isBuy) {
             // Add listing
             l.addListing(poolKey.strike, poolKey.maturity);
 
             // Collect option premium from buyer
-            IERC20(_asset()).safeTransferFrom(msg.sender, address(this), l.convertAssetFromUD60x18(totalPremium));
+            IERC20(_asset()).safeTransferFrom(msg.sender, address(this), l.fromUD60x18(totalPremium));
 
             // Approve transfer of base / quote token
-            uint256 approveAmountScaled = l.convertAssetFromUD60x18(
-                l.collateral(size, poolKey.strike) + quote.mintingFee
-            );
+            uint256 approveAmountScaled = l.fromUD60x18(l.collateral(size, poolKey.strike) + quote.mintingFee);
 
             IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
@@ -807,15 +802,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
             if (quote.premium > collateral) {
                 // Transfer to the user if the required collateral is less than the premiums
-                IERC20(_asset()).safeTransfer(msg.sender, l.convertAssetFromUD60x18(quote.premium - collateral));
+                IERC20(_asset()).safeTransfer(msg.sender, l.fromUD60x18(quote.premium - collateral));
                 // Transfer the collateral from the user if the required funds is greater than the
                 // premiums are receiving.
             } else {
-                IERC20(_asset()).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    l.convertAssetFromUD60x18(collateral - quote.premium)
-                );
+                IERC20(_asset()).safeTransferFrom(msg.sender, address(this), l.fromUD60x18(collateral - quote.premium));
             }
             // Transfer collateral from user (if required) then send them the short contracts
             // Trader: Sell-To-Open, Vault: Buy-To-Close
@@ -850,7 +841,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 unlockedCollateral = l.isCall ? positionSize : positionSize * strike;
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
             address pool = _getPoolAddress(l, strike, maturity);
-            UD60x18 collateralValue = l.convertAssetToUD60x18(IPool(pool).settle());
+            UD60x18 collateralValue = l.toUD60x18(IPool(pool).settle());
             l.totalAssets = l.totalAssets - (unlockedCollateral - collateralValue);
 
             emit Settle(pool, positionSize, ZERO);
@@ -951,7 +942,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @notice Transfers fees to the FEE_RECEIVER.
     function _claimFees(UnderwriterVaultStorage.Layout storage l) internal {
-        uint256 claimedFees = l.convertAssetFromUD60x18(l.protocolFees);
+        uint256 claimedFees = l.fromUD60x18(l.protocolFees);
 
         if (claimedFees == 0) return;
 

@@ -265,6 +265,30 @@ library OptionMath {
         return value / int256(10 ** (inputDecimals - targetDecimals));
     }
 
+    /// @notice Converts a number with `decimals`, to a UD60x18 type
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The number as a UD60x18
+    function toUD60x18(uint256 value, uint8 decimals) internal pure returns (UD60x18) {
+        return ud(scaleDecimals(value, decimals, 18));
+    }
+
+    /// @notice Converts a UD60x18 number with `decimals`, to it's uint256 type scaled down.
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The number as a scaled down uint256
+    function fromUD60x18(UD60x18 value, uint8 decimals) internal pure returns (uint256) {
+        return scaleDecimals(value.unwrap(), 18, decimals);
+    }
+
+    /// @notice Truncates a UD60x18 number down to the correct precision.
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The truncated UD60x18 number
+    function truncate(UD60x18 value, uint8 decimals) internal pure returns (UD60x18) {
+        return toUD60x18(fromUD60x18(value, decimals), decimals);
+    }
+
     /// @notice Performs a naive log10 calculation on `input` returning the floor of the result
     function log10Floor(uint256 input) internal pure returns (uint256 count) {
         while (input >= 10) {
