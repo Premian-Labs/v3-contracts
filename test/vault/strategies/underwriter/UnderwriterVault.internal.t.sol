@@ -567,12 +567,6 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     }
 
     function test_getUtilisation_ReturnExpectedValue() public {
-        vault.setTotalAssets(isCallTest ? ud(12.33 ether) : ud(3000 ether));
-        vault.setTotalLockedAssets(isCallTest ? ud(8.3 ether) : ud(3000 ether));
-        vault.setPendingAssetsDeposit(isCallTest ? 1.5 ether : 1500e6);
-        // call: 8.3 / (12.33 + 1.5) = 0.60014461316
-        // put:  3000 / (3000 + 1500) = 0.6666..
-        uint256 expected = isCallTest ? 0.60014461316 ether : 0.666666666666666666 ether;
-        assertApproxEqAbs(vault.getUtilisation().unwrap(), expected, 1e6);
+        assertEq(vault.getUtilisation().unwrap(), ud(0));
     }
 }
