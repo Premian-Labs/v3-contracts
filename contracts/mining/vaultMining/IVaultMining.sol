@@ -11,7 +11,7 @@ interface IVaultMining {
     event AllocateRewards(address indexed user, address indexed vault, UD60x18 rewardAmount);
     event Claim(address indexed user, UD60x18 rewardAmount);
 
-    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilisationRate);
+    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 voteMultiplier);
 
     event SetRewardsPerYear(UD60x18 rewardsPerYear);
 

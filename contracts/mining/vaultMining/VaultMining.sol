@@ -39,8 +39,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     /// @notice Address of the PREMIA physically settled options
     address internal immutable OPTION_REWARD;
 
-    /// @notice If utilisation rate is less than this value, we use this value instead as a multiplier on allocation points
-    UD60x18 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
+    /// @notice If vote multiplier is less than this value, we use this value instead
+    UD60x18 private constant MIN_VOTE_MULTIPLIER = ONE;
 
     constructor(address vaultRegistry, address premia, address vxPremia, address optionReward) {
         VAULT_REGISTRY = vaultRegistry;
@@ -174,6 +174,11 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         VaultMiningStorage.layout().rewardsPerYear = rewardsPerYear;
         emit SetRewardsPerYear(rewardsPerYear);
+    }
+
+    /// @notice Sets the vote multiplier for a specific vault
+    function setVoteMultiplier(address vault, UD60x18 voteMultiplier) external onlyOwner {
+        VaultMiningStorage.layout().voteMultiplier[vault] = voteMultiplier;
     }
 
     /// @notice Add a dual mining pool for a specific vault
@@ -381,28 +386,19 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
-    /// @notice Update vault allocation based on votes and utilization rate
-    function _updateVaultAllocation(
-        VaultMiningStorage.Layout storage l,
-        address vault,
-        UD60x18 utilisationRate
-    ) internal virtual {
+    /// @notice Update vault allocation based on votes and vote multiplier
+    function _updateVaultAllocation(VaultMiningStorage.Layout storage l, address vault) internal virtual {
         uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encodePacked(vault));
-        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilisationRate: utilisationRate}));
+        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes)}));
     }
 
-    /// @notice Set new vault votes, scaled by utilization rate
+    /// @notice Set new vault votes, scaled by vote multiplier
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
-        if (data.vaultUtilisationRate < MIN_POINTS_MULTIPLIER) {
-            data.vaultUtilisationRate = MIN_POINTS_MULTIPLIER;
-        }
-
-        UD60x18 adjustedVotes = data.votes * data.vaultUtilisationRate;
-
+        if (l.voteMultiplier[data.vault] < MIN_VOTE_MULTIPLIER) l.voteMultiplier[data.vault] = MIN_VOTE_MULTIPLIER;
+        UD60x18 adjustedVotes = data.votes * l.voteMultiplier[data.vault];
         l.totalVotes = l.totalVotes - l.vaultInfo[data.vault].votes + adjustedVotes;
         l.vaultInfo[data.vault].votes = adjustedVotes;
-
-        emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilisationRate);
+        emit UpdateVaultVotes(data.vault, data.votes, l.voteMultiplier[data.vault]);
     }
 
     /// @notice Revert if `addr` is not a vault
