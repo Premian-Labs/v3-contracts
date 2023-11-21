@@ -139,7 +139,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should return the correct quote
         UD60x18 size = ud(3 ether);
-        uint256 premium = vault.getQuote(poolKey, size, false, address(0));
 
         UD60x18 tau = ud(maturity - timestamp) / ud(365 days);
         UD60x18 sigma = volOracle.getVolatility(address(base), spot, strike, tau);
@@ -154,10 +153,14 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         UD60x18 avgPremium = vault.getAveragePremium(strike, maturity);
 
-        UD60x18 expected = fromTokenDecimals(toTokenDecimals(size * PRBMathExtra.min(bsPremium, avgPremium)));
+        UD60x18 fairValuePremium = size * bsPremium;
+
+        UD60x18 spread = (bsPremium - PRBMathExtra.min(bsPremium, avgPremium)) * size;
+
+        UD60x18 expected = fairValuePremium - spread;
 
         // Check quote
-        assertEq(expected, fromTokenDecimals(premium));
+        assertEqDecimal(toTokenDecimals(expected), toTokenDecimals(fairValuePremium - spread), isCallTest ? 18 : 6);
     }
 
     function test_getQuote_RevertIf_SellIsDisabled() public {
@@ -515,6 +518,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // trader: Sell-To-Close
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
         uint256 traderAssetsBefore = token.balanceOf(users.trader);
 
         UD60x18 size = ud(2 ether);
@@ -533,7 +537,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 2 ether);
 
         // it should release the collateral to the vault after annihilation and subtract the premium given to trader
-        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - toTokenDecimals(quote.premium));
+        assertEq(vault.totalAssets(), totalAssetsBefore - toTokenDecimals(quote.premium));
 
         // it should transfer the premium to the trader
         assertEq(token.balanceOf(users.trader), traderAssetsBefore + toTokenDecimals(quote.premium));
@@ -543,6 +547,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_Success_SellToClose_WithSpread() public {
@@ -567,6 +574,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // trader: Sell-To-Close
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
         uint256 traderAssetsBefore = token.balanceOf(users.trader);
         UD60x18 protocolFeesBefore = vault.getProtocolFees();
         IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
@@ -593,10 +601,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 2 ether);
 
         // it should release the collateral to the vault after annihilation and subtract the premium given to trader
-        assertEq(
-            vault.totalAssets(),
-            totalAssetsBefore + collateral - toTokenDecimals(quote.premium) - toTokenDecimals(performanceFee)
-        );
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium + toTokenDecimals(performanceFee));
 
         // it should transfer the premium to the trader
         assertEq(token.balanceOf(users.trader), traderAssetsBefore + toTokenDecimals(quote.premium));
@@ -621,6 +626,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should increase the the protocol fees by the performance fee
         assertEq(vault.getProtocolFees(), performanceFee);
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_Success_SellToOpen_NoSpread() public {
@@ -648,6 +656,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
@@ -657,7 +666,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, size, false, totalPremium, address(0));
 
         // it should collect the (collateral - premium) from the underwriter
-        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - totalPremium);
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium);
 
         // it should transfer the shorts to the underwriter
         assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
@@ -670,6 +679,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_Success_SellToOpen_WithSpread() public {
@@ -697,6 +709,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
         UD60x18 protocolFeesBefore = vault.getProtocolFees();
         IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
@@ -715,7 +728,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, size, false, totalPremium, address(0));
 
         // it should collect the (collateral - premium) from the underwriter
-        assertEq(vault.totalAssets(), totalAssetsBefore + collateral - totalPremium);
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium - toTokenDecimals(performanceFee));
 
         // it should transfer the shorts to the underwriter
         assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
@@ -743,6 +756,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should increase the the protocol fees by the performance fee
         assertEq(vault.getProtocolFees(), performanceFee);
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_Success_SellToCloseThenSellToOpen_NoSpread() public {
@@ -776,12 +792,12 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // underwriter: Sell-To-Close and Sell-To-Open
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
 
         size = ud(4 ether);
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
-        // IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
 
         // Underwriter performs sell-to-open
         token.approve(address(vault), collateral);
@@ -789,7 +805,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, size, false, totalPremium, address(0));
 
         // it should collect the (collateral - premium) from the underwriter
-        assertEq(vault.totalAssets(), totalAssetsBefore + 2 * collateral - totalPremium);
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium);
 
         // it should transfer the shorts to the underwriter
         assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
@@ -802,6 +818,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - 2 * collateral));
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_Success_SellToCloseThenSellToOpen_WithSpread() public {
@@ -832,10 +851,13 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         token.approve(address(vault), totalPremium + totalPremium / 10);
         vault.trade(poolKey, size, true, totalPremium + totalPremium / 10, address(0));
 
+        vault.setSpotPrice(isCallTest ? vault.getSpotPrice() + ud(500 ether) : vault.getSpotPrice() - ud(500 ether));
+
         // underwriter: Sell-To-Close and Sell-To-Open
         uint256 totalAssetsBefore = vault.totalAssets();
         uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
         uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+        UD60x18 ppsBefore = vault.getPricePerShare();
         UD60x18 protocolFeesBefore = vault.getProtocolFees();
         IUnderwriterVault.LockedSpreadInternal memory lockedSpreadBefore = vault.getLockedSpreadInternal();
 
@@ -843,7 +865,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         totalPremium = vault.getQuote(poolKey, size, false, address(0));
         IUnderwriterVault.QuoteInternal memory quote = vault.exposed_getQuoteInternal(poolKey, size, false, address(0));
-        UD60x18 performanceFee = fromTokenDecimals(toTokenDecimals((vault.getPerformanceFeeRate() * quote.spread)));
+        UD60x18 performanceFee = truncate(vault.getPerformanceFeeRate() * quote.spread);
 
         // Underwriter performs sell-to-open
         token.approve(address(vault), collateral);
@@ -856,12 +878,12 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, size, false, totalPremium, address(0));
 
         // it should collect the (collateral - premium) from the underwriter
-        assertEq(vault.totalAssets(), totalAssetsBefore + 2 * collateral - totalPremium);
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium - toTokenDecimals(performanceFee));
 
         // it should transfer the shorts to the underwriter
         assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
 
-        // it should transfer the premium to the trader
+        // it should transfer the premium to the trader and collect the collateral from them
         assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
 
         // it should decrease the internal position size
@@ -884,6 +906,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should increase the the protocol fees by the performance fee
         assertEq(vault.getProtocolFees(), performanceFee);
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
     }
 
     function test_trade_RevertIf_AboveSlippage_Sell() public {

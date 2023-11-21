@@ -521,7 +521,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 (l.positionSizes[maturity][strike] + size);
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
         } else {
-            l.totalAssets = l.totalAssets + collateral - premium - spreadProtocol;
+            l.totalAssets = l.totalAssets - (premium - spreadLP);
             l.totalLockedAssets = l.totalLockedAssets - collateral;
 
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
@@ -674,18 +674,15 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         );
 
         vars.price = l.isCall ? vars.price / vars.spot : vars.price;
-
-        // If buy-to-close, then use avg premium as upper bound for how much we will pay
-        // If fair value, is cheaper then use that
-        if (!args.isBuy) vars.price = PRBMathExtra.min(l.avgPremium[args.maturity][args.strike], vars.price);
-
         // Compute output variables
         quote.premium = vars.price * args.size;
         quote.premium = l.truncate(quote.premium); // Round down to align with token
 
+        // If buy-to-close, then use avg premium as upper bound for how much we will pay
+        // If fair value, is cheaper then use that
         quote.spread = args.isBuy
             ? (vars.cLevel - ONE) * quote.premium
-            : (l.avgPremium[args.maturity][args.strike] - vars.price) * args.size;
+            : (vars.price - PRBMathExtra.min(l.avgPremium[args.maturity][args.strike], vars.price)) * args.size;
 
         quote.spread = l.truncate(quote.spread); // Round down to align with token
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
@@ -729,7 +726,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         );
 
         premium = UnderwriterVaultStorage.layout().toTokenDecimals(
-            isBuy ? quote.premium + quote.spread + quote.mintingFee : quote.premium
+            isBuy ? quote.premium + quote.spread + quote.mintingFee : quote.premium - quote.spread
         );
     }
 
@@ -758,7 +755,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             true
         );
 
-        UD60x18 totalPremium = (isBuy) ? quote.premium + quote.spread + quote.mintingFee : quote.premium;
+        UD60x18 totalPremium = (isBuy) ? quote.premium + quote.spread + quote.mintingFee : quote.premium - quote.spread;
 
         _revertIfAboveTradeMaxSlippage(totalPremium, l.fromTokenDecimals(premiumLimit), isBuy);
 
@@ -802,16 +799,16 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             }
 
             UD60x18 collateral = l.collateral(size - annihilateSize, poolKey.strike);
-            if (quote.premium > collateral) {
+            if (totalPremium > collateral) {
                 // Transfer to the user if the required collateral is less than the premiums
-                IERC20(_asset()).safeTransfer(msg.sender, l.toTokenDecimals(quote.premium - collateral));
+                IERC20(_asset()).safeTransfer(msg.sender, l.toTokenDecimals(totalPremium - collateral));
                 // Transfer the collateral from the user if the required funds is greater than the
                 // premiums are receiving.
             } else {
                 IERC20(_asset()).safeTransferFrom(
                     msg.sender,
                     address(this),
-                    l.toTokenDecimals(collateral - quote.premium)
+                    l.toTokenDecimals(collateral - totalPremium)
                 );
             }
             // Transfer collateral from user (if required) then send them the short contracts
