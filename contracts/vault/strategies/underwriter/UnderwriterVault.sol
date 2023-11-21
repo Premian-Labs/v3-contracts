@@ -536,7 +536,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
         l.protocolFees = l.protocolFees + spreadProtocol;
 
-        emit PerformanceFeePaid(FEE_RECEIVER, l.toTokenDecimals(spreadProtocol));
+        if (spreadProtocol > ZERO) emit PerformanceFeePaid(FEE_RECEIVER, l.toTokenDecimals(spreadProtocol));
     }
 
     /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
