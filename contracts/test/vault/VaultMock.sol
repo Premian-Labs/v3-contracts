@@ -7,17 +7,7 @@ import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {Vault} from "../../vault/Vault.sol";
 
 contract VaultMock is Vault {
-    UD60x18 public utilisation = UD60x18.wrap(1e18);
-
     constructor(address vaultMining) Vault(vaultMining) {}
-
-    function getUtilisation() public view override returns (UD60x18) {
-        return utilisation;
-    }
-
-    function setUtilisation(UD60x18 value) external {
-        utilisation = value;
-    }
 
     function mint(address account, uint256 amount) public {
         _mint(account, amount);

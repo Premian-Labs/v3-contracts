@@ -10,7 +10,7 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
-import {ZERO} from "../../libraries/Constants.sol";
+import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "../../libraries/UD50x28.sol";
 
@@ -255,20 +255,15 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < vaults.length; i++) {
             IVault vault = IVault(vaults[i].vault);
-            _updateVault(vaults[i].vault, ud(vault.totalSupply()), vault.getUtilisation());
+            _updateVault(vaults[i].vault, ud(vault.totalSupply()));
         }
     }
 
     /// @inheritdoc IVaultMining
-    function updateUser(
-        address user,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) external nonReentrant {
+    function updateUser(address user, UD60x18 newUserShares, UD60x18 newTotalShares, UD60x18) external nonReentrant {
         _revertIfNotVault(msg.sender);
         _allocatePendingRewards(VaultMiningStorage.layout());
-        _updateUser(user, msg.sender, newUserShares, newTotalShares, utilisationRate);
+        _updateUser(user, msg.sender, newUserShares, newTotalShares);
     }
 
     /// @inheritdoc IVaultMining
@@ -279,7 +274,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _allocatePendingRewards(VaultMiningStorage.layout());
 
         IVault _vault = IVault(vault);
-        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()));
 
         address[] memory dualMiningPools = getDualMiningPools(vault);
         for (uint256 i = 0; i < dualMiningPools.length; i++) {
@@ -304,11 +299,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         l.globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
     }
 
-    function _updateVault(
-        address vault,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) internal returns (UD60x18 vaultRewards) {
+    function _updateVault(address vault, UD60x18 newTotalShares) internal returns (UD60x18 vaultRewards) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
@@ -323,7 +314,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
 
         vInfo.totalShares = newTotalShares;
-        _updateVaultAllocation(l, vault, utilisationRate);
+        _updateVaultAllocation(l, vault);
 
         vInfo.rewardDebt = vInfo.votes * l.globalAccRewardsPerVote;
     }
@@ -339,7 +330,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _revertIfNotVault(vault);
 
         IVault _vault = IVault(vault);
-        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
+        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()));
     }
 
     /// @notice Update user rewards for a list of vaults
@@ -350,18 +341,12 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     }
 
     /// @notice Update user rewards for a specific vault
-    function _updateUser(
-        address user,
-        address vault,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) internal {
+    function _updateUser(address user, address vault, UD60x18 newUserShares, UD60x18 newTotalShares) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
-        UD60x18 vaultRewards = _updateVault(vault, newTotalShares, utilisationRate);
+        UD60x18 vaultRewards = _updateVault(vault, newTotalShares);
 
         UD60x18 userRewards = (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
 

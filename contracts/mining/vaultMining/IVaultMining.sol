@@ -51,7 +51,6 @@ interface IVaultMining {
     struct VaultVotes {
         address vault;
         UD60x18 votes;
-        UD60x18 vaultUtilisationRate;
     }
 
     /// @notice Add rewards to the contract
@@ -111,7 +110,8 @@ interface IVaultMining {
     /// @param user The user to update
     /// @param newUserShares The new amount of shares for the user
     /// @param newTotalShares The new amount of total shares for the vault
-    /// @param utilisationRate The new utilisation rate for the vault
+    /// @param utilisationRate DEPRECATED: This function no longer uses the utilisationRate which has been left blank in case
+    ///        it is used again.
     function updateUser(address user, UD60x18 newUserShares, UD60x18 newTotalShares, UD60x18 utilisationRate) external;
 
     /// @notice Trigger an update for a vault

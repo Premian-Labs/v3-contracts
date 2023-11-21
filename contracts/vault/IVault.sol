@@ -90,7 +90,7 @@ interface IVault is ISolidStateERC4626 {
         address referrer
     ) external;
 
-    /// @notice Returns the utilisation rate of the vault
+    /// @notice DEPRECATED: Returns the utilisation rate of the vault
     /// @return The utilisation rate of the vault
     function getUtilisation() external view returns (UD60x18);
 }
