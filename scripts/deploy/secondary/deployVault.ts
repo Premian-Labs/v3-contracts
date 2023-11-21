@@ -61,7 +61,7 @@ async function main() {
         parseEther('1'), // Min C Level
         parseEther('1.35'), // Max C Level
         parseEther('3'), // Min DTE
-        parseEther('30'), // Max DTE
+        parseEther('35'), // Max DTE
         parseEther('0.2'), // Min Delta
         parseEther('0.7'), // Max Delta
         parseEther('0.2'), // Performance fee rate
