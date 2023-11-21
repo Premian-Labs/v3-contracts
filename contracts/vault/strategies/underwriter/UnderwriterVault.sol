@@ -63,21 +63,20 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         POOL_DIAMOND = poolDiamond;
     }
 
-    // TODO: refactor utilisation calculation
-    //    /// @inheritdoc IVault
-    //    function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
-    //        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-    //
-    //        (
-    //            UD60x18 totalAssetsAfterSettlement,
-    //            UD60x18 totalLockedAfterSettlement
-    //        ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
-    //
-    //        UD60x18 totalAssets = totalAssetsAfterSettlement + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
-    //        if (totalAssets == ZERO) return ZERO;
-    //
-    //        return totalLockedAfterSettlement / totalAssets;
-    //    }
+    /// @inheritdoc IVault
+    function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        (
+            UD60x18 totalAssetsAfterSettlement,
+            UD60x18 totalLockedAfterSettlement
+        ) = _computeAssetsAfterSettlementOfExpiredOptions(l);
+
+        UD60x18 totalAssets = totalAssetsAfterSettlement + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        if (totalAssets == ZERO) return ZERO;
+
+        return totalLockedAfterSettlement / totalAssets;
+    }
 
     /// @inheritdoc IVault
     function updateSettings(bytes memory settings) external {
