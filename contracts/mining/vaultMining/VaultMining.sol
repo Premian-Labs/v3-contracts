@@ -176,9 +176,15 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
+    /// @inheritdoc IVaultMining
+    function getVoteMultiplier(address vault) external view returns (UD60x18) {
+        return VaultMiningStorage.layout().voteMultiplier[vault];
+    }
+
     /// @notice Sets the vote multiplier for a specific vault
     function setVoteMultiplier(address vault, UD60x18 voteMultiplier) external onlyOwner {
         VaultMiningStorage.layout().voteMultiplier[vault] = voteMultiplier;
+        emit SetVoteMultiplier(vault, voteMultiplier);
     }
 
     /// @notice Add a dual mining pool for a specific vault

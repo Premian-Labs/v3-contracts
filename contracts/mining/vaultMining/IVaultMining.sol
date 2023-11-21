@@ -14,6 +14,7 @@ interface IVaultMining {
     event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 voteMultiplier);
 
     event SetRewardsPerYear(UD60x18 rewardsPerYear);
+    event SetVoteMultiplier(address indexed vault, UD60x18 voteMultiplier);
 
     event AddDualMiningPool(address indexed vault, address dualMiningPool);
     event RemoveDualMiningPool(address indexed vault, address dualMiningPool);
@@ -85,6 +86,9 @@ interface IVaultMining {
 
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
+
+    /// @notice Get the vote multiplier for a given vault
+    function getVoteMultiplier(address vault) external view returns (UD60x18);
 
     /// @notice Return list of dual mining pools for a given vault
     function getDualMiningPools(address vault) external view returns (address[] memory);
