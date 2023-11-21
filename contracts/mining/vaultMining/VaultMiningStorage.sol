@@ -28,6 +28,8 @@ library VaultMiningStorage {
         UD60x18 globalAccRewardsPerVote;
         // Dual mining pools
         mapping(address vault => EnumerableSet.AddressSet pools) dualMining;
+        // Vote multiplier for each vault, this replaces the utilisation rate which was calculated by each vault
+        mapping(address vault => UD60x18 multiplier) voteMultiplier;
     }
 
     function layout() internal pure returns (Layout storage l) {

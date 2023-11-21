@@ -264,4 +264,20 @@ contract VaultMiningTest is VaultMiningSetup {
         );
         vaultMining.claim(vaultList, ud(50_001e18));
     }
+
+    function test_setVoteMultiplier_RevertIf_Not_Owner() public {
+        vm.prank(alice);
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vaultMining.setVoteMultiplier(address(vaultA), ud(5e18));
+    }
+
+    function test_setVoteMultiplier_Success() public {
+        assertEq(vaultMining.getVaultInfo(address(vaultA)).votes, ud(1e18));
+
+        vm.prank(admin);
+        vaultMining.setVoteMultiplier(address(vaultA), ud(5e18));
+        vaultA.mint(alice, 1e18);
+
+        assertEq(vaultMining.getVaultInfo(address(vaultA)).votes, ud(5e18));
+    }
 }

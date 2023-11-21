@@ -11,9 +11,10 @@ interface IVaultMining {
     event AllocateRewards(address indexed user, address indexed vault, UD60x18 rewardAmount);
     event Claim(address indexed user, UD60x18 rewardAmount);
 
-    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilisationRate);
+    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 voteMultiplier);
 
     event SetRewardsPerYear(UD60x18 rewardsPerYear);
+    event SetVoteMultiplier(address indexed vault, UD60x18 voteMultiplier);
 
     event AddDualMiningPool(address indexed vault, address dualMiningPool);
     event RemoveDualMiningPool(address indexed vault, address dualMiningPool);
@@ -51,7 +52,6 @@ interface IVaultMining {
     struct VaultVotes {
         address vault;
         UD60x18 votes;
-        UD60x18 vaultUtilisationRate;
     }
 
     /// @notice Add rewards to the contract
@@ -87,6 +87,9 @@ interface IVaultMining {
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
 
+    /// @notice Get the vote multiplier for a given vault
+    function getVoteMultiplier(address vault) external view returns (UD60x18);
+
     /// @notice Return list of dual mining pools for a given vault
     function getDualMiningPools(address vault) external view returns (address[] memory);
 
@@ -111,7 +114,8 @@ interface IVaultMining {
     /// @param user The user to update
     /// @param newUserShares The new amount of shares for the user
     /// @param newTotalShares The new amount of total shares for the vault
-    /// @param utilisationRate The new utilisation rate for the vault
+    /// @param utilisationRate DEPRECATED: This function no longer uses the utilisationRate which has been left blank in case
+    ///        it is used again.
     function updateUser(address user, UD60x18 newUserShares, UD60x18 newTotalShares, UD60x18 utilisationRate) external;
 
     /// @notice Trigger an update for a vault

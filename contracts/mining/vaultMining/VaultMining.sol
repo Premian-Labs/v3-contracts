@@ -10,7 +10,7 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
-import {ZERO} from "../../libraries/Constants.sol";
+import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "../../libraries/UD50x28.sol";
 
@@ -39,8 +39,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     /// @notice Address of the PREMIA physically settled options
     address internal immutable OPTION_REWARD;
 
-    /// @notice If utilisation rate is less than this value, we use this value instead as a multiplier on allocation points
-    UD60x18 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
+    /// @notice If vote multiplier is zero or not set, we use this value instead
+    UD60x18 private constant DEFAULT_VOTE_MULTIPLIER = ONE;
 
     constructor(address vaultRegistry, address premia, address vxPremia, address optionReward) {
         VAULT_REGISTRY = vaultRegistry;
@@ -176,6 +176,17 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
+    /// @inheritdoc IVaultMining
+    function getVoteMultiplier(address vault) external view returns (UD60x18) {
+        return VaultMiningStorage.layout().voteMultiplier[vault];
+    }
+
+    /// @notice Sets the vote multiplier for a specific vault
+    function setVoteMultiplier(address vault, UD60x18 voteMultiplier) external onlyOwner {
+        VaultMiningStorage.layout().voteMultiplier[vault] = voteMultiplier;
+        emit SetVoteMultiplier(vault, voteMultiplier);
+    }
+
     /// @notice Add a dual mining pool for a specific vault
     function addDualMiningPool(address vault, address dualMining) external onlyOwner {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
@@ -255,20 +266,15 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < vaults.length; i++) {
             IVault vault = IVault(vaults[i].vault);
-            _updateVault(vaults[i].vault, ud(vault.totalSupply()), vault.getUtilisation());
+            _updateVault(vaults[i].vault, ud(vault.totalSupply()));
         }
     }
 
     /// @inheritdoc IVaultMining
-    function updateUser(
-        address user,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) external nonReentrant {
+    function updateUser(address user, UD60x18 newUserShares, UD60x18 newTotalShares, UD60x18) external nonReentrant {
         _revertIfNotVault(msg.sender);
         _allocatePendingRewards(VaultMiningStorage.layout());
-        _updateUser(user, msg.sender, newUserShares, newTotalShares, utilisationRate);
+        _updateUser(user, msg.sender, newUserShares, newTotalShares);
     }
 
     /// @inheritdoc IVaultMining
@@ -279,7 +285,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _allocatePendingRewards(VaultMiningStorage.layout());
 
         IVault _vault = IVault(vault);
-        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()));
 
         address[] memory dualMiningPools = getDualMiningPools(vault);
         for (uint256 i = 0; i < dualMiningPools.length; i++) {
@@ -304,11 +310,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         l.globalAccRewardsPerVote = l.globalAccRewardsPerVote + (rewardAmount / l.totalVotes);
     }
 
-    function _updateVault(
-        address vault,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) internal returns (UD60x18 vaultRewards) {
+    function _updateVault(address vault, UD60x18 newTotalShares) internal returns (UD60x18 vaultRewards) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
@@ -323,7 +325,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
 
         vInfo.totalShares = newTotalShares;
-        _updateVaultAllocation(l, vault, utilisationRate);
+        _updateVaultAllocation(l, vault);
 
         vInfo.rewardDebt = vInfo.votes * l.globalAccRewardsPerVote;
     }
@@ -339,7 +341,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _revertIfNotVault(vault);
 
         IVault _vault = IVault(vault);
-        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
+        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()));
     }
 
     /// @notice Update user rewards for a list of vaults
@@ -350,18 +352,12 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     }
 
     /// @notice Update user rewards for a specific vault
-    function _updateUser(
-        address user,
-        address vault,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) internal {
+    function _updateUser(address user, address vault, UD60x18 newUserShares, UD60x18 newTotalShares) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
-        UD60x18 vaultRewards = _updateVault(vault, newTotalShares, utilisationRate);
+        UD60x18 vaultRewards = _updateVault(vault, newTotalShares);
 
         UD60x18 userRewards = (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
 
@@ -396,28 +392,19 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         }
     }
 
-    /// @notice Update vault allocation based on votes and utilization rate
-    function _updateVaultAllocation(
-        VaultMiningStorage.Layout storage l,
-        address vault,
-        UD60x18 utilisationRate
-    ) internal virtual {
+    /// @notice Update vault allocation based on votes and vote multiplier
+    function _updateVaultAllocation(VaultMiningStorage.Layout storage l, address vault) internal virtual {
         uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encodePacked(vault));
-        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilisationRate: utilisationRate}));
+        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes)}));
     }
 
-    /// @notice Set new vault votes, scaled by utilization rate
+    /// @notice Set new vault votes, scaled by vote multiplier
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
-        if (data.vaultUtilisationRate < MIN_POINTS_MULTIPLIER) {
-            data.vaultUtilisationRate = MIN_POINTS_MULTIPLIER;
-        }
-
-        UD60x18 adjustedVotes = data.votes * data.vaultUtilisationRate;
-
+        if (l.voteMultiplier[data.vault] == ZERO) l.voteMultiplier[data.vault] = DEFAULT_VOTE_MULTIPLIER;
+        UD60x18 adjustedVotes = data.votes * l.voteMultiplier[data.vault];
         l.totalVotes = l.totalVotes - l.vaultInfo[data.vault].votes + adjustedVotes;
         l.vaultInfo[data.vault].votes = adjustedVotes;
-
-        emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilisationRate);
+        emit UpdateVaultVotes(data.vault, data.votes, l.voteMultiplier[data.vault]);
     }
 
     /// @notice Revert if `addr` is not a vault
