@@ -39,8 +39,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     /// @notice Address of the PREMIA physically settled options
     address internal immutable OPTION_REWARD;
 
-    /// @notice If vote multiplier is less than this value, we use this value instead
-    UD60x18 private constant MIN_VOTE_MULTIPLIER = ONE;
+    /// @notice If vote multiplier is zero or not set, we use this value instead
+    UD60x18 private constant DEFAULT_VOTE_MULTIPLIER = ONE;
 
     constructor(address vaultRegistry, address premia, address vxPremia, address optionReward) {
         VAULT_REGISTRY = vaultRegistry;
@@ -400,7 +400,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
     /// @notice Set new vault votes, scaled by vote multiplier
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
-        if (l.voteMultiplier[data.vault] < MIN_VOTE_MULTIPLIER) l.voteMultiplier[data.vault] = MIN_VOTE_MULTIPLIER;
+        if (l.voteMultiplier[data.vault] == ZERO) l.voteMultiplier[data.vault] = DEFAULT_VOTE_MULTIPLIER;
         UD60x18 adjustedVotes = data.votes * l.voteMultiplier[data.vault];
         l.totalVotes = l.totalVotes - l.vaultInfo[data.vault].votes + adjustedVotes;
         l.vaultInfo[data.vault].votes = adjustedVotes;
