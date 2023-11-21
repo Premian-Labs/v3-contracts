@@ -700,6 +700,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
         vm.stopPrank();
 
+        vault.setSpotPrice(isCallTest ? vault.getSpotPrice() + ud(500 ether) : vault.getSpotPrice() - ud(500 ether));
+
         // underwriter: Sell-To-Open
         vm.startPrank(users.underwriter);
 
