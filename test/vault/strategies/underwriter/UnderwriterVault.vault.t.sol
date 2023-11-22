@@ -669,6 +669,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium);
 
         // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.LONG), 0 ether);
         assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 2 ether);
 
         // it should transfer the premium to the trader
@@ -679,6 +680,73 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // it should decrease totalLockedAssets by the amount of collateral released
         assertEq(vault.totalLockedAssets(), fromTokenDecimals(totalLockedAssetsBefore - collateral));
+
+        // it should have the price per share stay the same
+        assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
+    }
+
+    function test_trade_Success_SellToCloseAndSellToOpen_NoSpread() public {
+        setup();
+        enableSell();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 tradeSize = ud(3 ether);
+
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        // trader: Buy-To-Open
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // underwriter: Buy-To-Open
+        vm.startPrank(users.underwriter);
+        totalPremium = vault.getQuote(poolKey, ud(1 ether), true, address(0));
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, ud(1 ether), true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        // underwriter: Sell-To-Close and Sell-To-Open
+        vm.startPrank(users.underwriter);
+
+        UD60x18 size = ud(2 ether);
+        uint256 collateral = isCallTest ? 1 ether : toTokenDecimals(ud(1 ether) * strike);
+        deal(address(token), users.underwriter, collateral);
+
+        uint256 totalAssetsBefore = vault.totalAssets();
+        uint256 totalLockedAssetsBefore = toTokenDecimals(vault.totalLockedAssets());
+        UD60x18 ppsBefore = vault.getPricePerShare();
+        uint256 underwriterAssetsBefore = token.balanceOf(users.underwriter);
+
+        pool.setApprovalForAll(address(vault), true);
+        totalPremium = vault.getQuote(poolKey, size, false, address(0));
+
+        // Underwriter performs sell-to-open
+        token.approve(address(vault), collateral);
+        vault.trade(poolKey, size, false, totalPremium, address(0));
+
+        // it should collect the (collateral - premium) from the underwriter
+        assertEq(vault.totalAssets(), totalAssetsBefore - totalPremium);
+
+        // it should transferFrom the longs from the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.LONG), 0 ether);
+
+        // it should transfer the shorts to the underwriter
+        assertEq(pool.balanceOf(users.underwriter, PoolStorage.SHORT), 1 ether);
+
+        // it should transfer the premium to the trader
+        assertEq(token.balanceOf(users.underwriter), underwriterAssetsBefore - collateral + totalPremium);
+
+        // it should decrease the internal position size
+        assertEq(vault.getPositionSize(strike, maturity), ud(2 ether));
+
+        // it should decrease totalLockedAssets by the amount of collateral released
+        assertEq(
+            vault.totalLockedAssets(),
+            fromTokenDecimals(totalLockedAssetsBefore - (isCallTest ? 2 ether : toTokenDecimals(ud(2 ether) * strike)))
+        );
 
         // it should have the price per share stay the same
         assertApproxEqAbsDecimal(vault.getPricePerShare().unwrap(), ppsBefore.unwrap(), 1e9, 18);
