@@ -12,6 +12,7 @@ interface IVault is ISolidStateERC4626 {
     error Vault__AboveMaxSlippage(UD60x18 totalPremium, UD60x18 premiumLimit);
     error Vault__AddressZero();
     error Vault__InsufficientFunds();
+    error Vault__InsufficientShorts();
     error Vault__InvalidSettingsUpdate();
     error Vault__InvariantViolated();
     error Vault__MaximumAmountExceeded(UD60x18 maximum, UD60x18 amount);
@@ -21,6 +22,7 @@ interface IVault is ISolidStateERC4626 {
     error Vault__OptionTypeMismatchWithVault();
     error Vault__OutOfDeltaBounds();
     error Vault__OutOfDTEBounds();
+    error Vault__SellDisabled();
     error Vault__SettingsNotFromRegistry();
     error Vault__SettingsUpdateIsEmpty();
     error Vault__StrikeZero();

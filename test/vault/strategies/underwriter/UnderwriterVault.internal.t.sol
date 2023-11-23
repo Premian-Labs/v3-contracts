@@ -17,8 +17,6 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
-    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged);
-
     function setupSpreadVault() internal {
         startTime = 1678435200 + 500 * 7 days;
         t0 = startTime + 7 days;
@@ -127,7 +125,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         vault.setTimestamp(startTime + 1 days);
         vm.expectEmit();
         emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
-        vault.afterBuy(strike, t0, size, spread, premium);
+        vault.afterTrade(true, strike, t0, size, spread, premium);
 
         // (1,24 / 7 + 5,56 / 10 + 11,2 / 14 + (10 * 0,95) / 6) / (24 * 60 * 60) = 0,000036070326278658
         assertEq(vault.spreadUnlockingRate(), 36070326278658);
@@ -456,33 +454,17 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
     function test__revertIfNotTradeableWithVault__Success() public {
         // Does not revert when trying to buy a call option from the call vault
-        vault.revertIfNotTradeableWithVault(true, true, true);
+        vault.revertIfNotTradeableWithVault(true, true);
         // Does not revert when trying to buy a put option from the put vault
-        vault.revertIfNotTradeableWithVault(false, false, true);
-
-        // trying to sell a call option to the call vault
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.revertIfNotTradeableWithVault(true, true, false);
+        vault.revertIfNotTradeableWithVault(false, false);
 
         // trying to buy a put option from the call vault
         vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
-        vault.revertIfNotTradeableWithVault(true, false, true);
-
-        // trying to sell a put option to the call vault
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.revertIfNotTradeableWithVault(true, false, false);
+        vault.revertIfNotTradeableWithVault(true, false);
 
         // trying to buy a call option from the put vault
         vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
-        vault.revertIfNotTradeableWithVault(false, true, true);
-
-        // trying to sell a call option to the put vault
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.revertIfNotTradeableWithVault(false, true, false);
-
-        // trying to sell a put option to the put vault
-        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.revertIfNotTradeableWithVault(false, true, false);
+        vault.revertIfNotTradeableWithVault(false, true);
     }
 
     function test_revertIfOptionInvalid_Success() public {

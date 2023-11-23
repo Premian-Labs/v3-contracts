@@ -19,6 +19,20 @@ import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/Unde
 import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
+    event UpdateQuotes();
+
+    event Trade(
+        address indexed user,
+        address indexed pool,
+        UD60x18 contractSize,
+        bool isBuy,
+        UD60x18 premium,
+        UD60x18 takerFee,
+        UD60x18 makerRebate,
+        UD60x18 vaultFee
+    );
+    event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
+
     uint256 startTime = 100000;
 
     uint256 t0 = startTime + 7 days;
@@ -72,7 +86,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         vaultType = keccak256("UnderwriterVault");
 
         // Update settings
-        settings = new uint256[](10);
+        settings = new uint256[](11);
 
         settings[0] = 3e18;
         settings[1] = 0.005e18;
@@ -84,6 +98,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         settings[7] = 0.7e18;
         settings[8] = 0.05e18;
         settings[9] = 0.02e18;
+        settings[10] = 0;
 
         // Deploy and set vault implementation
         address vaultImpl = address(

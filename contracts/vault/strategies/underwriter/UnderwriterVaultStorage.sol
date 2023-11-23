@@ -96,6 +96,12 @@ library UnderwriterVaultStorage {
         // When `getUtilisation` is called here, we want it to return the new utilisation after the deposit, not the current one.
         // As `_beforeTokenTransfer` know the share amount change, but not the asset amount change, we need to store it here temporarily.
         uint256 pendingAssetsDeposit;
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Sell Variables
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // Average premium for every strike and maturity
+        bool enableSell;
+        mapping(uint256 maturity => mapping(UD60x18 strike => UD60x18)) avgPremium;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -111,6 +117,8 @@ library UnderwriterVaultStorage {
         UD60x18[] memory arr = abi.decode(settings, (UD60x18[]));
         // minCLevel cannot be less than one
         if (arr[2] < ONE) revert IVault.Vault__InvalidSettingsUpdate();
+        // enableSell must be 0 or 1
+        if (arr[10].unwrap() > 1) revert IVault.Vault__InvalidSettingsUpdate();
 
         l.alphaCLevel = arr[0];
         l.hourlyDecayDiscount = arr[1];
@@ -122,6 +130,7 @@ library UnderwriterVaultStorage {
         l.maxDelta = arr[7];
         l.performanceFeeRate = arr[8];
         l.managementFeeRate = arr[9];
+        l.enableSell = (arr[10].unwrap() == 1);
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {
@@ -132,12 +141,16 @@ library UnderwriterVaultStorage {
         return l.isCall ? size : size * strike;
     }
 
-    function convertAssetToUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
-        return UD60x18.wrap(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
+    function truncate(Layout storage l, UD60x18 value) internal view returns (UD60x18) {
+        return OptionMath.truncate(value, l.assetDecimals());
     }
 
-    function convertAssetFromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
-        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
+    function fromTokenDecimals(Layout storage l, uint256 value) internal view returns (UD60x18) {
+        return OptionMath.fromTokenDecimals(value, l.assetDecimals());
+    }
+
+    function toTokenDecimals(Layout storage l, UD60x18 value) internal view returns (uint256) {
+        return OptionMath.toTokenDecimals(value, l.assetDecimals());
     }
 
     /// @notice Gets the nearest maturity after the given timestamp, exclusive

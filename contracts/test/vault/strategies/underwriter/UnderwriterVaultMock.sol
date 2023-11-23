@@ -8,11 +8,12 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 
-import {ZERO} from "../../../../libraries/Constants.sol";
+import {ZERO, WAD, ONE_HOUR, ONE_YEAR} from "../../../../libraries/Constants.sol";
 import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";
 import {IPool} from "../../../../pool/IPool.sol";
+import {IPoolFactory} from "../../../../factory/IPoolFactory.sol";
 import {UnderwriterVault} from "../../../../vault/strategies/underwriter/UnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "../../../../vault/strategies/underwriter/UnderwriterVaultStorage.sol";
 
@@ -70,14 +71,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.assetDecimals();
     }
 
-    function convertAssetToUD60x18(uint256 value) external view returns (UD60x18) {
+    function fromTokenDecimals(uint256 value) external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.convertAssetToUD60x18(value);
+        return l.fromTokenDecimals(value);
     }
 
-    function convertAssetFromUD60x18(UD60x18 value) external view returns (uint256) {
+    function toTokenDecimals(UD60x18 value) external view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.convertAssetFromUD60x18(value);
+        return l.toTokenDecimals(value);
     }
 
     function getMaturityAfterTimestamp(uint256 timestamp) external view returns (uint256) {
@@ -196,6 +197,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.maxMaturity = current;
     }
 
+    function getAveragePremium(UD60x18 strike, uint256 maturity) external view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.avgPremium[maturity][strike];
+    }
+
     function clearListingsAndSizes() external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -248,7 +254,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function increaseTotalLockedAssets(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         l.totalLockedAssets = l.totalLockedAssets + value;
-        uint256 transfer = l.convertAssetFromUD60x18(value);
+        uint256 transfer = l.toTokenDecimals(value);
         IERC20(_asset()).transfer(address(1), transfer);
     }
 
@@ -331,16 +337,23 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getPoolAddress(UnderwriterVaultStorage.layout(), strike, maturity);
     }
 
-    function afterBuy(UD60x18 strike, uint256 maturity, UD60x18 size, UD60x18 spread, UD60x18 premium) external {
-        _afterBuy(UnderwriterVaultStorage.layout(), strike, maturity, size, spread, premium);
+    function afterTrade(
+        bool isBuy,
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 size,
+        UD60x18 spread,
+        UD60x18 premium
+    ) external {
+        _afterTrade(UnderwriterVaultStorage.layout(), isBuy, strike, maturity, size, spread, premium);
     }
 
     function getSpotPrice() public view returns (UD60x18) {
         return _getSpotPrice();
     }
 
-    function getSettlementPrice(uint256 timestamp) public view returns (UD60x18) {
-        return _getSettlementPrice(UnderwriterVaultStorage.layout(), timestamp);
+    function getPerformanceFeeRate() public view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().performanceFeeRate;
     }
 
     function getTradeBounds() public view returns (UD60x18, UD60x18, UD60x18, UD60x18) {
@@ -426,9 +439,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         }
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
 
-        UD60x18 mintingFee = l.convertAssetToUD60x18(
-            IPool(pool).takerFee(address(0), size, l.convertAssetFromUD60x18(ZERO), true, false)
-        );
+        UD60x18 mintingFee = l.fromTokenDecimals(IPool(pool).takerFee(address(0), size, 0, true, false));
 
         IPool(pool).writeFrom(address(this), msg.sender, size, address(0));
 
@@ -436,8 +447,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalAssets = l.totalAssets - mintingFee;
     }
 
-    function revertIfNotTradeableWithVault(bool isCallVault, bool isCallOption, bool isBuy) external pure {
-        _revertIfNotTradeableWithVault(isCallVault, isCallOption, isBuy);
+    function revertIfNotTradeableWithVault(bool isCallVault, bool isCallOption) external pure {
+        _revertIfNotTradeableWithVault(isCallVault, isCallOption);
     }
 
     function revertIfOptionInvalid(UD60x18 strike, uint256 maturity) external view {
@@ -464,7 +475,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 maxCLevel,
         UD60x18 decayRate
     ) external pure returns (UD60x18) {
-        return _computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
+        return OptionMath.computeCLevel(utilisation, duration, alpha, minCLevel, maxCLevel, decayRate);
     }
 
     function computeCLevelGeoMean(
@@ -473,7 +484,27 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 orderSize
     ) external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return _computeCLevelGeoMean(totalAssetsVar, totalLockedAssetsVar, orderSize, l);
+
+        // Compute C-level
+        UD60x18 utilisationBefore = totalLockedAssetsVar / totalAssetsVar;
+
+        // If utilisation is a function of premium, and we want to use that to compute the premium we get an
+        // implicit equation. For this function, there is no explicit solution enabling us to include premiums.
+        // Therefore, this is the current approximation we are using.
+        UD60x18 utilisationAfter = (totalLockedAssetsVar + orderSize) / totalAssetsVar;
+
+        UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
+
+        return
+            OptionMath.computeCLevelGeoMean(
+                utilisationBefore,
+                utilisationAfter,
+                hoursSinceLastTx,
+                l.alphaCLevel,
+                l.minCLevel,
+                l.maxCLevel,
+                l.hourlyDecayDiscount
+            );
     }
 
     function setProtocolFees(UD60x18 value) external {
@@ -529,6 +560,27 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function exposed_computeAssetsAfterSettlementOfExpiredOptions() external view returns (UD60x18, UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeAssetsAfterSettlementOfExpiredOptions(l);
+    }
+
+    function exposed_getQuoteInternal(
+        IPoolFactory.PoolKey calldata poolKey,
+        UD60x18 size,
+        bool isBuy,
+        address taker
+    ) external view returns (QuoteInternal memory) {
+        QuoteInternal memory quote = _getQuoteInternal(
+            UnderwriterVaultStorage.layout(),
+            QuoteArgsInternal({
+                strike: poolKey.strike,
+                maturity: poolKey.maturity,
+                isCall: poolKey.isCallPool,
+                size: size,
+                isBuy: isBuy,
+                taker: taker
+            }),
+            false
+        );
+        return quote;
     }
 
     function setPendingAssetsDeposit(uint256 depositAmount) external {

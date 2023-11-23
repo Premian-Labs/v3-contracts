@@ -4,7 +4,9 @@ pragma solidity ^0.8.19;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
+
+import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 import {ZERO, ONE, TWO, iZERO, iONE, iTWO, iNINE} from "./Constants.sol";
 
@@ -28,6 +30,7 @@ library OptionMath {
     error OptionMath__NonPositiveVol();
     error OptionMath__OutOfBoundsPrice(UD60x18 min, UD60x18 max, UD60x18 price);
     error OptionMath__Underflow();
+    error OptionMath__UtilisationOutOfBounds();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x The input to the normal CDF (18 decimals)
@@ -177,8 +180,8 @@ library OptionMath {
         SD59x18 b = normalCdf(d2 * sign) / discountFactor;
         SD59x18 scaledPrice = (a - b) * sign;
 
-        if (scaledPrice < SD59x18.wrap(-1e12)) revert OptionMath__Underflow();
-        if (scaledPrice >= SD59x18.wrap(-1e12) && scaledPrice <= iZERO) scaledPrice = iZERO;
+        if (scaledPrice < sd(-1e12)) revert OptionMath__Underflow();
+        if (scaledPrice >= sd(-1e12) && scaledPrice <= iZERO) scaledPrice = iZERO;
 
         return (scaledPrice * _strike).intoUD60x18();
     }
@@ -262,6 +265,30 @@ library OptionMath {
         return value / int256(10 ** (inputDecimals - targetDecimals));
     }
 
+    /// @notice Converts a number with `decimals`, to a UD60x18 type
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The number as a UD60x18
+    function fromTokenDecimals(uint256 value, uint8 decimals) internal pure returns (UD60x18) {
+        return ud(scaleDecimals(value, decimals, 18));
+    }
+
+    /// @notice Converts a UD60x18 number with `decimals`, to it's uint256 type scaled down.
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The number as a scaled down uint256
+    function toTokenDecimals(UD60x18 value, uint8 decimals) internal pure returns (uint256) {
+        return scaleDecimals(value.unwrap(), 18, decimals);
+    }
+
+    /// @notice Truncates a UD60x18 number down to the correct precision.
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals the value has
+    /// @return The truncated UD60x18 number
+    function truncate(UD60x18 value, uint8 decimals) internal pure returns (UD60x18) {
+        return fromTokenDecimals(toTokenDecimals(value, decimals), decimals);
+    }
+
     /// @notice Performs a naive log10 calculation on `input` returning the floor of the result
     function log10Floor(uint256 input) internal pure returns (uint256 count) {
         while (input >= 10) {
@@ -270,5 +297,59 @@ library OptionMath {
         }
 
         return count;
+    }
+
+    /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
+    ///         (https://www.desmos.com/calculator/0uzv50t7jy)
+    /// @param utilisation The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return The C-level corresponding to the post-utilisation value.
+    function computeCLevel(
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) internal pure returns (UD60x18) {
+        if (utilisation > ONE) revert OptionMath__UtilisationOutOfBounds();
+
+        UD60x18 posExp = (alpha * (ONE - utilisation)).exp();
+        UD60x18 alphaExp = alpha.exp();
+        UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - ONE);
+
+        UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 decay = decayRate * duration;
+
+        return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
+    }
+
+    /// @notice Calculates the geo-mean C-level given a utilisation before and after collateral is utilised.
+    /// @param utilisationBefore The utilisation before some collateral is utilised.
+    /// @param utilisationAfter The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
+    /// @return cLevel The C-level corresponding to the geo-mean of the utilisation value before and after collateral is utilised.
+    function computeCLevelGeoMean(
+        UD60x18 utilisationBefore,
+        UD60x18 utilisationAfter,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) internal pure returns (UD60x18 cLevel) {
+        UD60x18 cLevelBefore = computeCLevel(utilisationBefore, ZERO, alpha, minCLevel, maxCLevel, decayRate);
+
+        UD60x18 cLevelAfter = computeCLevel(utilisationAfter, duration, alpha, minCLevel, maxCLevel, decayRate);
+
+        cLevel = (cLevelBefore * cLevelAfter).sqrt();
     }
 }

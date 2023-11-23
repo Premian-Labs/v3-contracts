@@ -11,8 +11,6 @@ import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/
 import {IVault} from "contracts/vault/IVault.sol";
 
 abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
-    event UpdateQuotes();
-
     function test_totalAssets_ReturnExpectedValue() public {
         UD60x18[3] memory cases = [ud(1e18), ud(1.1e18), ud(590.7e18)];
 

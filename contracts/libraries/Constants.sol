@@ -28,3 +28,6 @@ SD49x28 constant SD49_ONE = SD49x28.wrap(1e28);
 SD49x28 constant SD49_TWO = SD49x28.wrap(2e28);
 
 uint256 constant WAD = 1e18;
+
+uint256 constant ONE_YEAR = 365 days;
+uint256 constant ONE_HOUR = 1 hours;

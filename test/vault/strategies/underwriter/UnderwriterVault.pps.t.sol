@@ -140,14 +140,6 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         assertEq(vault.getSpotPrice(), ud(1500e18));
     }
 
-    function test_getSettlementPrice_ReturnExpectedValue() public {
-        oracleAdapter.setPriceAt(t0, ud(1000e18));
-        oracleAdapter.setPriceAt(t1, ud(1400e18));
-
-        assertEq(vault.getSettlementPrice(t0), ud(1000e18));
-        assertEq(vault.getSettlementPrice(t1), ud(1400e18));
-    }
-
     function test_computeAssetsAfterSettlementOfExpiredOptions_ReturnExpectedValue() public {
         setupOracleAdapterMock();
 
