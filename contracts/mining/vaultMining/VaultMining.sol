@@ -178,11 +178,18 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IVaultMining
     function getVoteMultiplier(address vault) external view returns (UD60x18) {
-        return VaultMiningStorage.layout().voteMultiplier[vault];
+        UD60x18 voteMultiplier = VaultMiningStorage.layout().voteMultiplier[vault];
+
+        if (voteMultiplier == ZERO) return DEFAULT_VOTE_MULTIPLIER;
+        return voteMultiplier;
     }
 
     /// @notice Sets the vote multiplier for a specific vault
     function setVoteMultiplier(address vault, UD60x18 voteMultiplier) external onlyOwner {
+        _setVoteMultiplier(vault, voteMultiplier);
+    }
+
+    function _setVoteMultiplier(address vault, UD60x18 voteMultiplier) internal {
         VaultMiningStorage.layout().voteMultiplier[vault] = voteMultiplier;
         emit SetVoteMultiplier(vault, voteMultiplier);
     }
@@ -400,7 +407,8 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
 
     /// @notice Set new vault votes, scaled by vote multiplier
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
-        if (l.voteMultiplier[data.vault] == ZERO) l.voteMultiplier[data.vault] = DEFAULT_VOTE_MULTIPLIER;
+        if (l.voteMultiplier[data.vault] == ZERO) _setVoteMultiplier(data.vault, DEFAULT_VOTE_MULTIPLIER);
+
         UD60x18 adjustedVotes = data.votes * l.voteMultiplier[data.vault];
         l.totalVotes = l.totalVotes - l.vaultInfo[data.vault].votes + adjustedVotes;
         l.vaultInfo[data.vault].votes = adjustedVotes;
