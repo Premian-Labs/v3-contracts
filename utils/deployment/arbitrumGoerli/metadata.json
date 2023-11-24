@@ -315,9 +315,9 @@
       "owner": ""
     },
     "VaultMiningImplementation": {
-      "address": "0x23dCbA4123787AA62Ae6fa10E4D0A284719C5F6d",
-      "block": 56286496,
-      "commitHash": "29f4e0b316b2b43ef92bff5c2b6fd347856f82ff",
+      "address": "0xe3EFE7B1AeF38C33770bB994e97d44264B65A771",
+      "block": 56701302,
+      "commitHash": "dd2fa3e28e2bb38bce220547933a1a42ac95f44d",
       "contractType": "Implementation",
       "deploymentArgs": [
         "0xb47aA1233E645D2Eb15C61069D4f94C61CE8dED4",
@@ -325,8 +325,8 @@
         "0x85E9b6B7915f9B259Ba0C54AEF2818F278c284d8",
         "0x0F0569935A6bE2Ed5a4EBbA3909D3996fb8faAf8"
       ],
-      "timestamp": 1700601627,
-      "txHash": "0x3a22754f77ed89057a96724f9e6420f9a8cf3de72fb6d191c664e60e81d15242",
+      "timestamp": 1700825062,
+      "txHash": "0xdb7c26747b164614968e855e1176b6b2ad596128eb92582c2d27b01c67a63c8e",
       "owner": ""
     },
     "VaultMiningProxy": {
