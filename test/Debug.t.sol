@@ -325,7 +325,7 @@ contract Debug_Test is Base_Test {
         UnderwriterVault vaultImpl = new UnderwriterVault(
             address(vaultRegistry),
             FEE_RECEIVER,
-            address(oracleAdapter),
+            address(volatilityOracle),
             address(factory),
             address(router),
             address(vxPremia),
