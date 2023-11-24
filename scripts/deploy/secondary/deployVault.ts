@@ -66,6 +66,7 @@ async function main() {
         parseEther('0.7'), // Max Delta
         parseEther('0.2'), // Performance fee rate
         parseEther('0.02'), // Management fee rate
+        '0', // Disable sell to vault
       ],
     ],
   );
