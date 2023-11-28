@@ -18,5 +18,3 @@
 | `pSV-MAGIC/USDCe-P`  |             | `0xe56BF5a095f98c3Ad93ec4C8aa0A5C9bA780b615` | [🔗](https://arbiscan.io/address/0xe56BF5a095f98c3Ad93ec4C8aa0A5C9bA780b615) |
 | `pSV-SOL/USDCe-C`    |             | `0x2aebD7FFd70cB191eb72a76662a04aEb6A4Ee9E2` | [🔗](https://arbiscan.io/address/0x2aebD7FFd70cB191eb72a76662a04aEb6A4Ee9E2) |
 | `pSV-SOL/USDCe-P`    |             | `0x010aEb3ec7A6a15655C2991eb617c7D9b64Baef0` | [🔗](https://arbiscan.io/address/0x010aEb3ec7A6a15655C2991eb617c7D9b64Baef0) |
-| `pSV-FXS/USDCe-C`    |             | `0x1646E2f436d933682D51410F1166fB3989bE3522` | [🔗](https://arbiscan.io/address/0x1646E2f436d933682D51410F1166fB3989bE3522) |
-| `pSV-FXS/USDCe-P`    |             | `0x88995fC9DD6C773D4772a98ae0Ac7C7dEAF858Ca` | [🔗](https://arbiscan.io/address/0x88995fC9DD6C773D4772a98ae0Ac7C7dEAF858Ca) |
