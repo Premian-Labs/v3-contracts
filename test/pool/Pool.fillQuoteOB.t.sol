@@ -144,14 +144,8 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
     function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
         vm.startPrank(users.trader);
 
-        quoteOB.price = ud(1);
-        IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
-
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OutOfBoundsPrice.selector, quoteOB.price));
-        pool.fillQuoteOB(quoteOB, quoteOB.size, sig, address(0));
-
         quoteOB.price = ud(1 ether + 1);
-        sig = signQuoteOB(quoteOB);
+        IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OutOfBoundsPrice.selector, quoteOB.price));
         pool.fillQuoteOB(quoteOB, quoteOB.size, sig, address(0));

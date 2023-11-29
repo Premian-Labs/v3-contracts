@@ -2026,7 +2026,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             return (false, InvalidQuoteOBError.QuoteOBOverfilled);
         }
 
-        if (PoolStorage.MIN_TICK_PRICE > quoteOB.price || quoteOB.price > PoolStorage.MAX_TICK_PRICE) {
+        if (quoteOB.price > PoolStorage.MAX_TICK_PRICE) {
             if (revertIfInvalid) revert Pool__OutOfBoundsPrice(quoteOB.price);
             return (false, InvalidQuoteOBError.OutOfBoundsPrice);
         }
