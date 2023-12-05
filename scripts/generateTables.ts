@@ -1,4 +1,4 @@
-import { generateTables } from './utils/tables/model';
+import { generateTables } from './utils/table';
 import { ChainID } from './utils/deployment/types';
 
 async function main() {

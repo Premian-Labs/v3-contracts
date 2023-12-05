@@ -18,7 +18,7 @@ import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
 import arbitrumDeployment from './arbitrum/metadata.json';
 import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
-import { generateTables } from '../tables/model';
+import { generateTables } from '../table';
 
 interface UpdateDeploymentMetadataOptions {
   logTxUrl?: boolean;

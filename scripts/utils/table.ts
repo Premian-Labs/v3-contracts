@@ -8,22 +8,16 @@ import {
   ChainID,
   ChainName,
   ContractKey,
+  ContractType,
   DeploymentMetadata,
   DeploymentPath,
-} from '../deployment/types';
+} from './deployment/types';
 import {
   getContractFilePath,
   getContractFilePaths,
   inferContractDescription,
   inferContractName,
-} from '../file';
-import {
-  tableTemplateNoHeader,
-  tableTemplate,
-  summaryPartial,
-  detailedSummaryPartial,
-} from './template';
-import { TableData, Contract } from './types';
+} from './file';
 
 function displayHeader() {
   if (this.name.length > 0 || this.name !== '') return `|**${this.name}**|||||`;
@@ -239,3 +233,59 @@ function writeTables(
     }
   }
 }
+
+//////////////////////
+// Templates
+//////////////////////
+
+const tableTemplateNoHeader = `# {{chain}} : {{name}} Deployments
+|Contract      |Description|Address|    |
+|--------------|-----------|-------|----|
+{{#sections}}
+{{>partial}}
+{{/sections}}`;
+
+const summaryPartial = `{{#contracts}}|\`{{{name}}}\`|{{description}}|{{{displayAddress}}}|{{{displayEtherscanUrl}}}|\n{{/contracts}}`;
+
+const tableTemplate = `# {{chain}} : {{name}} Deployments
+|Contract      |Description|Address|    |    |
+|--------------|-----------|-------|----|----|
+{{#sections}}
+{{displayHeader}}
+{{>partial}}
+{{/sections}}`;
+
+const detailedSummaryPartial = `{{#contracts}}|\`{{{name}}}\`|{{description}}|{{{displayAddress}}}|{{{displayEtherscanUrl}}}|{{{displayFilePathUrl}}}|\n{{/contracts}}`;
+
+//////////////////////
+// Types
+//////////////////////
+
+interface TableData {
+  categories: {
+    [key: string]: {
+      name: string;
+      chain: string;
+      sections: Section[];
+      displayHeader: () => string;
+    };
+  };
+}
+
+type Section = {
+  name: string;
+  contracts: Contract[];
+};
+
+type Contract = {
+  name: string;
+  description: string;
+  type?: ContractType;
+  address: string;
+  commitHash?: string;
+  etherscanUrl: string;
+  filePath?: string;
+  displayAddress: () => string;
+  displayEtherscanUrl: () => string;
+  displayFilePathUrl?: () => string;
+};
