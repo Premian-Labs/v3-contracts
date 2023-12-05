@@ -3,21 +3,24 @@ import _ from 'lodash';
 import * as prettier from 'prettier';
 import { render } from 'mustache';
 import path from 'path';
-import {
-  BlockExplorerUrl,
-  ChainID,
-  ChainName,
-  ContractKey,
-  ContractType,
-  DeploymentMetadata,
-  DeploymentPath,
-} from './deployment';
+
 import {
   getContractFilePath,
   getContractFilePaths,
   inferContractDescription,
   inferContractName,
 } from './file';
+import {
+  BlockExplorerUrl,
+  ChainID,
+  ChainName,
+  DeploymentPath,
+} from './types.chain';
+import {
+  ContractKey,
+  ContractType,
+  DeploymentMetadata,
+} from './types.deployment';
 
 function displayHeader() {
   if (this.name.length > 0 || this.name !== '') return `|**${this.name}**|||||`;

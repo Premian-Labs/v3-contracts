@@ -27,11 +27,9 @@ import {
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { constants } from 'ethers';
-import {
-  ContractKey,
-  ContractType,
-  updateDeploymentMetadata,
-} from './deployment';
+
+import { updateDeploymentMetadata } from './deployment';
+import { ContractKey, ContractType } from './types.deployment';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;

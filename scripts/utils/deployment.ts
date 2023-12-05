@@ -1,135 +1,24 @@
 import fs from 'fs';
 import child_process from 'child_process';
 
-import { IOwnable__factory } from '../../typechain';
+import _ from 'lodash';
 import { Provider, TransactionReceipt } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { ethers, run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
+
+import { IOwnable__factory } from '../../typechain';
 import arbitrumDeployment from '../../deployments/arbitrum/metadata.json';
 import arbitrumGoerliDeployment from '../../deployments/arbitrumGoerli/metadata.json';
+
 import { generateTables } from './table';
-
-export interface DeploymentMetadata {
-  addresses: {
-    treasury: string;
-    insuranceFund: string;
-    dao: string;
-    lzEndpoint: string;
-  };
-  tokens: { [symbol: string]: string };
-
-  feeConverter: {
-    main: ContractDeploymentMetadata;
-    insuranceFund: ContractDeploymentMetadata;
-    treasury: ContractDeploymentMetadata;
-    dao: ContractDeploymentMetadata;
-  };
-  core: { [key in ContractKey]: ContractDeploymentMetadata };
-  dualMining: { [name: string]: ContractDeploymentMetadata };
-  optionPS: { [name: string]: ContractDeploymentMetadata };
-  optionReward: { [name: string]: ContractDeploymentMetadata };
-  vaults: { [name: string]: ContractDeploymentMetadata };
-}
-
-export enum ContractKey {
-  ChainlinkAdapterImplementation = 'ChainlinkAdapterImplementation',
-  ChainlinkAdapterProxy = 'ChainlinkAdapterProxy',
-  DualMiningImplementation = 'DualMiningImplementation',
-  DualMiningManager = 'DualMiningManager',
-  PremiaDiamond = 'PremiaDiamond',
-  PoolFactoryImplementation = 'PoolFactoryImplementation',
-  PoolFactoryProxy = 'PoolFactoryProxy',
-  PoolFactoryDeployer = 'PoolFactoryDeployer',
-  UserSettingsImplementation = 'UserSettingsImplementation',
-  UserSettingsProxy = 'UserSettingsProxy',
-  ExchangeHelper = 'ExchangeHelper',
-  ReferralImplementation = 'ReferralImplementation',
-  ReferralProxy = 'ReferralProxy',
-  VxPremiaImplementation = 'VxPremiaImplementation',
-  VxPremiaProxy = 'VxPremiaProxy',
-  ERC20Router = 'ERC20Router',
-  PoolBase = 'PoolBase',
-  PoolCore = 'PoolCore',
-  PoolDepositWithdraw = 'PoolDepositWithdraw',
-  PoolTrade = 'PoolTrade',
-  OrderbookStream = 'OrderbookStream',
-  VaultRegistryImplementation = 'VaultRegistryImplementation',
-  VaultRegistryProxy = 'VaultRegistryProxy',
-  VolatilityOracleImplementation = 'VolatilityOracleImplementation',
-  VolatilityOracleProxy = 'VolatilityOracleProxy',
-  OptionMathExternal = 'OptionMathExternal',
-  UnderwriterVaultImplementation = 'UnderwriterVaultImplementation',
-  VaultMiningImplementation = 'VaultMiningImplementation',
-  VaultMiningProxy = 'VaultMiningProxy',
-  OptionPSFactoryImplementation = 'OptionPSFactoryImplementation',
-  OptionPSFactoryProxy = 'OptionPSFactoryProxy',
-  OptionPSImplementation = 'OptionPSImplementation',
-  OptionRewardFactoryImplementation = 'OptionRewardFactoryImplementation',
-  OptionRewardFactoryProxy = 'OptionRewardFactoryProxy',
-  OptionRewardImplementation = 'OptionRewardImplementation',
-  FeeConverterImplementation = 'FeeConverterImplementation',
-  PaymentSplitterImplementation = 'PaymentSplitterImplementation',
-  PaymentSplitterProxy = 'PaymentSplitterProxy',
-}
-
-export interface ContractDeploymentMetadata {
-  address: string;
-  contractType: ContractType | string;
-  deploymentArgs: string[];
-  commitHash: string;
-  txHash: string;
-  block: number;
-  timestamp: number;
-  owner: string;
-}
-
-export enum ContractType {
-  Standalone = 'Standalone',
-  Proxy = 'Proxy',
-  Implementation = 'Implementation',
-  DiamondProxy = 'DiamondProxy',
-  DiamondFacet = 'DiamondFacet',
-}
-
-export enum ChainID {
-  Ethereum = 1,
-  Goerli = 5,
-  Arbitrum = 42161,
-  ArbitrumGoerli = 421613,
-  ArbitrumNova = 42170,
-}
-
-export const ChainName: { [chainId: number]: string } = {
-  [ChainID.Ethereum]: 'Ethereum',
-  [ChainID.Goerli]: 'Goerli',
-  [ChainID.Arbitrum]: 'Arbitrum',
-  [ChainID.ArbitrumGoerli]: 'Arbitrum Goerli',
-  [ChainID.ArbitrumNova]: 'Arbitrum Nova',
-};
-
-export const SafeChainPrefix: { [chainId: number]: string } = {
-  [ChainID.Ethereum]: 'eth',
-  [ChainID.Goerli]: 'gor',
-  [ChainID.Arbitrum]: 'arb1',
-  // Arbitrum Goerli and Arbitrum Nova are currently not supported by Safe https://docs.safe.global/safe-core-api/available-services
-};
-
-export const BlockExplorerUrl: { [chainId: number]: string } = {
-  [ChainID.Ethereum]: 'https://etherscan.io',
-  [ChainID.Goerli]: 'https://goerli.etherscan.io',
-  [ChainID.Arbitrum]: 'https://arbiscan.io',
-  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io',
-  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io',
-};
-
-export const DeploymentPath: { [chainId: number]: string } = {
-  [ChainID.Arbitrum]: 'deployments/arbitrum/',
-  [ChainID.ArbitrumGoerli]: 'deployments/arbitrumGoerli/',
-  [ChainID.ArbitrumNova]: 'deployments/arbitrumNova/',
-};
+import { BlockExplorerUrl, ChainID, DeploymentPath } from './types.chain';
+import {
+  ContractKey,
+  ContractType,
+  DeploymentMetadata,
+} from './types.deployment';
 
 interface UpdateDeploymentMetadataOptions {
   logTxUrl?: boolean;
