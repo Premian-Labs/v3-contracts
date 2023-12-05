@@ -1,11 +1,7 @@
-import {
-  IUnderwriterVault__factory,
-  VaultRegistry__factory,
-} from '../../typechain';
+import { IUnderwriterVault__factory } from '../../typechain';
 import { ethers } from 'hardhat';
 import { defaultAbiCoder, parseEther } from 'ethers/lib/utils';
-import { initialize } from '../utils/deployment/deployment';
-import { proposeOrSendTransaction } from '../utils/safe';
+import { initialize, proposeOrSendTransaction } from '../utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

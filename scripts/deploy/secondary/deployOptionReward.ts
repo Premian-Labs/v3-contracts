@@ -3,14 +3,14 @@ import {
   OptionRewardFactory__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import {
-  initialize,
-  updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
-import { getEvent } from '../../utils/events';
-import { ContractType } from '../../utils/deployment/types';
 import { parseEther } from 'ethers/lib/utils';
-import { ONE_DAY } from '../../utils/time';
+import {
+  ContractType,
+  getEvent,
+  initialize,
+  ONE_DAY,
+  updateDeploymentMetadata,
+} from '../../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

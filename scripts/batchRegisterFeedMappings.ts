@@ -1,8 +1,7 @@
-import arbitrum from './utils/deployment/arbitrum/metadata.json';
-import { arbitrumFeeds } from './utils/addresses';
 import { ChainlinkAdapter__factory } from '../typechain';
 import { ethers } from 'hardhat';
-import { proposeOrSendTransaction } from './utils/safe';
+import arbitrum from '../deployments/arbitrum/metadata.json';
+import { arbitrumFeeds, proposeOrSendTransaction } from './utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

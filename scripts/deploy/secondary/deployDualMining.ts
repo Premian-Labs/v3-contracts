@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import {
   DualMining__factory,
   DualMiningProxy__factory,
@@ -5,15 +6,15 @@ import {
   VaultMining__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import { ContractType, DeploymentMetadata } from '../../utils/deployment/types';
 import { parseEther } from 'ethers/lib/utils';
+import { BigNumber, PopulatedTransaction } from 'ethers';
 import {
+  ContractType,
+  DeploymentMetadata,
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
-import { proposeOrSendTransaction } from '../../utils/safe';
-import { BigNumber, PopulatedTransaction } from 'ethers';
-import _ from 'lodash';
+  proposeOrSendTransaction,
+} from '../../utils';
 
 interface DualMiningArgs {
   vaultName: string;

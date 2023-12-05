@@ -4,11 +4,11 @@ import {
 } from '../../../typechain';
 import { ethers } from 'hardhat';
 import {
+  ContractType,
+  getEvent,
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
-import { getEvent } from '../../utils/events';
-import { ContractType } from '../../utils/deployment/types';
+} from '../../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

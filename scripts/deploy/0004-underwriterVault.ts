@@ -5,11 +5,12 @@ import {
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import { solidityKeccak256 } from 'ethers/lib/utils';
-import { ContractKey, ContractType } from '../utils/deployment/types';
 import {
+  ContractKey,
+  ContractType,
   initialize,
   updateDeploymentMetadata,
-} from '../utils/deployment/deployment';
+} from '../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

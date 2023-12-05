@@ -2,14 +2,15 @@ import {
   OptionRewardFactory__factory,
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
-import { ContractKey, ContractType } from '../utils/deployment/types';
 import { ethers } from 'hardhat';
-import {
-  initialize,
-  updateDeploymentMetadata,
-} from '../utils/deployment/deployment';
-import { proposeOrSendTransaction } from '../utils/safe';
 import { parseEther } from 'ethers/lib/utils';
+import {
+  ContractKey,
+  ContractType,
+  initialize,
+  proposeOrSendTransaction,
+  updateDeploymentMetadata,
+} from '../utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

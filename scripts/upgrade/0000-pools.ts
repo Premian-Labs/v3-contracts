@@ -1,9 +1,13 @@
 import { Premia__factory } from '../../typechain';
-import { PoolUtil } from '../utils/PoolUtil';
-import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import { ethers } from 'hardhat';
-import { proposeOrSendTransaction } from '../utils/safe';
-import { initialize } from '../utils/deployment/deployment';
+import {
+  FacetCut,
+  FacetCutAction,
+  getSelectors,
+  initialize,
+  PoolUtil,
+  proposeOrSendTransaction,
+} from '../utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

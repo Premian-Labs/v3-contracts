@@ -11,7 +11,7 @@ import {
   ContractType,
   DeploymentMetadata,
   DeploymentPath,
-} from './deployment/types';
+} from './deployment';
 import {
   getContractFilePath,
   getContractFilePaths,

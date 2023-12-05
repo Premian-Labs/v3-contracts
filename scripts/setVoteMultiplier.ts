@@ -1,9 +1,9 @@
-import arbitrum from './utils/deployment/arbitrum/metadata.json';
 import { VaultMining__factory } from '../typechain';
 import { ethers } from 'hardhat';
 import { PopulatedTransaction } from 'ethers';
-import { proposeOrSendTransaction } from './utils/safe';
 import { parseEther } from 'ethers/lib/utils';
+import arbitrum from '../deployments/arbitrum/metadata.json';
+import { proposeOrSendTransaction } from './utils';
 
 const vaults = [
   {

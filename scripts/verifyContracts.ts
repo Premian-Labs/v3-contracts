@@ -1,12 +1,10 @@
+import { ethers } from 'hardhat';
 import {
   ContractDeploymentMetadata,
   ContractKey,
-} from './utils/deployment/types';
-import {
   initialize,
   verifyContractsOnEtherscan,
-} from './utils/deployment/deployment';
-import { ethers } from 'hardhat';
+} from './utils';
 
 const proxyUpgradableOwnablePath =
   'contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable';
