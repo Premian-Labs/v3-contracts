@@ -1,4 +1,4 @@
-import arbitrum from '../utils/deployment/arbitrum/metadata.json';
+import arbitrum from './utils/deployment/arbitrum/metadata.json';
 import { VaultMining__factory } from '../typechain';
 import { ethers } from 'hardhat';
 import { PopulatedTransaction } from 'ethers';

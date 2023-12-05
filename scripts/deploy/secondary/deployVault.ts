@@ -4,7 +4,7 @@ import {
   VaultRegistry__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import { ChainID, ContractType } from '../../../utils/deployment/types';
+import { ChainID, ContractType } from '../../utils/deployment/types';
 import {
   defaultAbiCoder,
   parseEther,
@@ -14,7 +14,7 @@ import { OptionType, TradeSide } from '../../../utils/sdk/types';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../../utils/deployment/deployment';
+} from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../../utils/safe';
 
 async function main() {

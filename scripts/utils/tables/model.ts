@@ -11,7 +11,6 @@ import {
   DeploymentMetadata,
   DeploymentPath,
 } from '../deployment/types';
-import { Network } from '@ethersproject/networks';
 import {
   getContractFilePath,
   getContractFilePaths,

@@ -4,7 +4,7 @@ import {
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import { defaultAbiCoder, parseEther } from 'ethers/lib/utils';
-import { initialize } from '../../utils/deployment/deployment';
+import { initialize } from '../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {

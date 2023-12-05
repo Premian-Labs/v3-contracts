@@ -1,5 +1,5 @@
-import { generateTables } from '../utils/tables/model';
-import { ChainID } from '../utils/deployment/types';
+import { generateTables } from './utils/tables/model';
+import { ChainID } from './utils/deployment/types';
 
 async function main() {
   const chain = ChainID.Arbitrum;

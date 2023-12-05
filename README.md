@@ -4,12 +4,12 @@ https://premia.finance
 
 ## Deployments
 
-| Deployment                | Arbitrum                                             | Arbitrum Goerli                                            | Arbitrum Nova                                    |
-| ------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| Core Contracts            | [📜](utils/deployment/arbitrum/coreTable.md)         | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         | [📜](utils/deployment/arbitrumNova/coreTable.md) |
-| Option Physically Settled | [📜](utils/deployment/arbitrum/optionPSTable.md)     | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |                                                  |
-| Option Rewards            | [📜](utils/deployment/arbitrum/optionRewardTable.md) | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |                                                  |
-| Vaults                    | [📜](utils/deployment/arbitrum/vaultsTable.md)       | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |                                                  |
+| Deployment                | Arbitrum                                                     | Arbitrum Goerli                                                    | Arbitrum Nova                                            |
+| ------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------- |
+| Core Contracts            | [📜](scripts/utils/deployment/arbitrum/coreTable.md)         | [📜](scripts/utils/deployment/arbitrumGoerli/coreTable.md)         | [📜](scripts/utils/deployment/arbitrumNova/coreTable.md) |
+| Option Physically Settled | [📜](scripts/utils/deployment/arbitrum/optionPSTable.md)     | [📜](scripts/utils/deployment/arbitrumGoerli/optionPSTable.md)     |                                                          |
+| Option Rewards            | [📜](scripts/utils/deployment/arbitrum/optionRewardTable.md) | [📜](scripts/utils/deployment/arbitrumGoerli/optionRewardTable.md) |                                                          |
+| Vaults                    | [📜](scripts/utils/deployment/arbitrum/vaultsTable.md)       | [📜](scripts/utils/deployment/arbitrumGoerli/vaultsTable.md)       |                                                          |
 
 <!---
  | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |

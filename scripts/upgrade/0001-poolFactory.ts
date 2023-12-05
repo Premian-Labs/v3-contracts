@@ -2,12 +2,12 @@ import {
   PoolFactory__factory,
   PoolFactoryProxy__factory,
 } from '../../typechain';
-import { ContractKey, ContractType } from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
+} from '../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {

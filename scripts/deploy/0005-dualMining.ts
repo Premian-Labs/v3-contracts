@@ -3,15 +3,11 @@ import {
   DualMiningManager__factory,
 } from '../../typechain';
 import { ethers } from 'hardhat';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-} from '../../utils/deployment/types';
+import { ChainID, ContractKey, ContractType } from '../utils/deployment/types';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
+} from '../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {

@@ -1,11 +1,11 @@
 import {
   ContractDeploymentMetadata,
   ContractKey,
-} from '../utils/deployment/types';
+} from './utils/deployment/types';
 import {
   initialize,
   verifyContractsOnEtherscan,
-} from '../utils/deployment/deployment';
+} from './utils/deployment/deployment';
 import { ethers } from 'hardhat';
 
 const proxyUpgradableOwnablePath =

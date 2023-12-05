@@ -6,9 +6,9 @@ import { ethers } from 'hardhat';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../../utils/deployment/deployment';
-import { getEvent } from '../../../utils/events';
-import { ContractType } from '../../../utils/deployment/types';
+} from '../../utils/deployment/deployment';
+import { getEvent } from '../../utils/events';
+import { ContractType } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

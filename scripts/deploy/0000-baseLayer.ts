@@ -2,18 +2,14 @@ import {
   ChainlinkAdapter__factory,
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
-import { PoolUtil } from '../../utils/PoolUtil';
-import { arbitrumFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
+import { PoolUtil } from '../utils/PoolUtil';
+import { arbitrumFeeds, arbitrumGoerliFeeds } from '../utils/addresses';
 import { ethers } from 'hardhat';
-import {
-  ChainID,
-  ContractKey,
-  ContractType,
-} from '../../utils/deployment/types';
+import { ChainID, ContractKey, ContractType } from '../utils/deployment/types';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
+} from '../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

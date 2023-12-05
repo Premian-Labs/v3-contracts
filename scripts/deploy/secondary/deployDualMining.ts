@@ -5,15 +5,12 @@ import {
   VaultMining__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import {
-  ContractType,
-  DeploymentMetadata,
-} from '../../../utils/deployment/types';
+import { ContractType, DeploymentMetadata } from '../../utils/deployment/types';
 import { parseEther } from 'ethers/lib/utils';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../../utils/deployment/deployment';
+} from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../../utils/safe';
 import { BigNumber, PopulatedTransaction } from 'ethers';
 import _ from 'lodash';

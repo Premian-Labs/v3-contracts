@@ -1,5 +1,5 @@
-import arbitrum from '../utils/deployment/arbitrum/metadata.json';
-import { arbitrumFeeds } from '../utils/addresses';
+import arbitrum from './utils/deployment/arbitrum/metadata.json';
+import { arbitrumFeeds } from './utils/addresses';
 import { ChainlinkAdapter__factory } from '../typechain';
 import { ethers } from 'hardhat';
 import { proposeOrSendTransaction } from './utils/safe';

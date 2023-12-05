@@ -1,7 +1,7 @@
 import { OptionMathExternal__factory } from '../../typechain';
-import { ContractKey, ContractType } from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../utils/deployment/types';
 import { ethers } from 'hardhat';
-import { updateDeploymentMetadata } from '../../utils/deployment/deployment';
+import { updateDeploymentMetadata } from '../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

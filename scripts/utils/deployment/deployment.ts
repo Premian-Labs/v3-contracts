@@ -1,7 +1,7 @@
 import fs from 'fs';
 import child_process from 'child_process';
 
-import { IOwnable__factory } from '../../typechain';
+import { IOwnable__factory } from '../../../typechain';
 import {
   BlockExplorerUrl,
   ChainID,

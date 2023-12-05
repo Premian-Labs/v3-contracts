@@ -1,10 +1,10 @@
 import { PoolFactory__factory } from '../../../typechain';
 import { PoolKey } from '../../../utils/sdk/types';
-import { getValidMaturity } from '../../../utils/time';
+import { getValidMaturity } from '../../utils/time';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { initialize } from '../../../utils/deployment/deployment';
+import { initialize } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

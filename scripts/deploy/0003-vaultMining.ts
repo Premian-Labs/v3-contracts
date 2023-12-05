@@ -11,14 +11,14 @@ import {
   VaultMiningProxy__factory,
 } from '../../typechain';
 import { ethers } from 'hardhat';
-import { ContractKey, ContractType } from '../../utils/deployment/types';
+import { ContractKey, ContractType } from '../utils/deployment/types';
 import {
   initialize,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
+} from '../utils/deployment/deployment';
 import { parseEther } from 'ethers/lib/utils';
-import { getEvent } from '../../utils/events';
-import { ONE_DAY } from '../../utils/time';
+import { getEvent } from '../utils/events';
+import { ONE_DAY } from '../utils/time';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

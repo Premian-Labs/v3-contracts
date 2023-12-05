@@ -7,11 +7,8 @@ import SafeApiKit from '@safe-global/api-kit';
 import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { SafeChainPrefix } from '../../utils/deployment/types';
-import {
-  getNetwork,
-  getTransactionUrl,
-} from '../../utils/deployment/deployment';
+import { SafeChainPrefix } from './deployment/types';
+import { getNetwork, getTransactionUrl } from './deployment/deployment';
 
 /**
  * Sends a Safe transaction proposal to the `safeAddress`
