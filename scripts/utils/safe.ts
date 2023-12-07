@@ -7,11 +7,16 @@ import SafeApiKit from '@safe-global/api-kit';
 import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { SafeChainPrefix } from '../../utils/deployment/types';
-import {
-  getNetwork,
-  getTransactionUrl,
-} from '../../utils/deployment/deployment';
+
+import { getNetwork, getTransactionUrl } from './deployment';
+import { ChainID } from './types.chain';
+
+export const SafeChainPrefix: { [chainId: number]: string } = {
+  [ChainID.Ethereum]: 'eth',
+  [ChainID.Goerli]: 'gor',
+  [ChainID.Arbitrum]: 'arb1',
+  // Arbitrum Goerli and Arbitrum Nova are currently not supported by Safe https://docs.safe.global/safe-core-api/available-services
+};
 
 /**
  * Sends a Safe transaction proposal to the `safeAddress`

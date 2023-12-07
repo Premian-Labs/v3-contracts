@@ -1,4 +1,4 @@
-import { diamondCut } from '../scripts/utils/diamond';
+import { diamondCut } from './diamond';
 import {
   ERC20Router,
   ERC20Router__factory,
@@ -23,12 +23,13 @@ import {
   VaultRegistry__factory,
   VxPremia__factory,
   VxPremiaProxy__factory,
-} from '../typechain';
+} from '../../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { constants } from 'ethers';
-import { updateDeploymentMetadata } from './deployment/deployment';
-import { ContractKey, ContractType } from './deployment/types';
+
+import { updateDeploymentMetadata } from './deployment';
+import { ContractKey, ContractType } from './types.deployment';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;

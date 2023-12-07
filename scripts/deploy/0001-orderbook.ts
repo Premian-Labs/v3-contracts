@@ -1,7 +1,6 @@
 import { OrderbookStream__factory } from '../../typechain';
 import { ethers } from 'hardhat';
-import { updateDeploymentMetadata } from '../../utils/deployment/deployment';
-import { ContractKey, ContractType } from '../../utils/deployment/types';
+import { ContractKey, ContractType, updateDeploymentMetadata } from '../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

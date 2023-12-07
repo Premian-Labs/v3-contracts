@@ -3,28 +3,24 @@ import _ from 'lodash';
 import * as prettier from 'prettier';
 import { render } from 'mustache';
 import path from 'path';
-import {
-  BlockExplorerUrl,
-  ChainID,
-  ChainName,
-  ContractKey,
-  DeploymentMetadata,
-  DeploymentPath,
-} from '../deployment/types';
-import { Network } from '@ethersproject/networks';
+
 import {
   getContractFilePath,
   getContractFilePaths,
   inferContractDescription,
   inferContractName,
-} from '../file';
+} from './file';
 import {
-  tableTemplateNoHeader,
-  tableTemplate,
-  summaryPartial,
-  detailedSummaryPartial,
-} from './template';
-import { TableData, Contract } from './types';
+  BlockExplorerUrl,
+  ChainID,
+  ChainName,
+  DeploymentPath,
+} from './types.chain';
+import {
+  ContractKey,
+  ContractType,
+  DeploymentMetadata,
+} from './types.deployment';
 
 function displayHeader() {
   if (this.name.length > 0 || this.name !== '') return `|**${this.name}**|||||`;
@@ -240,3 +236,59 @@ function writeTables(
     }
   }
 }
+
+//////////////////////
+// Templates
+//////////////////////
+
+const tableTemplateNoHeader = `# {{chain}} : {{name}} Deployments
+|Contract      |Description|Address|    |
+|--------------|-----------|-------|----|
+{{#sections}}
+{{>partial}}
+{{/sections}}`;
+
+const summaryPartial = `{{#contracts}}|\`{{{name}}}\`|{{description}}|{{{displayAddress}}}|{{{displayEtherscanUrl}}}|\n{{/contracts}}`;
+
+const tableTemplate = `# {{chain}} : {{name}} Deployments
+|Contract      |Description|Address|    |    |
+|--------------|-----------|-------|----|----|
+{{#sections}}
+{{displayHeader}}
+{{>partial}}
+{{/sections}}`;
+
+const detailedSummaryPartial = `{{#contracts}}|\`{{{name}}}\`|{{description}}|{{{displayAddress}}}|{{{displayEtherscanUrl}}}|{{{displayFilePathUrl}}}|\n{{/contracts}}`;
+
+//////////////////////
+// Types
+//////////////////////
+
+interface TableData {
+  categories: {
+    [key: string]: {
+      name: string;
+      chain: string;
+      sections: Section[];
+      displayHeader: () => string;
+    };
+  };
+}
+
+type Section = {
+  name: string;
+  contracts: Contract[];
+};
+
+type Contract = {
+  name: string;
+  description: string;
+  type?: ContractType;
+  address: string;
+  commitHash?: string;
+  etherscanUrl: string;
+  filePath?: string;
+  displayAddress: () => string;
+  displayEtherscanUrl: () => string;
+  displayFilePathUrl?: () => string;
+};

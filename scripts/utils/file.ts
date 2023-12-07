@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { ContractType } from './deployment/types';
+import { ContractType } from './types.deployment';
 
 export function getContractFilePaths(
   rootPath: string = './contracts',

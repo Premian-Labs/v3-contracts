@@ -4,16 +4,12 @@ https://premia.finance
 
 ## Deployments
 
-| Deployment                | Arbitrum                                             | Arbitrum Goerli                                            | Arbitrum Nova                                    |
-| ------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| Core Contracts            | [📜](utils/deployment/arbitrum/coreTable.md)         | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         | [📜](utils/deployment/arbitrumNova/coreTable.md) |
-| Option Physically Settled | [📜](utils/deployment/arbitrum/optionPSTable.md)     | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |                                                  |
-| Option Rewards            | [📜](utils/deployment/arbitrum/optionRewardTable.md) | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |                                                  |
-| Vaults                    | [📜](utils/deployment/arbitrum/vaultsTable.md)       | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |                                                  |
-
-<!---
- | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
--->
+| Deployment                | Arbitrum                                        | Arbitrum Goerli                                       | Arbitrum Nova                               |
+| ------------------------- | ----------------------------------------------- | ----------------------------------------------------- | ------------------------------------------- |
+| Core Contracts            | [📜](deployments/arbitrum/coreTable.md)         | [📜](deployments/arbitrumGoerli/coreTable.md)         | [📜](deployments/arbitrumNova/coreTable.md) |
+| Option Physically Settled | [📜](deployments/arbitrum/optionPSTable.md)     | [📜](deployments/arbitrumGoerli/optionPSTable.md)     |                                             |
+| Option Rewards            | [📜](deployments/arbitrum/optionRewardTable.md) | [📜](deployments/arbitrumGoerli/optionRewardTable.md) |                                             |
+| Vaults                    | [📜](deployments/arbitrum/vaultsTable.md)       | [📜](deployments/arbitrumGoerli/vaultsTable.md)       |                                             |
 
 ## Development
 

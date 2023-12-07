@@ -4,18 +4,20 @@ import {
   VaultRegistry__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import { ChainID, ContractType } from '../../../utils/deployment/types';
 import {
   defaultAbiCoder,
   parseEther,
   solidityKeccak256,
 } from 'ethers/lib/utils';
-import { OptionType, TradeSide } from '../../../utils/sdk/types';
 import {
+  ChainID,
+  ContractType,
   initialize,
+  OptionType,
+  proposeOrSendTransaction,
+  TradeSide,
   updateDeploymentMetadata,
-} from '../../../utils/deployment/deployment';
-import { proposeOrSendTransaction } from '../../utils/safe';
+} from '../../utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

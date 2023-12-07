@@ -4,12 +4,13 @@ import {
   ProxyUpgradeableOwnable__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import { ContractKey, ContractType } from '../../../utils/deployment/types';
 import { parseEther } from 'ethers/lib/utils';
 import {
+  ContractKey,
+  ContractType,
   initialize,
   updateDeploymentMetadata,
-} from '../../../utils/deployment/deployment';
+} from '../../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

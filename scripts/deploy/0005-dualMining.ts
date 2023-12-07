@@ -7,12 +7,10 @@ import {
   ChainID,
   ContractKey,
   ContractType,
-} from '../../utils/deployment/types';
-import {
   initialize,
+  proposeOrSendTransaction,
   updateDeploymentMetadata,
-} from '../../utils/deployment/deployment';
-import { proposeOrSendTransaction } from '../utils/safe';
+} from '../utils';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();

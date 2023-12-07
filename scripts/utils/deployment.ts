@@ -1,24 +1,24 @@
 import fs from 'fs';
 import child_process from 'child_process';
 
-import { IOwnable__factory } from '../../typechain';
-import {
-  BlockExplorerUrl,
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentMetadata,
-  DeploymentPath,
-} from './types';
+import _ from 'lodash';
 import { Provider, TransactionReceipt } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { ethers, run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
-import arbitrumDeployment from './arbitrum/metadata.json';
-import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
-import { generateTables } from '../tables/model';
+
+import { IOwnable__factory } from '../../typechain';
+import arbitrumDeployment from '../../deployments/arbitrum/metadata.json';
+import arbitrumGoerliDeployment from '../../deployments/arbitrumGoerli/metadata.json';
+
+import { generateTables } from './table';
+import { BlockExplorerUrl, ChainID, DeploymentPath } from './types.chain';
+import {
+  ContractKey,
+  ContractType,
+  DeploymentMetadata,
+} from './types.deployment';
 
 interface UpdateDeploymentMetadataOptions {
   logTxUrl?: boolean;

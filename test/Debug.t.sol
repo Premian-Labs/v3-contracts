@@ -53,7 +53,7 @@ contract Debug_Test is Base_Test {
 
     // Variables
     string internal chain = "arbitrum";
-    string internal path = string.concat("utils/deployment/", chain, "/metadata.json");
+    string internal path = string.concat("deployments/", chain, "/metadata.json");
 
     function isForkTest() internal virtual override returns (bool) {
         return true;
