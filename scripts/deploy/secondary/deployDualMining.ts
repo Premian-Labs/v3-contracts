@@ -77,6 +77,78 @@ async function main() {
       rewardsPerYear: parseEther('260714'),
       depositAmount: parseEther('10000'),
     },
+    {
+      vaultName: 'pSV-LINK/USDCe-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-LINK/USDCe-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-MAGIC/USDCe-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-MAGIC/USDCe-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-wstETH/USDCe-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-wstETH/USDCe-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('64036'),
+      depositAmount: parseEther('2456'),
+    },
+    {
+      vaultName: 'pSV-GMX/USDCe-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('80044'),
+      depositAmount: parseEther('3070'),
+    },
+    {
+      vaultName: 'pSV-GMX/USDCe-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('80044'),
+      depositAmount: parseEther('3070'),
+    },
+    {
+      vaultName: 'pSV-SOL/USDCe-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('96053'),
+      depositAmount: parseEther('3684'),
+    },
+    {
+      vaultName: 'pSV-SOL/USDCe-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('96053'),
+      depositAmount: parseEther('3684'),
+    },
+    {
+      vaultName: 'pSV-FXS/FRAX-C',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('80044'),
+      depositAmount: parseEther('3070'),
+    },
+    {
+      vaultName: 'pSV-FXS/FRAX-P',
+      rewardToken: deployment.tokens.ARB,
+      rewardsPerYear: parseEther('80044'),
+      depositAmount: parseEther('3070'),
+    },
   ];
 
   const proposerOrSigner = proposeToMultiSig ? proposer : deployer;

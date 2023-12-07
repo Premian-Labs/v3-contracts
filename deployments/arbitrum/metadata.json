@@ -1009,6 +1009,186 @@
       "timestamp": 1700072926,
       "txHash": "0x430a56de3c86ba81da94a145230201e7d7b9fffc63b55c93ff402a401abbad7a",
       "owner": ""
+    },
+    "pSV-LINK/USDCe-C-1": {
+      "address": "0x25EDea507B31550792feB5C0c8906db1A2A1a462",
+      "block": 157165150,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x9C9a20b9A27b91592f7EF7622F8c4Fea9f4A0C8f",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793871,
+      "txHash": "0xb4ffa1708bb2263e328687c8565758c83466bb9de8dcbaac6ba880a8f3f3df79",
+      "owner": ""
+    },
+    "pSV-LINK/USDCe-P-1": {
+      "address": "0x1D81c268B8dFb17DcfFDff4620357C601f25EaAf",
+      "block": 157165163,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x8CEbe7380Bbe5e680Fa31a5fe0229F638580dbf3",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793874,
+      "txHash": "0xc3b7c3a0709f8bea79fec273e928002fcba91ec2331197985b7002e0d91a0798",
+      "owner": ""
+    },
+    "pSV-MAGIC/USDCe-C-1": {
+      "address": "0xd6Be33D8d6f39C8c2783262e696f27f7565cE4CC",
+      "block": 157165173,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xA181F7ce9820b074960C4Ee11d5202F159C87AFB",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793877,
+      "txHash": "0x999c0921fa5750b90d7eb47bf490b53586539712b8de9964aae0a7d5649807dd",
+      "owner": ""
+    },
+    "pSV-MAGIC/USDCe-P-1": {
+      "address": "0xF7DFf579E9B715c1Dc3414CeD3f40c4dC28E2E08",
+      "block": 157165183,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xe56BF5a095f98c3Ad93ec4C8aa0A5C9bA780b615",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793880,
+      "txHash": "0xda60289524ebda9ff858b4d24f665ae9bfb8653fa63bb1374fdf122726c32f11",
+      "owner": ""
+    },
+    "pSV-wstETH/USDCe-C-1": {
+      "address": "0x4C1EF78fe6C77E05dD93052b246FAB9839D9b307",
+      "block": 157165189,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xe0C92F15eE2947C81e8d72864AC62331bAf8D77d",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793883,
+      "txHash": "0xcf3abd947a295bff1768c18a0dd24122b93ee7157e4ef37c863b092af0f79144",
+      "owner": ""
+    },
+    "pSV-wstETH/USDCe-P-1": {
+      "address": "0xb626f929b412ac52C95330fc55330EeC51a6214b",
+      "block": 157165201,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xe330C090e2A5CEB4C39d3fB1dF82c773Efa55dcF",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "64036000000000000000000"
+      ],
+      "timestamp": 1701793886,
+      "txHash": "0xbfe3f34c38d5ae8e5c6cf13fe383c3ed99ce08fc0b7dd49ee0fa2217be238f26",
+      "owner": ""
+    },
+    "pSV-GMX/USDCe-C-1": {
+      "address": "0xE398ef557b4A91EF3b32B00d6A55e65C31a1def5",
+      "block": 157165213,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x2E98Ed9983747ab93F14503cde4Cd0f1EAcBD098",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "80044000000000000000000"
+      ],
+      "timestamp": 1701793889,
+      "txHash": "0xec83463317c19c088314faa7be551b3f7607794cf53eb6661b7e13db04051492",
+      "owner": ""
+    },
+    "pSV-GMX/USDCe-P-1": {
+      "address": "0xC4117377104aD15041ACE1e2B47e9BCb1efF9d60",
+      "block": 157165226,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xB5ECA2280dD6a58C9E17f613F292Cb35E5260f21",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "80044000000000000000000"
+      ],
+      "timestamp": 1701793892,
+      "txHash": "0xe4f857fbf30c4b3b3cd018bc4304967612d408da550c4ebd0e152376745b2747",
+      "owner": ""
+    },
+    "pSV-SOL/USDCe-C-1": {
+      "address": "0x3a2bd0CFD8320bFB2Cf45ff12E90A31AcE884C6D",
+      "block": 157165236,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x2aebD7FFd70cB191eb72a76662a04aEb6A4Ee9E2",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "96053000000000000000000"
+      ],
+      "timestamp": 1701793895,
+      "txHash": "0x4a708e909115ddac5e8038aa4062830862dd3b59964d700dff0edf29d088cffb",
+      "owner": ""
+    },
+    "pSV-SOL/USDCe-P-1": {
+      "address": "0x96459876A7F36788cB8926A2f55ADAE7Fc385184",
+      "block": 157165248,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x010aEb3ec7A6a15655C2991eb617c7D9b64Baef0",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "96053000000000000000000"
+      ],
+      "timestamp": 1701793898,
+      "txHash": "0x5ef322b848df3550cd107c52bc1c29256acbed65da2f8ca2ecca28c03987f654",
+      "owner": ""
+    },
+    "pSV-FXS/FRAX-C-1": {
+      "address": "0x3561f9AB9C0E180FABF1127CB44a410306c17182",
+      "block": 157165258,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x767823505c345fA1Aa315116DC5f0276f8D5C623",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "80044000000000000000000"
+      ],
+      "timestamp": 1701793900,
+      "txHash": "0x78f949405068cb20212e4bb6a22f2049cdedbb6f9d8277eb90b501c5681e6f1f",
+      "owner": ""
+    },
+    "pSV-FXS/FRAX-P-1": {
+      "address": "0xF42b0faBbB187Af5eE56C888de0672cA562AA9AC",
+      "block": 157165269,
+      "commitHash": "51df3b4e5ce4e83f02a6cc50d5bc4de01323c095",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x469ea472D168364B2e50aBB81Fe5C6DA142f9a62",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "80044000000000000000000"
+      ],
+      "timestamp": 1701793903,
+      "txHash": "0x8fe2bb876ef66e75d01546734b6985b471b08ac5709f07eca6e2adce005d5894",
+      "owner": ""
     }
   }
 }
