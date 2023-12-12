@@ -1189,6 +1189,21 @@
       "timestamp": 1701793903,
       "txHash": "0x8fe2bb876ef66e75d01546734b6985b471b08ac5709f07eca6e2adce005d5894",
       "owner": ""
+    },
+    "pSV-FXS/FRAX-P-2": {
+      "address": "0xB671Eb5Cee01d681df07a245df2fcf9FCB808c0a",
+      "block": 158185016,
+      "commitHash": "0a7d16f92b1af7a35f1ce3316477bf90f98441cc",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x469ea472D168364B2e50aBB81Fe5C6DA142f9a62",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "54075000000000000000000"
+      ],
+      "timestamp": 1702067085,
+      "txHash": "0x7b0af8296a331d78430475c067b5578e78404e68c5ac4319b00be05c2a740b3c",
+      "owner": ""
     }
   }
 }
