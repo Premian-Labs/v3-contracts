@@ -10,7 +10,7 @@ import {DualMining} from "contracts/mining/dualMining/DualMining.sol";
 import {DualMiningProxy} from "contracts/mining/dualMining/DualMiningProxy.sol";
 import {DualMiningManager} from "contracts/mining/dualMining/DualMiningManager.sol";
 import {ProxyManager} from "contracts/proxy/ProxyManager.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../../token/ERC20Mock.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {VaultMiningSetup} from "../vaultMining/VaultMining.setup.t.sol";

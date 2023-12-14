@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {IPoolMock} from "../../../pool/mock/IPoolMock.sol";
 
 import {UnderwriterVaultTest} from "./_UnderwriterVault.t.sol";
 

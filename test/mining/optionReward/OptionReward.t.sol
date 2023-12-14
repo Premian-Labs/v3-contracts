@@ -13,7 +13,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../../token/ERC20Mock.sol";
 
 import {IOptionReward} from "contracts/mining/optionReward/IOptionReward.sol";
 import {OptionReward} from "contracts/mining/optionReward/OptionReward.sol";
@@ -21,7 +21,7 @@ import {IOptionRewardFactory} from "contracts/mining/optionReward/IOptionRewardF
 import {OptionRewardStorage} from "contracts/mining/optionReward/OptionRewardStorage.sol";
 import {OptionRewardFactory} from "contracts/mining/optionReward/OptionRewardFactory.sol";
 
-import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
+import {OracleAdapterMock} from "../../adapter/OracleAdapterMock.sol";
 
 import {PaymentSplitter} from "contracts/mining/PaymentSplitter.sol";
 import {IPaymentSplitter} from "contracts/mining/IPaymentSplitter.sol";

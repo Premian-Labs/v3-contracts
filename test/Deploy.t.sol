@@ -23,11 +23,11 @@ import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryDeployer} from "contracts/factory/PoolFactoryDeployer.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {IPoolMock} from "./pool/mock/IPoolMock.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
-import {PoolCoreMock} from "contracts/test/pool/PoolCoreMock.sol";
+import {PoolCoreMock} from "./pool/mock/PoolCoreMock.sol";
 import {PoolDepositWithdraw} from "contracts/pool/PoolDepositWithdraw.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
@@ -43,10 +43,10 @@ import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
-import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
-import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
-import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
-import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
+import {OracleAdapterMock} from "./adapter/OracleAdapterMock.sol";
+import {FlashLoanMock} from "./pool/mock/FlashLoanMock.sol";
+import {ReferralMock} from "./referral/ReferralMock.sol";
+import {IReferralMock} from "./referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 import {Placeholder} from "contracts/utils/Placeholder.sol";

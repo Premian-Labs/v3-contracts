@@ -2,14 +2,13 @@
 pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-
-import {Position} from "../../libraries/Position.sol";
-import {Pricing} from "../../libraries/Pricing.sol";
-import {UD50x28} from "../../libraries/UD50x28.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
-import {SD49x28} from "../../libraries/SD49x28.sol";
 
-import {IPoolInternal} from "../../pool/IPoolInternal.sol";
+import {Position} from "contracts/libraries/Position.sol";
+import {Pricing} from "contracts/libraries/Pricing.sol";
+import {UD50x28} from "contracts/libraries/UD50x28.sol";
+import {SD49x28} from "contracts/libraries/SD49x28.sol";
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 interface IPoolCoreMock {
     function _getPricing(bool isBuy) external view returns (Pricing.Args memory);

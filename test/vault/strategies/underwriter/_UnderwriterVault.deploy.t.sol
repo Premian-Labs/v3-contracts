@@ -6,11 +6,11 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
-import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
-import {VolatilityOracleMock} from "contracts/test/oracle/VolatilityOracleMock.sol";
-import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/UnderwriterVaultMock.sol";
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {ERC20Mock} from "../../../token/ERC20Mock.sol";
+import {OracleAdapterMock} from "../../../adapter/OracleAdapterMock.sol";
+import {VolatilityOracleMock} from "../../../oracle/VolatilityOracleMock.sol";
+import {UnderwriterVaultMock} from "./UnderwriterVaultMock.sol";
+import {IPoolMock} from "../../../pool/mock/IPoolMock.sol";
 
 import {DeployTest} from "../../../Deploy.t.sol";
 

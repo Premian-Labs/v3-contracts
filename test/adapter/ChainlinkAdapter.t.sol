@@ -12,8 +12,8 @@ import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.s
 import {ChainlinkAdapter} from "contracts/adapter/chainlink/ChainlinkAdapter.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
-import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePriceStub.sol";
+import {ERC20Mock} from "../token/ERC20Mock.sol";
+import {ChainlinkOraclePriceStub} from "./ChainlinkOraclePriceStub.sol";
 
 import {Base_Test} from "../Base.t.sol";
 

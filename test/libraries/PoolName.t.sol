@@ -2,9 +2,9 @@
 pragma solidity ^0.8.19;
 
 import {PoolName} from "contracts/libraries/PoolName.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../token/ERC20Mock.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
-import {PoolNameMock} from "contracts/test/libraries/PoolNameMock.sol";
+import {PoolNameMock} from "./PoolNameMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 

@@ -10,7 +10,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
-import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/UnderwriterVaultMock.sol";
+import {UnderwriterVaultMock} from "./UnderwriterVaultMock.sol";
 import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 import "forge-std/StdAssertions.sol";

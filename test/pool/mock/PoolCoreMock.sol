@@ -4,14 +4,14 @@ pragma solidity =0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Position} from "../../libraries/Position.sol";
-import {Pricing} from "../../libraries/Pricing.sol";
-import {UD50x28} from "../../libraries/UD50x28.sol";
-import {SD49x28} from "../../libraries/SD49x28.sol";
+import {Position} from "contracts/libraries/Position.sol";
+import {Pricing} from "contracts/libraries/Pricing.sol";
+import {UD50x28} from "contracts/libraries/UD50x28.sol";
+import {SD49x28} from "contracts/libraries/SD49x28.sol";
 
-import {PoolInternal} from "../../pool/PoolInternal.sol";
-import {PoolStorage} from "../../pool/PoolStorage.sol";
-import {IPoolInternal} from "../../pool/IPoolInternal.sol";
+import {PoolInternal} from "contracts/pool/PoolInternal.sol";
+import {PoolStorage} from "contracts/pool/PoolStorage.sol";
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";

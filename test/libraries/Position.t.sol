@@ -8,7 +8,7 @@ import {Position} from "contracts/libraries/Position.sol";
 import {IPosition} from "contracts/libraries/IPosition.sol";
 import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
-import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
+import {PositionMock} from "./PositionMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 

@@ -4,8 +4,8 @@ pragma solidity =0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {VolatilityOracle} from "../../oracle/VolatilityOracle.sol";
-import {VolatilityOracleStorage} from "../../oracle/VolatilityOracleStorage.sol";
+import {VolatilityOracle} from "contracts/oracle/VolatilityOracle.sol";
+import {VolatilityOracleStorage} from "contracts/oracle/VolatilityOracleStorage.sol";
 
 contract VolatilityOracleMock is VolatilityOracle {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;

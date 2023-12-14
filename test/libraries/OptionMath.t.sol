@@ -5,7 +5,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
-import {OptionMathMock} from "contracts/test/libraries/OptionMathMock.sol";
+import {OptionMathMock} from "./OptionMathMock.sol";
 import {Base_Test} from "../Base.t.sol";
 
 contract OptionMath_Unit_Test is Base_Test {

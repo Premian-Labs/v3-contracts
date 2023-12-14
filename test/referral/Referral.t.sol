@@ -6,11 +6,11 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {IPoolMock} from "../pool/mock/IPoolMock.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../token/ERC20Mock.sol";
 import {IReferral} from "contracts/referral/IReferral.sol";
 
 import {Base_Test} from "../Base.t.sol";
