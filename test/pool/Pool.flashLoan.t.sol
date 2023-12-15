@@ -9,8 +9,8 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
-import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {FlashLoanMock} from "./mock/FlashLoanMock.sol";
+import {IPoolMock} from "./mock/IPoolMock.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 

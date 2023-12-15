@@ -14,7 +14,7 @@ import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../token/ERC20Mock.sol";
 
 contract PoolListMock {
     function getPoolList() external pure returns (address[] memory poolList) {

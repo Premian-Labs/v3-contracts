@@ -6,7 +6,7 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {IVolatilityOracle} from "contracts/oracle/IVolatilityOracle.sol";
 
-import {VolatilityOracleMock} from "contracts/test/oracle/VolatilityOracleMock.sol";
+import {VolatilityOracleMock} from "./VolatilityOracleMock.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {Base_Test} from "../Base.t.sol";
 

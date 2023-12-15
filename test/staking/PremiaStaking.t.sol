@@ -11,8 +11,8 @@ import {DeployTest} from "../Deploy.t.sol";
 
 import {IPremiaStaking} from "contracts/staking/IPremiaStaking.sol";
 import {PremiaStakingStorage} from "contracts/staking/PremiaStakingStorage.sol";
-import {PremiaStakingMock} from "contracts/test/staking/PremiaStakingMock.sol";
-import {PremiaStakingProxyMock} from "contracts/test/staking/PremiaStakingProxyMock.sol";
+import {PremiaStakingMock} from "./PremiaStakingMock.sol";
+import {PremiaStakingProxyMock} from "./PremiaStakingProxyMock.sol";
 
 import {IOFT} from "contracts/layerZero/token/oft/IOFT.sol";
 

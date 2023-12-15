@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity =0.8.19;
 
-import {ChainlinkAdapterStorage} from "../../adapter/chainlink/ChainlinkAdapterStorage.sol";
+import {ChainlinkAdapterStorage} from "contracts/adapter/chainlink/ChainlinkAdapterStorage.sol";
 
 contract ChainlinkOraclePriceStub {
     uint16 internal PHASE_ID = 1;

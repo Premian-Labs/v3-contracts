@@ -5,7 +5,7 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 
 import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-import {RelayerAccessManagerMock} from "contracts/test/relayer/RelayerAccessManagerMock.sol";
+import {RelayerAccessManagerMock} from "./RelayerAccessManagerMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 

@@ -8,10 +8,10 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
-import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/UnderwriterVaultMock.sol";
+import {UnderwriterVaultMock} from "./UnderwriterVaultMock.sol";
 import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {IPoolMock} from "../../../pool/mock/IPoolMock.sol";
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {WAD, ZERO} from "contracts/libraries/Constants.sol";
 

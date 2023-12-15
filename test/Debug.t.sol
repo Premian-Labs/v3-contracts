@@ -22,10 +22,10 @@ import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
-import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
+import {OracleAdapterMock} from "./adapter/OracleAdapterMock.sol";
 
-import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
-import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
+import {ReferralMock} from "./referral/ReferralMock.sol";
+import {IReferralMock} from "./referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 

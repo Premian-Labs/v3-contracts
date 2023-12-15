@@ -3,7 +3,7 @@ pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
-import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
+import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 
 contract OracleAdapterMock is IOracleAdapter {
     address internal immutable BASE;

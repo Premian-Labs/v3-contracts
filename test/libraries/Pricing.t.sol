@@ -8,7 +8,7 @@ import {Pricing} from "contracts/libraries/Pricing.sol";
 import {IPricing} from "contracts/libraries/IPricing.sol";
 import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
-import {PricingMock} from "contracts/test/libraries/PricingMock.sol";
+import {PricingMock} from "./PricingMock.sol";
 
 import {Base_Test} from "../Base.t.sol";
 

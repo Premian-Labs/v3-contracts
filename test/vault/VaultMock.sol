@@ -3,8 +3,8 @@ pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IPoolFactory} from "../../factory/IPoolFactory.sol";
-import {Vault} from "../../vault/Vault.sol";
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+import {Vault} from "contracts/vault/Vault.sol";
 
 contract VaultMock is Vault {
     UD60x18 public utilisation = UD60x18.wrap(1e18);

@@ -4,7 +4,7 @@ pragma solidity =0.8.19;
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC3156FlashBorrower} from "@solidstate/contracts/interfaces/IERC3156FlashBorrower.sol";
 
-import {IPool} from "../../pool/IPool.sol";
+import {IPool} from "contracts/pool/IPool.sol";
 
 contract FlashLoanMock is IERC3156FlashBorrower {
     bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");

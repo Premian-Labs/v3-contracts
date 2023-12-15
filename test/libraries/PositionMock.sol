@@ -4,8 +4,8 @@ pragma solidity =0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {UD50x28} from "../../libraries/UD50x28.sol";
-import {Position} from "../../libraries/Position.sol";
+import {UD50x28} from "contracts/libraries/UD50x28.sol";
+import {Position} from "contracts/libraries/Position.sol";
 
 contract PositionMock {
     function keyHash(Position.KeyInternal memory self) external pure returns (bytes32) {

@@ -6,7 +6,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/IERC1155BaseInternal.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {ERC20Mock} from "../../token/ERC20Mock.sol";
 
 import {Assertions} from "../../Assertions.sol";
 import {OptionPSFactory, IOptionPSFactory} from "contracts/mining/optionPS/OptionPSFactory.sol";

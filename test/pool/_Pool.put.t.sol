@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {IPoolMock} from "./mock/IPoolMock.sol";
 
 import {PoolTest} from "./_Pool.t.sol";
 

@@ -3,8 +3,8 @@ pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {Pricing} from "../../libraries/Pricing.sol";
-import {UD50x28} from "../../libraries/UD50x28.sol";
+import {Pricing} from "contracts/libraries/Pricing.sol";
+import {UD50x28} from "contracts/libraries/UD50x28.sol";
 
 contract PricingMock {
     function proportion(UD60x18 lower, UD60x18 upper, UD50x28 marketPrice) external pure returns (UD50x28) {
