@@ -2,13 +2,13 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity =0.8.19;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IRewardDistributor} from "./IRewardDistributor.sol";
 
-contract RewardDistributor is IRewardDistributor, SafeOwnable {
+contract RewardDistributor is IRewardDistributor, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     address internal immutable REWARD_TOKEN;
@@ -19,7 +19,7 @@ contract RewardDistributor is IRewardDistributor, SafeOwnable {
         REWARD_TOKEN = rewardToken;
     }
 
-    function addRewards(address[] calldata users, uint256[] calldata amounts) external {
+    function addRewards(address[] calldata users, uint256[] calldata amounts) external nonReentrant {
         if (users.length != amounts.length) revert RewardDistributor__InvalidArrayLength();
 
         uint256 totalRewards;
@@ -35,7 +35,7 @@ contract RewardDistributor is IRewardDistributor, SafeOwnable {
         }
     }
 
-    function claim() external {
+    function claim() external nonReentrant {
         uint256 reward = rewards[msg.sender];
         if (reward == 0) revert RewardDistributor__NoRewards();
 
