@@ -963,6 +963,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
             quoteOBHash = _quoteOBHash(quoteOB);
+
+            _revertIfOptionExpired(l);
             _revertIfQuoteOBInvalid(l, args, quoteOB, quoteOBHash);
 
             premiumAndFee = _calculateQuoteOBPremiumAndFee(

@@ -81,6 +81,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         Signature calldata sig
     ) external view returns (bool, InvalidQuoteOBError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _revertIfOptionExpired(l);
         bytes32 quoteOBHash = _quoteOBHash(quoteOB);
         return
             _areQuoteOBAndBalanceValid(l, FillQuoteOBArgsInternal(user, address(0), size, sig), quoteOB, quoteOBHash);
