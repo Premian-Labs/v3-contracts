@@ -130,6 +130,24 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
         _test_fillQuoteOB_Success_WithReferral(false);
     }
 
+    function test_fillQuoteOB_RevertIf_OptionExpired() public {
+        mintAndApprove();
+        vm.startPrank(users.trader);
+        IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
+        pool.fillQuoteOB(quoteOB, quoteOB.size, sig, address(0));
+    }
+
+    function test_isQuoteOBValid_RevertIf_OptionExpired() public {
+        mintAndApprove();
+        vm.startPrank(users.trader);
+        IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
+        pool.isQuoteOBValid(users.trader, quoteOB, quoteOB.size, sig);
+    }
+
     function test_fillQuoteOB_RevertIf_QuoteOBExpired() public {
         quoteOB.deadline = block.timestamp - 1 hours;
 
