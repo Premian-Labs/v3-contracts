@@ -12,7 +12,7 @@ async function main() {
   );
 
   const feed = arbitrumFeeds.filter(
-    (feed) => feed.token === arbitrum.tokens.MIM,
+    (feed) => {}, // feed.token === arbitrum.tokens.MIM,
   );
 
   const transaction =
