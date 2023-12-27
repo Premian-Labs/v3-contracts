@@ -608,5 +608,6 @@
       "owner": ""
     }
   },
-  "dualMining": {}
+  "dualMining": {},
+  "rewardDistributor": {}
 }

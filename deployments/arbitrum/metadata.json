@@ -1204,5 +1204,17 @@
       "txHash": "0x7b0af8296a331d78430475c067b5578e78404e68c5ac4319b00be05c2a740b3c",
       "owner": ""
     }
+  },
+  "rewardDistributor": {
+    "ARB": {
+      "address": "0xd3C1f1ADF2e6d1C001bC7EF8A31DAF37D2495b4c",
+      "block": 164417605,
+      "commitHash": "99258f899ec67df11ebc6dbafe5114dbdc043121",
+      "contractType": "Standalone",
+      "deploymentArgs": ["0x912CE59144191C1204E64559FE8253a0e49E6548"],
+      "timestamp": 1703719114,
+      "txHash": "0x997d57db7fe9d35de9027279c5a3806189da47f3fb4b1403e49889424acfdd92",
+      "owner": ""
+    }
   }
 }
