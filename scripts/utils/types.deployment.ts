@@ -18,6 +18,7 @@ export interface DeploymentMetadata {
   optionPS: { [name: string]: ContractDeploymentMetadata };
   optionReward: { [name: string]: ContractDeploymentMetadata };
   vaults: { [name: string]: ContractDeploymentMetadata };
+  rewardDistributor: { [name: string]: ContractDeploymentMetadata };
 }
 
 export enum ContractKey {

@@ -1205,5 +1205,6 @@
       "txHash": "0x7b0af8296a331d78430475c067b5578e78404e68c5ac4319b00be05c2a740b3c",
       "owner": ""
     }
-  }
+  },
+  "rewardDistributor": {}
 }

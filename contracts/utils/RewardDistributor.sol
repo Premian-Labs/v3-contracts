@@ -31,7 +31,7 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard {
 
         for (uint256 i = 0; i < users.length; i++) {
             rewards[users[i]] += amounts[i];
-            emit AddedRewards(users[i], amounts[i]);
+            emit AddedRewards(msg.sender, users[i], amounts[i]);
         }
     }
 

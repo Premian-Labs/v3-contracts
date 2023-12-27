@@ -6,7 +6,7 @@ interface IRewardDistributor {
     error RewardDistributor__InvalidArrayLength();
     error RewardDistributor__NoRewards();
 
-    event AddedRewards(address indexed user, uint256 amount);
+    event AddedRewards(address indexed rewardProvider, address indexed user, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
     function addRewards(address[] calldata users, uint256[] calldata amounts) external;
