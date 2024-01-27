@@ -525,9 +525,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             l.totalLockedAssets = l.totalLockedAssets - collateral;
 
             l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] - size;
-
-            // If the vault holds no short positions for this listing it will be removed
-            if (l.positionSizes[maturity][strike] == ZERO) l.removeListing(strike, maturity);
         }
 
         // Update the timestamp of latest trade
