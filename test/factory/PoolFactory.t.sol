@@ -119,8 +119,8 @@ abstract contract PoolFactory_Integration_Shared_Test is Base_Test {
     }
 
     function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
-        uint256[4] memory strike = [uint256(99999 ether), uint256(1050 ether), uint256(960 ether), uint256(11.1 ether)];
-        uint256[4] memory interval = [uint256(5000 ether), uint256(100 ether), uint256(50 ether), uint256(1 ether)];
+        uint256[4] memory strike = [uint256(99999 ether), uint256(1050 ether), uint256(961 ether), uint256(11.1 ether)];
+        uint256[4] memory interval = [uint256(1000 ether), uint256(100 ether), uint256(10 ether), uint256(1 ether)];
 
         for (uint256 i; i < strike.length; i++) {
             poolKey.strike = ud(strike[i]);
