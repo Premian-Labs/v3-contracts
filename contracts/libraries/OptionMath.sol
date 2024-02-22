@@ -226,8 +226,7 @@ library OptionMath {
 
         uint256 _strike = strike.unwrap();
         uint256 exponent = log10Floor(_strike);
-        uint256 multiplier = (_strike >= 5 * 10 ** exponent) ? 5 : 1;
-        return ud(multiplier * 10 ** (exponent - 1));
+        return ud(10 ** (exponent - 1));
     }
 
     /// @notice Rounds `strike` using the calculated strike interval

@@ -151,11 +151,11 @@ abstract contract OptionPSTest is Assertions, Test {
         // prettier-ignore
         UD60x18[2][7] memory values = [
             [ud(1.11e18),    ud(0.1e18)],
-            [ud(7.4e18),     ud(0.5e18)],
+            [ud(7.401e18),     ud(0.1e18)],
             [ud(10.5e18),    ud(1e18)],
             [ud(45.5e18),    ud(1e18)],
-            [ud(54e18),      ud(5e18)],
-            [ud(99e18),      ud(5e18)],
+            [ud(54.9e18),      ud(1e18)],
+            [ud(99.9e18),      ud(1e18)],
             [ud(101e18),     ud(10e18)]
         ];
 
