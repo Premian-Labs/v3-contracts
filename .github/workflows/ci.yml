@@ -59,8 +59,11 @@ jobs:
       - name: 'Show the Foundry config'
         run: 'forge config'
 
+      - name: 'Show Forge version'
+        run: 'forge --version'
+
       - name: 'Build the contracts'
-        run: 'forge build --deny-warnings --ignored-error-codes 3628 --ignored-error-codes 5574'
+        run: 'forge build --ast --deny-warnings --ignored-error-codes 3628 --ignored-error-codes 5574'
 
       - name: 'Cache the build so that it can be re-used by the other jobs'
         uses: 'actions/cache/save@v3'
