@@ -211,22 +211,22 @@ contract PremiaAirdripTest is Test, Assertions {
         vm.prank(owner);
         premiaAirdrip.initialize(owner, users);
 
-        IPremiaAirdrip.Allocation[12] memory aliceAllocations = premiaAirdrip.previewVestingSchedule(alice);
+        IPremiaAirdrip.Allocation[12] memory aliceVestingSchedule = premiaAirdrip.previewVestingSchedule(alice);
         for (uint i = 0; i < 12; i++) {
-            assertEq(aliceAllocations[i].amount, aliceAllocation);
-            assertEq(aliceAllocations[i].vestDate, vestingDates[i]);
+            assertEq(aliceVestingSchedule[i].amount, aliceAllocation);
+            assertEq(aliceVestingSchedule[i].vestDate, vestingDates[i]);
         }
 
-        IPremiaAirdrip.Allocation[12] memory bobAllocations = premiaAirdrip.previewVestingSchedule(bob);
+        IPremiaAirdrip.Allocation[12] memory bobVestingSchedule = premiaAirdrip.previewVestingSchedule(bob);
         for (uint i = 0; i < 12; i++) {
-            assertEq(bobAllocations[i].amount, bobAllocation);
-            assertEq(bobAllocations[i].vestDate, vestingDates[i]);
+            assertEq(bobVestingSchedule[i].amount, bobAllocation);
+            assertEq(bobVestingSchedule[i].vestDate, vestingDates[i]);
         }
 
-        IPremiaAirdrip.Allocation[12] memory carolAllocations = premiaAirdrip.previewVestingSchedule(carol);
+        IPremiaAirdrip.Allocation[12] memory carolVestingSchedule = premiaAirdrip.previewVestingSchedule(carol);
         for (uint i = 0; i < 12; i++) {
-            assertEq(carolAllocations[i].amount, carolAllocation);
-            assertEq(carolAllocations[i].vestDate, vestingDates[i]);
+            assertEq(carolVestingSchedule[i].amount, carolAllocation);
+            assertEq(carolVestingSchedule[i].vestDate, vestingDates[i]);
         }
     }
 

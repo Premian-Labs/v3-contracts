@@ -3,7 +3,6 @@
 pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 library PremiaAirdripStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.PremiaAirdrip");
