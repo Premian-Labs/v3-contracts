@@ -3,27 +3,19 @@ import {
   ProxyUpgradeableOwnable__factory,
 } from '../../../typechain';
 import { ethers } from 'hardhat';
-import {
-  ContractType,
-  initialize,
-  updateDeploymentMetadata,
-} from '../../utils';
+import { ContractType, updateDeploymentMetadata } from '../../utils';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const { deployment } = await initialize(deployer);
 
-  const implementationArgs = [deployment.tokens['PREMIA']];
-  const implementation = await new PremiaAirdrip__factory(deployer).deploy(
-    implementationArgs[0],
-  );
+  const implementation = await new PremiaAirdrip__factory(deployer).deploy();
 
   await updateDeploymentMetadata(
     deployer,
     'premiaAirdrip.PremiaAirdripImplementation',
     ContractType.Implementation,
     implementation,
-    implementationArgs,
+    [],
     { logTxUrl: true, verification: { enableVerification: true } },
   );
 

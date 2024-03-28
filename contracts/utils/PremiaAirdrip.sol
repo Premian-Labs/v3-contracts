@@ -16,15 +16,11 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice premia token interface
-    IERC20 public immutable PREMIA;
+    IERC20 public constant PREMIA = IERC20(0x51fC0f6660482Ea73330E414eFd7808811a57Fa2);
     /// @notice total allocation of premia distributed over the vesting period
     UD60x18 public constant TOTAL_ALLOCATION = UD60x18.wrap(2_000_000e18);
     /// @notice total allocation of premia distributed over the vesting period
     UD60x18 public constant VESTING_INTERVALS = UD60x18.wrap(12e18);
-
-    constructor(IERC20 premia) {
-        PREMIA = premia;
-    }
 
     /// @inheritdoc IPremiaAirdrip
     function initialize(User[] memory users) external nonReentrant onlyOwner {

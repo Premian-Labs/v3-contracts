@@ -36,7 +36,7 @@ contract PremiaAirdripTest is Test, Assertions {
     function setUp() public {
         vm.createSelectFork({blockNumber: 194768525, urlOrAlias: "arbitrum_one"});
 
-        premia = IERC20(address(new ERC20Mock("PREMIA", 18)));
+        premia = IERC20(0x51fC0f6660482Ea73330E414eFd7808811a57Fa2);
 
         alice = makeAddr("alice");
         bob = makeAddr("bob");
@@ -49,12 +49,12 @@ contract PremiaAirdripTest is Test, Assertions {
         owner = makeAddr("owner");
 
         vm.startPrank(owner);
-        PremiaAirdrip implementation = new PremiaAirdrip(premia);
+        PremiaAirdrip implementation = new PremiaAirdrip();
         ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
         premiaAirdrip = PremiaAirdrip(address(proxy));
 
         totalAllocation = premiaAirdrip.TOTAL_ALLOCATION().unwrap();
-        emissionRate = ud(totalAllocation) / ud(20_000_000e18) / ud(12e18);
+        emissionRate = ud(2_000_000e18) / ud(20_000_000e18) / ud(12e18);
 
         deal(address(premia), owner, totalAllocation);
         premia.approve(address(premiaAirdrip), totalAllocation);
