@@ -8,6 +8,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
+import {ONE} from "../libraries/Constants.sol";
 import {IPremiaAirdrip} from "./IPremiaAirdrip.sol";
 import {PremiaAirdripStorage} from "./PremiaAirdripStorage.sol";
 
@@ -29,8 +30,9 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     function initialize(address sender, User[] memory users) external nonReentrant onlyOwner {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
         if (l.initialized) revert PremiaAirdrip__Initialized();
+        if (users.length == 0) revert PremiaAirdrip__ArrayEmpty();
 
-        PREMIA.safeTransferFrom(sender, address(this), TOTAL_ALLOCATION.unwrap());
+        PREMIA.safeTransferFrom(msg.sender, address(this), TOTAL_ALLOCATION.unwrap());
 
         l.vestingDates = [
             1723708800, // Thu Aug 15 2024 08:00:00 GMT+0000
@@ -49,8 +51,10 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
 
         UD60x18 totalInfluence;
         for (uint256 i = 0; i < users.length; i++) {
-            l.influence[users[i].user] = users[i].influence;
-            totalInfluence = totalInfluence + users[i].influence;
+            User memory u = users[i];
+            if (u.user == address(0) || u.influence < ONE) revert PremiaAirdrip__InvalidUser(u.user, u.influence);
+            l.influence[u.user] = u.influence;
+            totalInfluence = totalInfluence + u.influence;
         }
 
         l.emissionRate = (TOTAL_ALLOCATION / totalInfluence) / VESTING_INTERVALS;

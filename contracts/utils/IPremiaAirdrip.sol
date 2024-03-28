@@ -5,7 +5,9 @@ pragma solidity ^0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IPremiaAirdrip {
+    error PremiaAirdrip__ArrayEmpty();
     error PremiaAirdrip__Initialized();
+    error PremiaAirdrip__InvalidUser(address user, UD60x18 influence);
     error PremiaAirdrip__InvalidVestingDates();
     error PremiaAirdrip__NotInitialized();
     error PremiaAirdrip__ZeroAmountClaimable();
@@ -23,8 +25,7 @@ interface IPremiaAirdrip {
         uint256 vestDate;
     }
 
-    /// @notice Initializes the airdrip contract
-    /// @param sender The address that will send the premia tokens
+    /// @notice Initializes the airdrip contract by pulling $PREMIA tokens from msg.sender and setting state variables
     /// @param users The users that will receive the premia tokens
     function initialize(address sender, User[] memory users) external;
 
