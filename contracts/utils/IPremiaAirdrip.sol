@@ -27,7 +27,7 @@ interface IPremiaAirdrip {
 
     /// @notice Initializes the airdrip contract by pulling $PREMIA tokens from msg.sender and setting state variables
     /// @param users The users that will receive the premia tokens
-    function initialize(address sender, User[] memory users) external;
+    function initialize(User[] memory users) external;
 
     /// @notice Claims the premia tokens for the user.
     function claim() external;

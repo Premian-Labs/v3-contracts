@@ -32,7 +32,7 @@ async function main() {
     users.push({ user, influence: snapshot.total[user] });
   }
 
-  await premiaAirdrip.initialize(deployer.address, users);
+  await premiaAirdrip.initialize(users);
 }
 
 main()

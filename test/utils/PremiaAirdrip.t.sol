@@ -6,7 +6,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 
-import {ZERO} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {IPremiaAirdrip} from "contracts/utils/IPremiaAirdrip.sol";
 import {PremiaAirdrip} from "contracts/utils/PremiaAirdrip.sol";
@@ -87,7 +87,7 @@ contract PremiaAirdripTest is Test, Assertions {
         emit Initialized(emissionRate, ud(20_000_000e18));
 
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
         assertEq(premia.balanceOf(address(premiaAirdrip)), totalAllocation);
     }
 
@@ -95,7 +95,7 @@ contract PremiaAirdripTest is Test, Assertions {
         IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](0);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(alice);
-        premiaAirdrip.initialize(alice, _users);
+        premiaAirdrip.initialize(_users);
     }
 
     function test_initialize_RevertIf_ArrayEmpty() public {
@@ -140,15 +140,15 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_initialize_RevertIf_Initialized() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__Initialized.selector);
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
     }
 
     function test_claim_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         assertEq(premia.balanceOf(alice), ZERO);
         assertEq(premia.balanceOf(bob), ZERO);
@@ -206,7 +206,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_RevertIf_ZeroAmountClaimable() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
         vm.warp(allocations[11].vestDate);
@@ -221,7 +221,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_CanOnlyClaimOncePerPeriod() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
         vm.warp(allocations[5].vestDate);
@@ -237,7 +237,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_CannotClaimBeforeVestingStart() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
         vm.warp(allocations[0].vestDate - 1);
@@ -249,7 +249,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewVestingSchedule_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory aliceVestingSchedule = premiaAirdrip.previewVestingSchedule(alice);
         for (uint i = 0; i < 12; i++) {
@@ -272,7 +272,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewClaimedAllocations_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory aliceClaimedAllocations = premiaAirdrip.previewClaimedAllocations(alice);
         for (uint i = 0; i < 12; i++) {
@@ -361,7 +361,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewPendingAllocations_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(owner, users);
+        premiaAirdrip.initialize(users);
 
         IPremiaAirdrip.Allocation[12] memory alicePendingAllocations = premiaAirdrip.previewPendingAllocations(alice);
         for (uint i = 0; i < 12; i++) {

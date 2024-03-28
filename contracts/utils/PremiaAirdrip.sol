@@ -27,7 +27,7 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPremiaAirdrip
-    function initialize(address sender, User[] memory users) external nonReentrant onlyOwner {
+    function initialize(User[] memory users) external nonReentrant onlyOwner {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
         if (l.initialized) revert PremiaAirdrip__Initialized();
         if (users.length == 0) revert PremiaAirdrip__ArrayEmpty();
