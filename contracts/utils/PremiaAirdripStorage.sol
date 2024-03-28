@@ -10,14 +10,14 @@ library PremiaAirdripStorage {
     struct Layout {
         // whether the contract has been initialized
         bool initialized;
-        // premia per influence per vesting interval
+        // premia per influence per second
         UD60x18 emissionRate;
-        // dates which the premia airdrip will vest
-        uint256[12] vestingDates;
         // total influence per user
         mapping(address user => UD60x18 influence) influence;
-        // amount claimed at each vest date
-        mapping(address usermapping => mapping(uint256 vestDate => uint256 amountClaimed)) allocations;
+        // total amount claimed per user
+        mapping(address user => uint256 claimed) claimed;
+        // timestamp of last claim per user
+        mapping(address user => uint256 lastClaim) lastClaim;
     }
 
     function layout() internal pure returns (Layout storage l) {

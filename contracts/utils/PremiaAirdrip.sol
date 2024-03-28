@@ -2,7 +2,7 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity =0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
@@ -19,8 +19,10 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     IERC20 public constant PREMIA = IERC20(0x51fC0f6660482Ea73330E414eFd7808811a57Fa2);
     /// @notice total allocation of premia distributed over the vesting period
     UD60x18 public constant TOTAL_ALLOCATION = UD60x18.wrap(2_000_000e18);
-    /// @notice total allocation of premia distributed over the vesting period
-    UD60x18 public constant VESTING_INTERVALS = UD60x18.wrap(12e18);
+    /// @notice duration of time premia is distributed
+    uint256 public constant VESTING_DURATION = 365 days;
+    // @notice date which the premia airdrip will start to vest
+    uint256 public constant VESTING_START = 1723708800; // Thu Aug 15 2024 08:00:00 GMT+0000
 
     /// @inheritdoc IPremiaAirdrip
     function initialize(User[] memory users) external nonReentrant onlyOwner {
@@ -29,21 +31,6 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
         if (users.length == 0) revert PremiaAirdrip__ArrayEmpty();
 
         PREMIA.safeTransferFrom(msg.sender, address(this), TOTAL_ALLOCATION.unwrap());
-
-        l.vestingDates = [
-            1723708800, // Thu Aug 15 2024 08:00:00 GMT+0000
-            1726387200, // Sun Sep 15 2024 08:00:00 GMT+0000
-            1728979200, // Tue Oct 15 2024 08:00:00 GMT+0000
-            1731657600, // Fri Nov 15 2024 08:00:00 GMT+0000
-            1734249600, // Sun Dec 15 2024 08:00:00 GMT+0000
-            1736928000, // Wed Jan 15 2025 08:00:00 GMT+0000
-            1739606400, // Sat Feb 15 2025 08:00:00 GMT+0000
-            1742025600, // Sat Mar 15 2025 08:00:00 GMT+0000
-            1744704000, // Tue Apr 15 2025 08:00:00 GMT+0000
-            1747296000, // Thu May 15 2025 08:00:00 GMT+0000
-            1749974400, // Sun Jun 15 2025 08:00:00 GMT+0000
-            1752566400 // Tue Jul 15 2025 08:00:00 GMT+0000
-        ];
 
         UD60x18 totalInfluence;
         for (uint256 i = 0; i < users.length; i++) {
@@ -57,7 +44,7 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
             totalInfluence = totalInfluence + user.influence;
         }
 
-        l.emissionRate = (TOTAL_ALLOCATION / totalInfluence) / VESTING_INTERVALS;
+        l.emissionRate = TOTAL_ALLOCATION / totalInfluence / _timestampUD60x18(VESTING_DURATION);
         emit Initialized(l.emissionRate, totalInfluence);
 
         l.initialized = true;
@@ -66,57 +53,75 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     /// @inheritdoc IPremiaAirdrip
     function claim() external nonReentrant {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
+
+        uint256 lastClaim = l.lastClaim[msg.sender];
+        if (lastClaim >= block.timestamp) revert PremiaAirdrip__NotClaimable(lastClaim, block.timestamp);
+        if (VESTING_START > block.timestamp) revert PremiaAirdrip__NotVested(VESTING_START, block.timestamp);
         if (!l.initialized) revert PremiaAirdrip__NotInitialized();
 
-        uint256 amount;
-        uint256 allocation = _calculateAllocation(l, msg.sender);
-        for (uint256 i = 0; i < l.vestingDates.length; i++) {
-            uint256 vestingDate = l.vestingDates[i];
-
-            if (vestingDate > block.timestamp) continue;
-            if (l.allocations[msg.sender][vestingDate] > 0) continue;
-
-            amount = amount + allocation;
-            l.allocations[msg.sender][vestingDate] = allocation;
-        }
-
+        uint256 amount = _calculateClaimAmount(l, msg.sender, lastClaim);
         if (amount == 0) revert PremiaAirdrip__ZeroAmountClaimable();
 
+        l.lastClaim[msg.sender] = block.timestamp;
+        l.claimed[msg.sender] += amount;
+
         PREMIA.safeTransfer(msg.sender, amount);
-        emit Claimed(msg.sender, amount, allocation);
+
+        uint256 claimed = l.claimed[msg.sender];
+        uint256 remaining = _previewClaimableRemaining(l, msg.sender);
+
+        emit Claimed(msg.sender, amount, claimed, remaining);
     }
 
-    function _calculateAllocation(PremiaAirdripStorage.Layout storage l, address user) internal view returns (uint256) {
-        return (l.influence[user] * l.emissionRate).unwrap();
+    function _calculateClaimAmount(
+        PremiaAirdripStorage.Layout storage l,
+        address user,
+        uint256 lastClaim
+    ) internal view returns (uint256) {
+        UD60x18 premiaPerSecond = l.influence[user] * l.emissionRate;
+        uint256 elapsedSeconds = lastClaim == 0 ? block.timestamp - VESTING_START : block.timestamp - lastClaim;
+        return (premiaPerSecond * _timestampUD60x18(elapsedSeconds)).unwrap();
     }
 
-    /// @inheritdoc IPremiaAirdrip
-    function previewVestingSchedule(address user) external view returns (Allocation[12] memory allocations) {
-        PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
-        for (uint256 i = 0; i < l.vestingDates.length; i++) {
-            allocations[i] = Allocation({amount: _calculateAllocation(l, user), vestDate: l.vestingDates[i]});
-        }
-        return allocations;
-    }
-
-    /// @inheritdoc IPremiaAirdrip
-    function previewClaimedAllocations(address user) external view returns (Allocation[12] memory allocations) {
-        PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
-        for (uint256 i = 0; i < l.vestingDates.length; i++) {
-            uint256 vestingDate = l.vestingDates[i];
-            allocations[i] = Allocation({amount: l.allocations[user][vestingDate], vestDate: vestingDate});
-        }
-        return allocations;
+    function _timestampUD60x18(uint256 timestamp) internal view returns (UD60x18) {
+        return ud(timestamp * 1e18);
     }
 
     /// @inheritdoc IPremiaAirdrip
-    function previewPendingAllocations(address user) external view returns (Allocation[12] memory allocations) {
+    function previewMaxClaimableAmount(address user) external view returns (uint256) {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
-        for (uint256 i = 0; i < l.vestingDates.length; i++) {
-            uint256 vestingDate = l.vestingDates[i];
-            uint256 allocation = l.allocations[user][vestingDate] > 0 ? 0 : _calculateAllocation(l, user);
-            allocations[i] = Allocation({amount: allocation, vestDate: vestingDate});
-        }
-        return allocations;
+        return _previewMaxClaimableAmount(l, user);
+    }
+
+    /// @inheritdoc IPremiaAirdrip
+    function previewClaimableAmount(address user) external view returns (uint256) {
+        PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
+        return _calculateClaimAmount(l, user, l.lastClaim[user]);
+    }
+
+    /// @inheritdoc IPremiaAirdrip
+    function previewClaimableRemaining(address user) external view returns (uint256) {
+        PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
+        return _previewClaimableRemaining(l, user);
+    }
+
+    /// @inheritdoc IPremiaAirdrip
+    function previewClaimedAmount(address user) external view returns (uint256) {
+        PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
+        return l.claimed[user];
+    }
+
+    function _previewMaxClaimableAmount(
+        PremiaAirdripStorage.Layout storage l,
+        address user
+    ) internal view returns (uint256) {
+        return (l.influence[user] * l.emissionRate * _timestampUD60x18(VESTING_DURATION)).unwrap();
+    }
+
+    function _previewClaimableRemaining(
+        PremiaAirdripStorage.Layout storage l,
+        address user
+    ) internal view returns (uint256) {
+        return _previewMaxClaimableAmount(l, user) - l.claimed[user];
     }
 }
