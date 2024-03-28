@@ -42,9 +42,9 @@ contract PremiaAirdripTest is Test, Assertions {
         bob = makeAddr("bob");
         carol = makeAddr("carol");
 
-        users.push(IPremiaAirdrip.User({user: alice, influence: ud(2_000_000e18)}));
-        users.push(IPremiaAirdrip.User({user: bob, influence: ud(10_000_000e18)}));
-        users.push(IPremiaAirdrip.User({user: carol, influence: ud(8_000_000e18)}));
+        users.push(IPremiaAirdrip.User({addr: alice, influence: ud(2_000_000e18)}));
+        users.push(IPremiaAirdrip.User({addr: bob, influence: ud(10_000_000e18)}));
+        users.push(IPremiaAirdrip.User({addr: carol, influence: ud(8_000_000e18)}));
 
         owner = makeAddr("owner");
 
@@ -107,14 +107,14 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_initialize_RevertIf_InvalidUser() public {
         IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](3);
-        _users[0] = (IPremiaAirdrip.User({user: alice, influence: ud(2_000_000e18)}));
-        _users[1] = (IPremiaAirdrip.User({user: address(0), influence: ud(10_000_000e18)}));
-        _users[2] = (IPremiaAirdrip.User({user: carol, influence: ud(8_000_000e18)}));
+        _users[0] = (IPremiaAirdrip.User({addr: alice, influence: ud(2_000_000e18)}));
+        _users[1] = (IPremiaAirdrip.User({addr: address(0), influence: ud(10_000_000e18)}));
+        _users[2] = (IPremiaAirdrip.User({addr: carol, influence: ud(8_000_000e18)}));
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPremiaAirdrip.PremiaAirdrip__InvalidUser.selector,
-                _users[1].user,
+                _users[1].addr,
                 _users[1].influence
             )
         );
@@ -122,14 +122,14 @@ contract PremiaAirdripTest is Test, Assertions {
         vm.prank(owner);
         premiaAirdrip.initialize(_users);
 
-        _users[0] = (IPremiaAirdrip.User({user: alice, influence: ud(2_000_000e18)}));
-        _users[1] = (IPremiaAirdrip.User({user: bob, influence: ud(10_000_000e18)}));
-        _users[2] = (IPremiaAirdrip.User({user: carol, influence: ONE - ud(1)}));
+        _users[0] = (IPremiaAirdrip.User({addr: alice, influence: ud(2_000_000e18)}));
+        _users[1] = (IPremiaAirdrip.User({addr: bob, influence: ud(10_000_000e18)}));
+        _users[2] = (IPremiaAirdrip.User({addr: carol, influence: ONE - ud(1)}));
 
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPremiaAirdrip.PremiaAirdrip__InvalidUser.selector,
-                _users[2].user,
+                _users[2].addr,
                 _users[2].influence
             )
         );

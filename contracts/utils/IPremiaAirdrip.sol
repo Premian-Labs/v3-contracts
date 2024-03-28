@@ -16,7 +16,7 @@ interface IPremiaAirdrip {
     event Claimed(address indexed user, uint256 amount, uint256 monthlyAllocation);
 
     struct User {
-        address user;
+        address addr;
         UD60x18 influence;
     }
 

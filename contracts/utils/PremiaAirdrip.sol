@@ -51,10 +51,14 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
 
         UD60x18 totalInfluence;
         for (uint256 i = 0; i < users.length; i++) {
-            User memory u = users[i];
-            if (u.user == address(0) || u.influence < ONE) revert PremiaAirdrip__InvalidUser(u.user, u.influence);
-            l.influence[u.user] = u.influence;
-            totalInfluence = totalInfluence + u.influence;
+            User memory user = users[i];
+
+            if (user.addr == address(0) || user.influence < ONE) {
+                revert PremiaAirdrip__InvalidUser(user.addr, user.influence);
+            }
+
+            l.influence[user.addr] = user.influence;
+            totalInfluence = totalInfluence + user.influence;
         }
 
         l.emissionRate = (TOTAL_ALLOCATION / totalInfluence) / VESTING_INTERVALS;
