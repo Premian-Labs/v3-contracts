@@ -23,13 +23,15 @@ contract PremiaAirdripTest is Test, Assertions {
     address internal bob;
     address internal carol;
 
-    UD60x18 internal aliceAllocation;
-    UD60x18 internal bobAllocation;
-    UD60x18 internal carolAllocation;
+    UD60x18 internal aliceTokensPerSecond;
+    UD60x18 internal bobTokensPerSecond;
+    UD60x18 internal carolTokensPerSecond;
 
     uint256 internal totalAllocation;
     UD60x18 internal emissionRate;
-    uint256[] internal vestingDates;
+    uint256 internal vestingStart;
+
+    UD60x18 internal ONE_YEAR = UD60x18.wrap(365 days * 1e18);
 
     IPremiaAirdrip.User[] internal users;
 
@@ -54,30 +56,16 @@ contract PremiaAirdripTest is Test, Assertions {
         premiaAirdrip = PremiaAirdrip(address(proxy));
 
         totalAllocation = premiaAirdrip.TOTAL_ALLOCATION().unwrap();
-        emissionRate = ud(2_000_000e18) / ud(20_000_000e18) / ud(12e18);
+        vestingStart = premiaAirdrip.VESTING_START();
+        emissionRate = ud(2_000_000e18) / ud(20_000_000e18) / ud(365 days * 1e18);
 
         deal(address(premia), owner, totalAllocation);
         premia.approve(address(premiaAirdrip), totalAllocation);
         vm.stopPrank();
 
-        aliceAllocation = emissionRate * users[0].influence;
-        bobAllocation = emissionRate * users[1].influence;
-        carolAllocation = emissionRate * users[2].influence;
-
-        vestingDates = [
-            1723708800, // Thu Aug 15 2024 08:00:00 GMT+0000
-            1726387200, // Sun Sep 15 2024 08:00:00 GMT+0000
-            1728979200, // Tue Oct 15 2024 08:00:00 GMT+0000
-            1731657600, // Fri Nov 15 2024 08:00:00 GMT+0000
-            1734249600, // Sun Dec 15 2024 08:00:00 GMT+0000
-            1736928000, // Wed Jan 15 2025 08:00:00 GMT+0000
-            1739606400, // Sat Feb 15 2025 08:00:00 GMT+0000
-            1742025600, // Sat Mar 15 2025 08:00:00 GMT+0000
-            1744704000, // Tue Apr 15 2025 08:00:00 GMT+0000
-            1747296000, // Thu May 15 2025 08:00:00 GMT+0000
-            1749974400, // Sun Jun 15 2025 08:00:00 GMT+0000
-            1752566400 // Tue Jul 15 2025 08:00:00 GMT+0000
-        ];
+        aliceTokensPerSecond = emissionRate * users[0].influence;
+        bobTokensPerSecond = emissionRate * users[1].influence;
+        carolTokensPerSecond = emissionRate * users[2].influence;
     }
 
     event Initialized(UD60x18 emissionRate, UD60x18 totalInfluence);
@@ -85,7 +73,6 @@ contract PremiaAirdripTest is Test, Assertions {
     function test_initialize_Success() public {
         vm.expectEmit(false, false, false, true);
         emit Initialized(emissionRate, ud(20_000_000e18));
-
         vm.prank(owner);
         premiaAirdrip.initialize(users);
         assertEq(premia.balanceOf(address(premiaAirdrip)), totalAllocation);
@@ -96,6 +83,14 @@ contract PremiaAirdripTest is Test, Assertions {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(alice);
         premiaAirdrip.initialize(_users);
+    }
+
+    function test_initialize_RevertIf_Initialized() public {
+        vm.prank(owner);
+        premiaAirdrip.initialize(users);
+        vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__Initialized.selector);
+        vm.prank(owner);
+        premiaAirdrip.initialize(users);
     }
 
     function test_initialize_RevertIf_ArrayEmpty() public {
@@ -138,14 +133,6 @@ contract PremiaAirdripTest is Test, Assertions {
         premiaAirdrip.initialize(_users);
     }
 
-    function test_initialize_RevertIf_Initialized() public {
-        vm.prank(owner);
-        premiaAirdrip.initialize(users);
-        vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__Initialized.selector);
-        vm.prank(owner);
-        premiaAirdrip.initialize(users);
-    }
-
     function test_claim_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
@@ -154,52 +141,84 @@ contract PremiaAirdripTest is Test, Assertions {
         assertEq(premia.balanceOf(bob), ZERO);
         assertEq(premia.balanceOf(carol), ZERO);
 
-        IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
-
-        vm.warp(allocations[0].vestDate);
+        vm.warp(vestingStart + 1 seconds);
         vm.prank(alice);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(1e18) * aliceAllocation);
+        assertEq(premia.balanceOf(alice), aliceTokensPerSecond);
         assertEq(premia.balanceOf(bob), ZERO);
         assertEq(premia.balanceOf(carol), ZERO);
 
-        vm.warp(allocations[2].vestDate);
+        vm.warp(vestingStart + 100 seconds);
         vm.prank(carol);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(1e18) * aliceAllocation);
+        assertEq(premia.balanceOf(alice), aliceTokensPerSecond);
         assertEq(premia.balanceOf(bob), ZERO);
-        assertEq(premia.balanceOf(carol), ud(3e18) * carolAllocation);
+        assertEq(premia.balanceOf(carol), ud(100e18) * carolTokensPerSecond);
 
-        vm.warp(allocations[4].vestDate);
+        vm.warp(vestingStart + 100 days);
         vm.prank(alice);
         premiaAirdrip.claim();
         vm.prank(carol);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(5e18) * aliceAllocation);
+        assertEq(premia.balanceOf(alice), ud(100 days * 1e18) * aliceTokensPerSecond);
         assertEq(premia.balanceOf(bob), ZERO);
-        assertEq(premia.balanceOf(carol), ud(5e18) * carolAllocation);
+        assertEq(premia.balanceOf(carol), ud(100 days * 1e18) * carolTokensPerSecond);
 
-        vm.warp(allocations[11].vestDate);
+        vm.warp(vestingStart + 302 days);
         vm.prank(alice);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(12e18) * aliceAllocation);
+        assertEq(premia.balanceOf(alice), ud(302 days * 1e18) * aliceTokensPerSecond);
         assertEq(premia.balanceOf(bob), ZERO);
-        assertEq(premia.balanceOf(carol), ud(5e18) * carolAllocation);
+        assertEq(premia.balanceOf(carol), ud(100 days * 1e18) * carolTokensPerSecond);
 
-        vm.warp(allocations[11].vestDate + 90 days);
+        vm.warp(vestingStart + 375 days); // 10 days after vesting end
+        vm.prank(alice);
+        premiaAirdrip.claim();
         vm.prank(bob);
         premiaAirdrip.claim();
         vm.prank(carol);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(12e18) * aliceAllocation);
-        assertEq(premia.balanceOf(bob), ud(12e18) * bobAllocation);
-        assertEq(premia.balanceOf(carol), ud(12e18) * carolAllocation);
+        assertEq(premia.balanceOf(alice), ONE_YEAR * aliceTokensPerSecond);
+        assertEq(premia.balanceOf(bob), ONE_YEAR * bobTokensPerSecond);
+        assertEq(premia.balanceOf(carol), ONE_YEAR * carolTokensPerSecond);
+    }
 
-        assertApproxEqAbs(premia.balanceOf(address(premiaAirdrip)), 0, 80000000); // some dust remains in the contract
+    function test_claim_RevertIf_NotClaimable() public {
+        vm.prank(owner);
+        premiaAirdrip.initialize(users);
+
+        vm.warp(vestingStart + 10 seconds);
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        assertEq(premia.balanceOf(alice), ud(10e18) * aliceTokensPerSecond);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPremiaAirdrip.PremiaAirdrip__NotClaimable.selector,
+                vestingStart + 10 seconds,
+                block.timestamp
+            )
+        );
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+    }
+
+    function test_claim_RevertIf_NotVested() public {
+        vm.prank(owner);
+        premiaAirdrip.initialize(users);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPremiaAirdrip.PremiaAirdrip__NotVested.selector, vestingStart, block.timestamp)
+        );
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
     }
 
     function test_claim_RevertIf_NotInitialized() public {
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__NotInitialized.selector);
+        vm.warp(vestingStart);
         vm.prank(alice);
         premiaAirdrip.claim();
     }
@@ -208,243 +227,173 @@ contract PremiaAirdripTest is Test, Assertions {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
-        IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
-        vm.warp(allocations[11].vestDate);
+        vm.warp(vestingStart);
+        vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ZeroAmountClaimable.selector);
         vm.prank(alice);
         premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(12e18) * aliceAllocation);
 
+        vm.warp(vestingStart + 365 days); // 365 days after vesting start
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        assertEq(premia.balanceOf(alice), ONE_YEAR * aliceTokensPerSecond);
+
+        vm.warp(vestingStart + 365 days + 1 seconds); // 365 days and one second after vesting start
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ZeroAmountClaimable.selector);
         vm.prank(alice);
         premiaAirdrip.claim();
     }
 
-    function test_claim_CanOnlyClaimOncePerPeriod() public {
+    function test_previewMaxClaimableAmount_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
-        IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
-        vm.warp(allocations[5].vestDate);
-        vm.prank(alice);
-        premiaAirdrip.claim();
-        assertEq(premia.balanceOf(alice), ud(6e18) * aliceAllocation);
+        UD60x18 aliceMaxClaimable = ONE_YEAR * aliceTokensPerSecond;
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
 
-        vm.warp(allocations[5].vestDate + 15 days); // less than 1 month since last claim
-        vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ZeroAmountClaimable.selector);
+        vm.warp(vestingStart + 1 seconds);
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+
         vm.prank(alice);
         premiaAirdrip.claim();
+
+        vm.warp(vestingStart + 100 seconds);
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+
+        vm.warp(vestingStart + 100 days);
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+
+        vm.warp(vestingStart + 302 days);
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+
+        vm.warp(vestingStart + 375 days); // 10 days after vesting end
+        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
     }
 
-    function test_claim_CannotClaimBeforeVestingStart() public {
+    function test_previewClaimableAmount_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
-        IPremiaAirdrip.Allocation[12] memory allocations = premiaAirdrip.previewVestingSchedule(alice);
-        vm.warp(allocations[0].vestDate - 1);
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), ZERO);
 
-        vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ZeroAmountClaimable.selector);
+        vm.warp(vestingStart + 1 seconds);
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), aliceTokensPerSecond);
+
         vm.prank(alice);
         premiaAirdrip.claim();
+        UD60x18 totalClaimed = aliceTokensPerSecond;
+
+        vm.warp(vestingStart + 100 seconds);
+        UD60x18 expectedClaim = ud(100e18) * aliceTokensPerSecond - totalClaimed;
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), expectedClaim);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = totalClaimed + expectedClaim;
+
+        vm.warp(vestingStart + 100 days);
+        expectedClaim = ud(100 days * 1e18) * aliceTokensPerSecond - totalClaimed;
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), expectedClaim);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = totalClaimed + expectedClaim;
+
+        vm.warp(vestingStart + 302 days);
+        expectedClaim = ud(302 days * 1e18) * aliceTokensPerSecond - totalClaimed;
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), expectedClaim);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = totalClaimed + expectedClaim;
+
+        vm.warp(vestingStart + 375 days); // 10 days after vesting end
+        expectedClaim = ONE_YEAR * aliceTokensPerSecond - totalClaimed;
+        assertEq(premiaAirdrip.previewClaimableAmount(alice), expectedClaim);
     }
 
-    function test_previewVestingSchedule_Success() public {
+    function test_previewClaimableRemaining_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
-        IPremiaAirdrip.Allocation[12] memory aliceVestingSchedule = premiaAirdrip.previewVestingSchedule(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(aliceVestingSchedule[i].amount, aliceAllocation);
-            assertEq(aliceVestingSchedule[i].vestDate, vestingDates[i]);
-        }
+        UD60x18 aliceMaxClaimable = ONE_YEAR * aliceTokensPerSecond;
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable);
 
-        IPremiaAirdrip.Allocation[12] memory bobVestingSchedule = premiaAirdrip.previewVestingSchedule(bob);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(bobVestingSchedule[i].amount, bobAllocation);
-            assertEq(bobVestingSchedule[i].vestDate, vestingDates[i]);
-        }
+        vm.warp(vestingStart + 1 seconds);
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable);
 
-        IPremiaAirdrip.Allocation[12] memory carolVestingSchedule = premiaAirdrip.previewVestingSchedule(carol);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(carolVestingSchedule[i].amount, carolAllocation);
-            assertEq(carolVestingSchedule[i].vestDate, vestingDates[i]);
-        }
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        UD60x18 totalClaimed = aliceTokensPerSecond;
+
+        vm.warp(vestingStart + 100 seconds);
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable - totalClaimed);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = ud(100e18) * aliceTokensPerSecond;
+
+        vm.warp(vestingStart + 100 days);
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable - totalClaimed);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = ud(100 days * 1e18) * aliceTokensPerSecond;
+
+        vm.warp(vestingStart + 302 days);
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable - totalClaimed);
+
+        vm.prank(alice);
+        premiaAirdrip.claim();
+        totalClaimed = ud(302 days * 1e18) * aliceTokensPerSecond;
+
+        vm.warp(vestingStart + 375 days); // 10 days after vesting end
+        assertEq(premiaAirdrip.previewClaimableRemaining(alice), aliceMaxClaimable - totalClaimed);
     }
 
-    function test_previewClaimedAllocations_Success() public {
+    function test_previewClaimedAmount_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
-        IPremiaAirdrip.Allocation[12] memory aliceClaimedAllocations = premiaAirdrip.previewClaimedAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(aliceClaimedAllocations[i].vestDate, vestingDates[i]);
-        }
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), ZERO);
 
-        assertEq(aliceClaimedAllocations[0].amount, 0);
-        assertEq(aliceClaimedAllocations[1].amount, 0);
-        assertEq(aliceClaimedAllocations[2].amount, 0);
-        assertEq(aliceClaimedAllocations[3].amount, 0);
-        assertEq(aliceClaimedAllocations[4].amount, 0);
-        assertEq(aliceClaimedAllocations[5].amount, 0);
-        assertEq(aliceClaimedAllocations[6].amount, 0);
-        assertEq(aliceClaimedAllocations[7].amount, 0);
-        assertEq(aliceClaimedAllocations[8].amount, 0);
-        assertEq(aliceClaimedAllocations[9].amount, 0);
-        assertEq(aliceClaimedAllocations[10].amount, 0);
-        assertEq(aliceClaimedAllocations[11].amount, 0);
+        vm.warp(vestingStart + 1 seconds);
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), ZERO);
 
-        vm.warp(aliceClaimedAllocations[1].vestDate);
         vm.prank(alice);
         premiaAirdrip.claim();
+        UD60x18 totalClaimed = aliceTokensPerSecond;
 
-        aliceClaimedAllocations = premiaAirdrip.previewClaimedAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(aliceClaimedAllocations[i].vestDate, vestingDates[i]);
-        }
+        vm.warp(vestingStart + 100 seconds);
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), totalClaimed);
 
-        assertEq(aliceClaimedAllocations[0].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[1].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[2].amount, 0);
-        assertEq(aliceClaimedAllocations[3].amount, 0);
-        assertEq(aliceClaimedAllocations[4].amount, 0);
-        assertEq(aliceClaimedAllocations[5].amount, 0);
-        assertEq(aliceClaimedAllocations[6].amount, 0);
-        assertEq(aliceClaimedAllocations[7].amount, 0);
-        assertEq(aliceClaimedAllocations[8].amount, 0);
-        assertEq(aliceClaimedAllocations[9].amount, 0);
-        assertEq(aliceClaimedAllocations[10].amount, 0);
-        assertEq(aliceClaimedAllocations[11].amount, 0);
-
-        vm.warp(aliceClaimedAllocations[6].vestDate);
         vm.prank(alice);
         premiaAirdrip.claim();
+        totalClaimed = ud(100e18) * aliceTokensPerSecond;
 
-        aliceClaimedAllocations = premiaAirdrip.previewClaimedAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(aliceClaimedAllocations[i].vestDate, vestingDates[i]);
-        }
+        vm.warp(vestingStart + 100 days);
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), totalClaimed);
 
-        assertEq(aliceClaimedAllocations[0].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[1].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[2].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[3].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[4].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[5].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[6].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[7].amount, 0);
-        assertEq(aliceClaimedAllocations[8].amount, 0);
-        assertEq(aliceClaimedAllocations[9].amount, 0);
-        assertEq(aliceClaimedAllocations[10].amount, 0);
-        assertEq(aliceClaimedAllocations[11].amount, 0);
-
-        vm.warp(aliceClaimedAllocations[11].vestDate + 90 days);
         vm.prank(alice);
         premiaAirdrip.claim();
+        totalClaimed = ud(100 days * 1e18) * aliceTokensPerSecond;
 
-        aliceClaimedAllocations = premiaAirdrip.previewClaimedAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(aliceClaimedAllocations[i].vestDate, vestingDates[i]);
-        }
+        vm.warp(vestingStart + 302 days);
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), totalClaimed);
 
-        assertEq(aliceClaimedAllocations[0].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[1].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[2].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[3].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[4].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[5].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[6].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[7].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[8].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[9].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[10].amount, aliceAllocation);
-        assertEq(aliceClaimedAllocations[11].amount, aliceAllocation);
-    }
-
-    function test_previewPendingAllocations_Success() public {
-        vm.prank(owner);
-        premiaAirdrip.initialize(users);
-
-        IPremiaAirdrip.Allocation[12] memory alicePendingAllocations = premiaAirdrip.previewPendingAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(alicePendingAllocations[i].vestDate, vestingDates[i]);
-        }
-
-        assertEq(alicePendingAllocations[0].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[1].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[2].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[3].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[4].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[5].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[6].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[7].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[8].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[9].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[10].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[11].amount, aliceAllocation);
-
-        vm.warp(alicePendingAllocations[1].vestDate);
         vm.prank(alice);
         premiaAirdrip.claim();
+        totalClaimed = ud(302 days * 1e18) * aliceTokensPerSecond;
 
-        alicePendingAllocations = premiaAirdrip.previewPendingAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(alicePendingAllocations[i].vestDate, vestingDates[i]);
-        }
-
-        assertEq(alicePendingAllocations[0].amount, 0);
-        assertEq(alicePendingAllocations[1].amount, 0);
-        assertEq(alicePendingAllocations[2].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[3].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[4].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[5].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[6].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[7].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[8].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[9].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[10].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[11].amount, aliceAllocation);
-
-        vm.warp(alicePendingAllocations[6].vestDate);
-        vm.prank(alice);
-        premiaAirdrip.claim();
-
-        alicePendingAllocations = premiaAirdrip.previewPendingAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(alicePendingAllocations[i].vestDate, vestingDates[i]);
-        }
-
-        assertEq(alicePendingAllocations[0].amount, 0);
-        assertEq(alicePendingAllocations[1].amount, 0);
-        assertEq(alicePendingAllocations[2].amount, 0);
-        assertEq(alicePendingAllocations[3].amount, 0);
-        assertEq(alicePendingAllocations[4].amount, 0);
-        assertEq(alicePendingAllocations[5].amount, 0);
-        assertEq(alicePendingAllocations[6].amount, 0);
-        assertEq(alicePendingAllocations[7].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[8].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[9].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[10].amount, aliceAllocation);
-        assertEq(alicePendingAllocations[11].amount, aliceAllocation);
-
-        vm.warp(alicePendingAllocations[11].vestDate + 90 days);
-        vm.prank(alice);
-        premiaAirdrip.claim();
-
-        alicePendingAllocations = premiaAirdrip.previewPendingAllocations(alice);
-        for (uint i = 0; i < 12; i++) {
-            assertEq(alicePendingAllocations[i].vestDate, vestingDates[i]);
-        }
-
-        assertEq(alicePendingAllocations[0].amount, 0);
-        assertEq(alicePendingAllocations[1].amount, 0);
-        assertEq(alicePendingAllocations[2].amount, 0);
-        assertEq(alicePendingAllocations[3].amount, 0);
-        assertEq(alicePendingAllocations[4].amount, 0);
-        assertEq(alicePendingAllocations[5].amount, 0);
-        assertEq(alicePendingAllocations[6].amount, 0);
-        assertEq(alicePendingAllocations[7].amount, 0);
-        assertEq(alicePendingAllocations[8].amount, 0);
-        assertEq(alicePendingAllocations[9].amount, 0);
-        assertEq(alicePendingAllocations[10].amount, 0);
-        assertEq(alicePendingAllocations[11].amount, 0);
+        vm.warp(vestingStart + 375 days); // 10 days after vesting end
+        assertEq(premiaAirdrip.previewClaimedAmount(alice), totalClaimed);
     }
 }

@@ -78,12 +78,15 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
         address user,
         uint256 lastClaim
     ) internal view returns (uint256) {
+        uint256 vestingEnd = VESTING_START + VESTING_DURATION;
+        uint256 timestamp = block.timestamp >= vestingEnd ? vestingEnd : block.timestamp;
+        uint256 elapsedSeconds = lastClaim == 0 ? timestamp - VESTING_START : timestamp - lastClaim;
+
         UD60x18 premiaPerSecond = l.influence[user] * l.emissionRate;
-        uint256 elapsedSeconds = lastClaim == 0 ? block.timestamp - VESTING_START : block.timestamp - lastClaim;
         return (premiaPerSecond * _timestampUD60x18(elapsedSeconds)).unwrap();
     }
 
-    function _timestampUD60x18(uint256 timestamp) internal view returns (UD60x18) {
+    function _timestampUD60x18(uint256 timestamp) internal pure returns (UD60x18) {
         return ud(timestamp * 1e18);
     }
 
@@ -96,6 +99,7 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     /// @inheritdoc IPremiaAirdrip
     function previewClaimableAmount(address user) external view returns (uint256) {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
+        if (VESTING_START > block.timestamp) return 0;
         return _calculateClaimAmount(l, user, l.lastClaim[user]);
     }
 
