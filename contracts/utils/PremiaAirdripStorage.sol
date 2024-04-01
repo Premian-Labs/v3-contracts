@@ -10,8 +10,8 @@ library PremiaAirdripStorage {
     struct Layout {
         // whether the contract has been initialized
         bool initialized;
-        // premia per influence per second
-        UD60x18 emissionRate;
+        // premia per influence distributed per year
+        UD60x18 premiaPerInfluence;
         // total influence per user
         mapping(address user => UD60x18 influence) influence;
         // total amount claimed per user
