@@ -263,43 +263,43 @@ contract PremiaAirdripTest is Test, Assertions {
         premiaAirdrip.claim();
     }
 
-    function test_previewMaxClaimableAmount_Success() public {
+    function test_previewTotalAllocationAmount_Success() public {
         vm.prank(owner);
         premiaAirdrip.initialize(users);
 
         uint256 aliceMaxClaimable = aliceMaxClaimableAmount.intoUD60x18().unwrap();
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.warp(vestingStart + 1 seconds);
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.prank(alice);
         premiaAirdrip.claim();
 
         vm.warp(vestingStart + 100 seconds);
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.prank(alice);
         premiaAirdrip.claim();
 
         vm.warp(vestingStart + 100 days);
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.prank(alice);
         premiaAirdrip.claim();
 
         vm.warp(vestingStart + 302 days);
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.prank(alice);
         premiaAirdrip.claim();
 
         vm.warp(vestingStart + 375 days); // 10 days after vesting end
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
 
         vm.prank(alice);
         premiaAirdrip.claim();
-        assertEq(premiaAirdrip.previewMaxClaimableAmount(alice), aliceMaxClaimable);
+        assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
     }
 
     function test_previewClaimableAmount_Success() public {

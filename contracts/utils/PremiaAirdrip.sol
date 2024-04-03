@@ -89,15 +89,15 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
         if (startTimestamp >= endTimestamp) return 0;
 
         UD50x28 claimablePercent = ud50x28((endTimestamp - startTimestamp) * 1e28) / ud50x28(VESTING_DURATION * 1e28);
-        UD50x28 maxClaimableAmount = _previewMaxClaimableAmount(l, user).intoUD50x28();
+        UD50x28 totalAllocation = _previewTotalAllocationAmount(l, user).intoUD50x28();
 
-        return (claimablePercent * maxClaimableAmount).intoUD60x18().unwrap();
+        return (claimablePercent * totalAllocation).intoUD60x18().unwrap();
     }
 
     /// @inheritdoc IPremiaAirdrip
-    function previewMaxClaimableAmount(address user) external view returns (uint256) {
+    function previewTotalAllocationAmount(address user) external view returns (uint256) {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
-        return _previewMaxClaimableAmount(l, user).unwrap();
+        return _previewTotalAllocationAmount(l, user).unwrap();
     }
 
     /// @inheritdoc IPremiaAirdrip
@@ -119,7 +119,7 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
         return l.claimed[user];
     }
 
-    function _previewMaxClaimableAmount(
+    function _previewTotalAllocationAmount(
         PremiaAirdripStorage.Layout storage l,
         address user
     ) internal view returns (UD60x18) {
@@ -130,6 +130,6 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
         PremiaAirdripStorage.Layout storage l,
         address user
     ) internal view returns (uint256) {
-        return _previewMaxClaimableAmount(l, user).unwrap() - l.claimed[user];
+        return _previewTotalAllocationAmount(l, user).unwrap() - l.claimed[user];
     }
 }

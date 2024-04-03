@@ -28,10 +28,10 @@ interface IPremiaAirdrip {
     /// @notice Claims the premia tokens for the user.
     function claim() external;
 
-    /// @notice Returns the max amount claimable (throughout entire vesting period)
+    /// @notice Returns the total allocation amount (throughout entire vesting period)
     /// @param user The user to check
-    /// @return The max claimable amount
-    function previewMaxClaimableAmount(address user) external view returns (uint256);
+    /// @return The total allocation amount
+    function previewTotalAllocationAmount(address user) external view returns (uint256);
 
     /// @notice Returns the amount claimable since the last claim was made (or the vesting start)
     /// @param user The user to check
