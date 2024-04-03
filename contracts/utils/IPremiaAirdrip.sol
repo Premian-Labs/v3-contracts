@@ -11,6 +11,7 @@ interface IPremiaAirdrip {
     error PremiaAirdrip__NotClaimable(uint256 lastClaim, uint256 blockTimestamp);
     error PremiaAirdrip__NotInitialized();
     error PremiaAirdrip__NotVested(uint256 vestingStart, uint256 blockTimestamp);
+    error PremiaAirdrip__UserAlreadyExists(address user);
     error PremiaAirdrip__ZeroAmountClaimable();
 
     event Initialized(UD60x18 premiaPerInfluence, UD60x18 totalInfluence);

@@ -8,7 +8,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
-import {ONE} from "../libraries/Constants.sol";
+import {ZERO, ONE} from "../libraries/Constants.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {UD50x28, ud50x28} from "../libraries/UD50x28.sol";
 
@@ -42,6 +42,10 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
 
             if (user.addr == address(0) || user.influence < ONE) {
                 revert PremiaAirdrip__InvalidUser(user.addr, user.influence);
+            }
+
+            if (l.influence[user.addr] != ZERO) {
+                revert PremiaAirdrip__UserAlreadyExists(user.addr);
             }
 
             l.influence[user.addr] = user.influence;

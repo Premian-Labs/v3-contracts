@@ -142,6 +142,20 @@ contract PremiaAirdripTest is Test, Assertions {
         premiaAirdrip.initialize(_users);
     }
 
+    function test_initialize_RevertIf_UserAlreadyExists() public {
+        IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](3);
+        _users[0] = (IPremiaAirdrip.User({addr: alice, influence: ud(2_000_000e18)}));
+        _users[1] = (IPremiaAirdrip.User({addr: alice, influence: ud(10_000_000e18)}));
+        _users[2] = (IPremiaAirdrip.User({addr: carol, influence: ud(8_000_000e18)}));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPremiaAirdrip.PremiaAirdrip__UserAlreadyExists.selector, _users[1].addr)
+        );
+
+        vm.prank(owner);
+        premiaAirdrip.initialize(_users);
+    }
+
     function calculateClaimablePercent(uint256 duration) internal view returns (UD50x28) {
         return ud50x28(duration * 1e28) / ud50x28(vestingDuration * 1e28);
     }
