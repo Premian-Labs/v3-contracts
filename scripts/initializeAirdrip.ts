@@ -32,7 +32,17 @@ async function main() {
     users.push({ addr: user, influence: snapshot.total[user] });
   }
 
-  await premiaAirdrip.initialize(users);
+  const usersSizeChunk = users.length / 4;
+
+  const firstChunk = users.slice(0, usersSizeChunk);
+  const secondChunk = users.slice(usersSizeChunk, usersSizeChunk * 2);
+  const thirdChunk = users.slice(usersSizeChunk * 2, usersSizeChunk * 3);
+  const fourthChunk = users.slice(usersSizeChunk * 3, users.length);
+
+  await premiaAirdrip.initialize(firstChunk, false);
+  await premiaAirdrip.initialize(secondChunk, false);
+  await premiaAirdrip.initialize(thirdChunk, false);
+  await premiaAirdrip.initialize(fourthChunk, true);
 }
 
 main()

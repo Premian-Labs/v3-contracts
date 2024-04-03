@@ -74,39 +74,61 @@ contract PremiaAirdripTest is Test, Assertions {
         carolMaxClaimableAmount = (users[2].influence * premiaPerInfluence).intoUD50x28();
     }
 
-    event Initialized(UD60x18 premiaPerInfluence, UD60x18 totalInfluence);
+    event Initialized(bool initialized, UD60x18 premiaPerInfluence, UD60x18 totalInfluence);
 
     function test_initialize_Success() public {
         assertEq(premiaAirdrip.VESTING_DURATION(), 365 days);
         assertEq(premiaAirdrip.VESTING_START(), 1723708800);
 
         vm.expectEmit(false, false, false, true);
-        emit Initialized(premiaPerInfluence, ud(20_000_000e18));
+        emit Initialized(true, premiaPerInfluence, ud(20_000_000e18));
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
         assertEq(premia.balanceOf(address(premiaAirdrip)), totalAllocation);
+    }
+
+    function test_initialize_MultipleInitialization() public {
+        vm.expectEmit(false, false, false, true);
+        emit Initialized(false, premiaPerInfluence, ud(20_000_000e18));
+        vm.prank(owner);
+        premiaAirdrip.initialize(users, false);
+        assertEq(premia.balanceOf(address(premiaAirdrip)), 0);
+
+        address amy = makeAddr("amy");
+        address ben = makeAddr("ben");
+        address carla = makeAddr("carla");
+
+        IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](3);
+        _users[0] = (IPremiaAirdrip.User({addr: amy, influence: ud(4_000_000e18)}));
+        _users[1] = (IPremiaAirdrip.User({addr: ben, influence: ud(12_000_000e18)}));
+        _users[2] = (IPremiaAirdrip.User({addr: carla, influence: ud(4_000_000e18)}));
+
+        vm.expectEmit(false, false, false, true);
+        emit Initialized(true, premiaPerInfluence / ud(2e18), ud(40_000_000e18));
+        vm.prank(owner);
+        premiaAirdrip.initialize(_users, true);
     }
 
     function test_initialize_RevertIf_NotOwner() public {
         IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](0);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(alice);
-        premiaAirdrip.initialize(_users);
+        premiaAirdrip.initialize(_users, true);
     }
 
     function test_initialize_RevertIf_Initialized() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__Initialized.selector);
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
     }
 
     function test_initialize_RevertIf_ArrayEmpty() public {
         IPremiaAirdrip.User[] memory _users = new IPremiaAirdrip.User[](0);
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ArrayEmpty.selector);
         vm.prank(owner);
-        premiaAirdrip.initialize(_users);
+        premiaAirdrip.initialize(_users, true);
     }
 
     function test_initialize_RevertIf_InvalidUser() public {
@@ -124,7 +146,7 @@ contract PremiaAirdripTest is Test, Assertions {
         );
 
         vm.prank(owner);
-        premiaAirdrip.initialize(_users);
+        premiaAirdrip.initialize(_users, true);
 
         _users[0] = (IPremiaAirdrip.User({addr: alice, influence: ud(2_000_000e18)}));
         _users[1] = (IPremiaAirdrip.User({addr: bob, influence: ud(10_000_000e18)}));
@@ -139,7 +161,7 @@ contract PremiaAirdripTest is Test, Assertions {
         );
 
         vm.prank(owner);
-        premiaAirdrip.initialize(_users);
+        premiaAirdrip.initialize(_users, true);
     }
 
     function test_initialize_RevertIf_UserAlreadyExists() public {
@@ -153,7 +175,7 @@ contract PremiaAirdripTest is Test, Assertions {
         );
 
         vm.prank(owner);
-        premiaAirdrip.initialize(_users);
+        premiaAirdrip.initialize(_users, true);
     }
 
     function calculateClaimablePercent(uint256 duration) internal view returns (UD50x28) {
@@ -166,7 +188,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         assertEq(premia.balanceOf(alice), 0);
         assertEq(premia.balanceOf(bob), 0);
@@ -219,7 +241,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_RevertIf_NotClaimable() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         vm.warp(vestingStart + 10 seconds);
         vm.prank(alice);
@@ -240,7 +262,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_RevertIf_NotVested() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         vm.expectRevert(
             abi.encodeWithSelector(IPremiaAirdrip.PremiaAirdrip__NotVested.selector, vestingStart, block.timestamp)
@@ -259,7 +281,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_claim_RevertIf_ZeroAmountClaimable() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         vm.warp(vestingStart);
         vm.expectRevert(IPremiaAirdrip.PremiaAirdrip__ZeroAmountClaimable.selector);
@@ -279,7 +301,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewTotalAllocationAmount_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         uint256 aliceMaxClaimable = aliceMaxClaimableAmount.intoUD60x18().unwrap();
         assertEq(premiaAirdrip.previewTotalAllocationAmount(alice), aliceMaxClaimable);
@@ -318,7 +340,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewClaimableAmount_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         assertEq(premiaAirdrip.previewClaimableAmount(alice), 0);
 
@@ -365,7 +387,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewClaimRemaining_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         uint256 aliceMaxClaimable = aliceMaxClaimableAmount.intoUD60x18().unwrap();
         assertEq(premiaAirdrip.previewClaimRemaining(alice), aliceMaxClaimable);
@@ -408,7 +430,7 @@ contract PremiaAirdripTest is Test, Assertions {
 
     function test_previewClaimedAmount_Success() public {
         vm.prank(owner);
-        premiaAirdrip.initialize(users);
+        premiaAirdrip.initialize(users, true);
 
         assertEq(premiaAirdrip.previewClaimedAmount(alice), 0);
 

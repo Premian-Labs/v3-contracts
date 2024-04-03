@@ -12,6 +12,8 @@ library PremiaAirdripStorage {
         bool initialized;
         // premia per influence distributed per year
         UD60x18 premiaPerInfluence;
+        // total influence of all users
+        UD60x18 totalInfluence;
         // total influence per user
         mapping(address user => UD60x18 influence) influence;
         // total amount claimed per user

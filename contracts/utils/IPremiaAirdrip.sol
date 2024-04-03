@@ -14,7 +14,7 @@ interface IPremiaAirdrip {
     error PremiaAirdrip__UserAlreadyExists(address user);
     error PremiaAirdrip__ZeroAmountClaimable();
 
-    event Initialized(UD60x18 premiaPerInfluence, UD60x18 totalInfluence);
+    event Initialized(bool initialized, UD60x18 premiaPerInfluence, UD60x18 totalInfluence);
     event Claimed(address indexed user, uint256 amount, uint256 totalClaimed, uint256 totalRemaining);
 
     struct User {
@@ -24,7 +24,8 @@ interface IPremiaAirdrip {
 
     /// @notice Initializes the airdrip contract by pulling $PREMIA tokens from msg.sender and setting state variables
     /// @param users The users that will receive the premia tokens
-    function initialize(User[] memory users) external;
+    /// @param initialized Whether the contract initialization is complete
+    function initialize(User[] memory users, bool initialized) external;
 
     /// @notice Claims the premia tokens for the user.
     function claim() external;

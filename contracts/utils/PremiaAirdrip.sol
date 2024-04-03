@@ -29,14 +29,13 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
     uint256 public constant VESTING_START = 1723708800; // Thu Aug 15 2024 08:00:00 GMT+0000
 
     /// @inheritdoc IPremiaAirdrip
-    function initialize(User[] memory users) external nonReentrant onlyOwner {
+    function initialize(User[] memory users, bool initialized) external nonReentrant onlyOwner {
         PremiaAirdripStorage.Layout storage l = PremiaAirdripStorage.layout();
         if (l.initialized) revert PremiaAirdrip__Initialized();
         if (users.length == 0) revert PremiaAirdrip__ArrayEmpty();
 
-        PREMIA.safeTransferFrom(msg.sender, address(this), TOTAL_ALLOCATION.unwrap());
+        if (initialized) PREMIA.safeTransferFrom(msg.sender, address(this), TOTAL_ALLOCATION.unwrap());
 
-        UD60x18 totalInfluence;
         for (uint256 i = 0; i < users.length; i++) {
             User memory user = users[i];
 
@@ -49,13 +48,13 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
             }
 
             l.influence[user.addr] = user.influence;
-            totalInfluence = totalInfluence + user.influence;
+            l.totalInfluence = l.totalInfluence + user.influence;
         }
 
-        l.premiaPerInfluence = TOTAL_ALLOCATION / totalInfluence;
-        emit Initialized(l.premiaPerInfluence, totalInfluence);
+        l.premiaPerInfluence = TOTAL_ALLOCATION / l.totalInfluence;
+        l.initialized = initialized;
 
-        l.initialized = true;
+        emit Initialized(l.initialized, l.premiaPerInfluence, l.totalInfluence);
     }
 
     /// @inheritdoc IPremiaAirdrip
