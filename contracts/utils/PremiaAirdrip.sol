@@ -36,6 +36,7 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
 
         if (initialized) PREMIA.safeTransferFrom(msg.sender, address(this), TOTAL_ALLOCATION.unwrap());
 
+        UD60x18 totalInfluence = l.totalInfluence;
         for (uint256 i = 0; i < users.length; i++) {
             User memory user = users[i];
 
@@ -48,9 +49,10 @@ contract PremiaAirdrip is IPremiaAirdrip, OwnableInternal, ReentrancyGuard {
             }
 
             l.influence[user.addr] = user.influence;
-            l.totalInfluence = l.totalInfluence + user.influence;
+            totalInfluence = totalInfluence + user.influence;
         }
 
+        l.totalInfluence = totalInfluence;
         l.premiaPerInfluence = TOTAL_ALLOCATION / l.totalInfluence;
         l.initialized = initialized;
 
