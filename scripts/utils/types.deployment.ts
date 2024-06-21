@@ -19,6 +19,7 @@ export interface DeploymentMetadata {
   optionReward: { [name: string]: ContractDeploymentMetadata };
   vaults: { [name: string]: ContractDeploymentMetadata };
   rewardDistributor: { [name: string]: ContractDeploymentMetadata };
+  premiaAirdrip: { [name: string]: ContractDeploymentMetadata };
 }
 
 export enum ContractKey {
