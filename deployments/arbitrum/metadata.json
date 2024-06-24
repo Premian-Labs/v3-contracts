@@ -1216,5 +1216,27 @@
       "txHash": "0x997d57db7fe9d35de9027279c5a3806189da47f3fb4b1403e49889424acfdd92",
       "owner": ""
     }
+  },
+  "premiaAirdrip": {
+    "PremiaAirdripImplementation": {
+      "address": "0xA9C802f1d7f100379f6eD99b0CD2E9f2379EAB4d",
+      "block": 225376275,
+      "commitHash": "f4fb87d58841ea494537e6da93f732467877fadc",
+      "contractType": "Implementation",
+      "deploymentArgs": [],
+      "timestamp": 1719271159,
+      "txHash": "0x8552095e5f412f75d22f371f02e627ba9f7d90a5d84f64db78e6acfd080b1571",
+      "owner": ""
+    },
+    "PremiaAirdripProxy": {
+      "address": "0x267eDdB688E1190f9e669aDE66CE908D2942C12e",
+      "block": 225376526,
+      "commitHash": "f4fb87d58841ea494537e6da93f732467877fadc",
+      "contractType": "Proxy",
+      "deploymentArgs": ["0xA9C802f1d7f100379f6eD99b0CD2E9f2379EAB4d"],
+      "timestamp": 1719271222,
+      "txHash": "0x2fe2284d5ab2d9cd27f25417c4eb54c01ed9c64587c6770c1d72a89656808e78",
+      "owner": "0xC7f8D87734aB2cbf70030aC8aa82abfe3e8126cb"
+    }
   }
 }
