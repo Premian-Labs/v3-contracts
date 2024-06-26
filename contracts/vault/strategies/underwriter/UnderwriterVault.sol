@@ -585,6 +585,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 UD60x18 strike = l.maturityToStrikes[current].at(i);
                 UD60x18 positionSize = l.positionSizes[current][strike];
                 UD60x18 unlockedCollateral = l.isCall ? positionSize : positionSize * strike;
+
+                // TODO: remove after settling trades
+                if (unlockedCollateral > totalLockedAssets) totalLockedAssets = unlockedCollateral;
                 totalLockedAssets = totalLockedAssets - unlockedCollateral;
 
                 // Get the settlement price from oracle
@@ -709,8 +712,12 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         bool isBuy,
         address taker
     ) external view returns (uint256 premium) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Truncate the size to mitigate the risk of possible rounding errors accumulating in the system
+        size = l.truncate(size);
+
         QuoteInternal memory quote = _getQuoteInternal(
-            UnderwriterVaultStorage.layout(),
+            l,
             QuoteArgsInternal({
                 strike: poolKey.strike,
                 maturity: poolKey.maturity,
@@ -736,6 +743,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         address referrer
     ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // Truncate the size to mitigate the risk of possible rounding errors accumulating in the system
+        size = l.truncate(size);
+
         // Note: vault must settle expired options before pps is calculated
         _settle(l);
 
@@ -839,6 +849,8 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             UD60x18 strike = l.maturityToStrikes[maturity].at(i);
             UD60x18 positionSize = l.positionSizes[maturity][strike];
             UD60x18 unlockedCollateral = l.isCall ? positionSize : positionSize * strike;
+            // TODO: remove after settling trades
+            if (unlockedCollateral > l.totalLockedAssets) l.totalLockedAssets = unlockedCollateral;
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.fromTokenDecimals(IPool(pool).settle());
