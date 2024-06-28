@@ -331,9 +331,9 @@
       "owner": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469"
     },
     "UnderwriterVaultImplementation": {
-      "address": "0x05baF2323913008393637070f9b9836331D39BEd",
-      "block": 174656912,
-      "commitHash": "3c602e11f8785482b6add41d9cb8d5f1c188c5a0",
+      "address": "0xb63271BACcDB6997C694AE30557B43EE9e4375AB",
+      "block": 226725922,
+      "commitHash": "23777c9df90dba1907811f28c81c6fb383a547bc",
       "contractType": "Implementation",
       "deploymentArgs": [
         "0xBB7456a7661f46ebA8C638cb8CC2Ac181f45F3b9",
@@ -345,8 +345,8 @@
         "0x2eA42642D1B951f18eA7FbCE495Bea9E517b198F",
         "0xBCDBE71CA6475c3bE9f05E75bbDff7C3979Fdc52"
       ],
-      "timestamp": 1706346031,
-      "txHash": "0xdc8e5a554654f5e93a40d658457cbc24c723384a85201e283f71bcb103a60d3a",
+      "timestamp": 1719609029,
+      "txHash": "0xe38905b6367ebd79bbbdba751b9143c9084eb193bfff977ce5d7c8a1946c1985",
       "owner": ""
     },
     "VaultMiningImplementation": {
