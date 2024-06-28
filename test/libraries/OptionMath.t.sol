@@ -541,4 +541,29 @@ contract OptionMath_Unit_Test is Base_Test {
             assertEq(OptionMath.roundToStrikeInterval(values[i][0]), values[i][1]);
         }
     }
+
+    function test_countSignificantDigits_ReturnExpectedValue() public {
+        // prettier-ignore
+        UD60x18[2][15] memory values = [
+            [ud(995727814214145.735910195834782346e18), ud(18)],
+            [ud(592103573508216.0011000056003e18), ud(13)],
+            [ud(434.000005100560000000e18), ud(11)],
+            [ud(0.000000000000000001e18), ud(18)],
+            [ud(0.000000000000000111e18), ud(18)],
+            [ud(0.999999999999999999e18), ud(18)],
+            [ud(1.025778000099000111e18), ud(18)],
+            [ud(10.05990000000000000e18), ud(4)],
+            [ud(110.5990000000000000e18), ud(3)],
+            [ud(110.5900000000000000e18), ud(2)],
+            [ud(248.59e18), ud(2)],
+            [ud(1e18), ud(0)],
+            [ud(9999999e18), ud(0)],
+            [ud(5524000051020708e18), ud(0)],
+            [ud(0), ud(0)]
+        ];
+
+        for (uint256 i = 0; i < values.length; i++) {
+            assertEq(OptionMath.countSignificantDigits(values[i][0]), uint8(values[i][1].unwrap()));
+        }
+    }
 }

@@ -288,6 +288,24 @@ library OptionMath {
         return fromTokenDecimals(toTokenDecimals(value, decimals), decimals);
     }
 
+    /// @notice Counts the number of significant digits in a UD60x18 number
+    /// @param value The value to count the significant digits of
+    /// @return The number of significant digits
+    function countSignificantDigits(UD60x18 value) internal pure returns (uint8) {
+        uint8 decimals = 18;
+        uint256 fractionalPart = value.unwrap() % (10 ** decimals);
+
+        if (fractionalPart == 0) return 0;
+
+        uint8 significantDigits = decimals;
+        while (fractionalPart % 10 == 0) {
+            fractionalPart /= 10;
+            significantDigits--;
+        }
+
+        return significantDigits;
+    }
+
     /// @notice Performs a naive log10 calculation on `input` returning the floor of the result
     function log10Floor(uint256 input) internal pure returns (uint256 count) {
         while (input >= 10) {

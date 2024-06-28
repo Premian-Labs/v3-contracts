@@ -70,4 +70,8 @@ contract OptionMathMock {
     function calculateStrikeInterval(UD60x18 strike) external pure returns (UD60x18) {
         return OptionMath.calculateStrikeInterval(strike);
     }
+
+    function countSignificantDigits(UD60x18 value) internal view returns (uint8) {
+        return OptionMath.countSignificantDigits(value);
+    }
 }

@@ -557,4 +557,22 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         uint256 expected = isCallTest ? 0.60014461316 ether : 0.666666666666666666 ether;
         assertApproxEqAbs(vault.getUtilisation().unwrap(), expected, 1e6);
     }
+
+    function test_exposed_truncateTradeSize_ReturnExpectedValue() public {
+        // prettier-ignore
+        UD60x18[3][8] memory values = [
+            [ud(995727814214145.735910195834782346e18), ud(1.111111111111111111e18), ud(995727814214145e18)],
+            [ud(592103573508216.000000011000056003e18), ud(1000001.942800000000000000e18), ud(592103573508216.00000001100005e18)],
+            [ud(434.000005100560000000e18), ud(41249.12345e18), ud(434.00000510056e18)],
+            [ud(0.999999999999999999e18), ud(0.000000000000000001e18), ud(0)],
+            [ud(248.59e18), ud(1e18), ud(248.59e18)],
+            [ud(1e18), ud(20045e18), ud(1e18)],
+            [ud(0), ud(0.111e18), ud(0)],
+            [ud(0), ud(1e18), ud(0)]
+        ];
+
+        for (uint256 i = 0; i < values.length; i++) {
+            assertEq(vault.exposed_truncateTradeSize(values[i][0], values[i][1]), values[i][2]);
+        }
+    }
 }

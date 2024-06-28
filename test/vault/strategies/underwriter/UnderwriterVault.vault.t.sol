@@ -238,6 +238,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // the size after being truncated is zero (put vault only)
         if (!poolKey.isCallPool) {
+            poolKey.strike = ud(0.000000000001e18);
             vm.expectRevert(IVault.Vault__ZeroSize.selector);
             vault.getQuote(poolKey, ud(minTradeSize - 1), true, address(0));
         }
@@ -1107,9 +1108,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // the size after being truncated is zero (put vault only)
         if (!poolKey.isCallPool) {
-            tradeSize = ud(minTradeSize - 1);
+            poolKey.strike = ud(0.000000000001e18);
             vm.expectRevert(IVault.Vault__ZeroSize.selector);
-            vault.trade(poolKey, tradeSize, true, 1000e18, address(0));
+            vault.trade(poolKey, ud(minTradeSize - 1), true, 1000e18, address(0));
         }
     }
 

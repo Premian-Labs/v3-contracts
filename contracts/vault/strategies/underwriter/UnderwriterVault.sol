@@ -705,6 +705,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             );
     }
 
+    /// @notice Truncates the trade size (18 decimals) by the number of significant digits in the strike price
+    function _truncateTradeSize(UD60x18 size, UD60x18 strike) internal pure returns (UD60x18) {
+        return OptionMath.truncate(size, 18 - OptionMath.countSignificantDigits(strike));
+    }
+
     /// @inheritdoc IVault
     function getQuote(
         IPoolFactory.PoolKey calldata poolKey,
@@ -714,7 +719,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) external view returns (uint256 premium) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         // Truncate the size to mitigate the risk of possible rounding errors accumulating in the system
-        size = l.truncate(size);
+        size = _truncateTradeSize(size, poolKey.strike);
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
@@ -744,7 +749,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         // Truncate the size to mitigate the risk of possible rounding errors accumulating in the system
-        size = l.truncate(size);
+        size = _truncateTradeSize(size, poolKey.strike);
 
         // Note: vault must settle expired options before pps is calculated
         _settle(l);
