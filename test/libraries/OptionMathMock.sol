@@ -71,7 +71,7 @@ contract OptionMathMock {
         return OptionMath.calculateStrikeInterval(strike);
     }
 
-    function countSignificantDigits(UD60x18 value) internal view returns (uint8) {
+    function countSignificantDigits(UD60x18 value) internal pure returns (uint8) {
         return OptionMath.countSignificantDigits(value);
     }
 }
