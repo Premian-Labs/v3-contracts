@@ -586,8 +586,6 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
                 UD60x18 positionSize = l.positionSizes[current][strike];
                 UD60x18 unlockedCollateral = l.isCall ? positionSize : positionSize * strike;
 
-                // TODO: remove after settling trades
-                if (unlockedCollateral > totalLockedAssets) totalLockedAssets = unlockedCollateral;
                 totalLockedAssets = totalLockedAssets - unlockedCollateral;
 
                 // Get the settlement price from oracle
