@@ -24,6 +24,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     UD60x18 strike = UD60x18.wrap(1100e18);
     uint256 timestamp = 1677225600;
     uint256 maturity = 1677830400;
+    uint256 minTradeSize = 1e12;
 
     function setup() internal {
         poolKey.maturity = maturity;
@@ -234,6 +235,13 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__ZeroSize.selector);
         vault.getQuote(poolKey, ud(0), true, address(0));
+
+        // the size after being truncated is zero (put vault only)
+        if (!poolKey.isCallPool) {
+            poolKey.strike = ud(0.000000000001e18);
+            vm.expectRevert(IVault.Vault__ZeroSize.selector);
+            vault.getQuote(poolKey, ud(minTradeSize - 1), true, address(0));
+        }
     }
 
     function test_getQuote_RevertIf_ZeroStrike() public {
@@ -1097,6 +1105,13 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.expectRevert(IVault.Vault__ZeroSize.selector);
         vault.trade(poolKey, tradeSize, true, 1000e18, address(0));
+
+        // the size after being truncated is zero (put vault only)
+        if (!poolKey.isCallPool) {
+            poolKey.strike = ud(0.000000000001e18);
+            vm.expectRevert(IVault.Vault__ZeroSize.selector);
+            vault.trade(poolKey, ud(minTradeSize - 1), true, 1000e18, address(0));
+        }
     }
 
     function test_trade_RevertIf_ZeroStrike() public {

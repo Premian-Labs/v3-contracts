@@ -587,4 +587,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         l.pendingAssetsDeposit = depositAmount;
     }
+
+    function exposed_truncateTradeSize(UD60x18 size, UD60x18 strike) external pure returns (UD60x18) {
+        return _truncateTradeSize(size, strike);
+    }
 }

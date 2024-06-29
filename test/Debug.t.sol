@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+import "forge-std/console2.sol";
+
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+
 import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryDeployer} from "contracts/factory/PoolFactoryDeployer.sol";
@@ -66,15 +72,18 @@ contract Debug_Test is Base_Test {
 
     /// @dev Gets the starting block for the fork test.
     function getStartBlock() internal virtual override returns (uint256) {
-        string memory json = vm.readFile(path);
-        bytes memory data = vm.parseJson(json, ".core[*].block");
-        uint256[] memory blocks = abi.decode(data, (uint256[]));
+        //        string memory json = vm.readFile(path);
+        //        bytes memory data = vm.parseJson(json, ".core[*].block");
+        //        uint256[] memory blocks = abi.decode(data, (uint256[]));
+        //
+        //        uint256 maxBlock = 0;
+        //        for (uint256 i = 0; i < blocks.length; i++) {
+        //            if (blocks[i] > maxBlock) maxBlock = blocks[i];
+        //        }
+        //        return maxBlock;
 
-        uint256 maxBlock = 0;
-        for (uint256 i = 0; i < blocks.length; i++) {
-            if (blocks[i] > maxBlock) maxBlock = blocks[i];
-        }
-        return maxBlock;
+        // TODO: remove
+        return 225615913;
     }
 
     /// @dev Gets the start timestamp for the test.
@@ -354,5 +363,40 @@ contract Debug_Test is Base_Test {
         // IVault vault = IVault(vaultAddr);
         // uint256 totalAssets = vault.totalAssets();
         // emit log_named_uint("Total Assets", totalAssets);
+    }
+
+    function test_trade_dust_amount() public {
+        deal(users.deployer, 100 ether);
+        deal({token: 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8, to: users.deployer, give: 1_000_000_000e18});
+
+        vm.warp(block.timestamp);
+        vm.startPrank(users.deployer);
+
+        // pSV-ARB/USDCe-P
+        UnderwriterVault vault = UnderwriterVault(0xBe3E229319f86F5EE96EE1Dc0B6D55e8b68a439e);
+
+        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey(
+            0x912CE59144191C1204E64559FE8253a0e49E6548,
+            0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8,
+            0x68BDA63662b16550e86Ad16160625eb293AC3d5F,
+            ud(810000000000000000),
+            1720166400,
+            false
+        );
+
+        vault.settle();
+
+        bool isBuy = true;
+        IERC20 token = IERC20(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
+
+        UD60x18 tradeSize = ud(1.908470956312e12); // dust trade
+        vault.getQuote(poolKey, tradeSize, isBuy, address(0)); // total premium is 0 for dust trade
+        token.approve(address(vault), 2430000000); // ignore slippage
+        vault.trade(poolKey, tradeSize, isBuy, 2430000000, address(0)); // ignore slippage
+
+        tradeSize = ud(100.471786511581824214e18); // real trade
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, isBuy, address(0));
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        vault.trade(poolKey, tradeSize, isBuy, totalPremium + totalPremium / 10, address(0));
     }
 }
