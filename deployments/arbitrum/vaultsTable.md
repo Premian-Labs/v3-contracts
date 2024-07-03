@@ -20,3 +20,7 @@
 | `pSV-SOL/USDCe-P`    |             | `0x010aEb3ec7A6a15655C2991eb617c7D9b64Baef0` | [🔗](https://arbiscan.io/address/0x010aEb3ec7A6a15655C2991eb617c7D9b64Baef0) |
 | `pSV-FXS/FRAX-C`     |             | `0x767823505c345fA1Aa315116DC5f0276f8D5C623` | [🔗](https://arbiscan.io/address/0x767823505c345fA1Aa315116DC5f0276f8D5C623) |
 | `pSV-FXS/FRAX-P`     |             | `0x469ea472D168364B2e50aBB81Fe5C6DA142f9a62` | [🔗](https://arbiscan.io/address/0x469ea472D168364B2e50aBB81Fe5C6DA142f9a62) |
+| `pSV-PREMIA/USDCe-C` |             | `0xA8FF43e1953139a830c3dF25C4a922cF985B079A` | [🔗](https://arbiscan.io/address/0xA8FF43e1953139a830c3dF25C4a922cF985B079A) |
+| `pSV-PREMIA/USDCe-P` |             | `0xF1f6B7e04549976f6274917a86575D55d6e6e3C8` | [🔗](https://arbiscan.io/address/0xF1f6B7e04549976f6274917a86575D55d6e6e3C8) |
+| `pSV-OP/USDCe-C`     |             | `0xd4AF4096891A45c488bd330bbEa7fE5c38890613` | [🔗](https://arbiscan.io/address/0xd4AF4096891A45c488bd330bbEa7fE5c38890613) |
+| `pSV-OP/USDCe-P`     |             | `0xD9A6443FB26259FdDD781b4f546cE57f153feeE8` | [🔗](https://arbiscan.io/address/0xD9A6443FB26259FdDD781b4f546cE57f153feeE8) |

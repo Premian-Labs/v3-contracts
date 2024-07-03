@@ -268,6 +268,11 @@ export const arbitrumFeeds = [
     denomination: CHAINLINK_USD,
     feed: '0x24ceA4b8ce57cdA5058b924B9B9987992450590c',
   },
+  {
+    token: arbitrum.tokens.OP,
+    denomination: CHAINLINK_USD,
+    feed: '0x205aaD468a11fd5D34fA7211bC6Bad5b3deB9b98',
+  },
 ];
 
 export const arbitrumGoerliFeeds = [
