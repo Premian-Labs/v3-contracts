@@ -1280,6 +1280,156 @@
       "timestamp": 1702067085,
       "txHash": "0x7b0af8296a331d78430475c067b5578e78404e68c5ac4319b00be05c2a740b3c",
       "owner": ""
+    },
+    "pSV-WETH/USDCe-C-2": {
+      "address": "0x5E2988d59b70485f693B885fe4ffA543a57f1A31",
+      "block": 234926915,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xbae43c546DFADC69576aE73C68e0694A54F08e1B",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "195640000000000000000000"
+      ],
+      "timestamp": 1721665883,
+      "txHash": "0x816a239f7403769d29f24145aea581da4b5d0b9d4bf62a9161178a3596a51031",
+      "owner": ""
+    },
+    "pSV-WETH/USDCe-P-2": {
+      "address": "0x9879eBeAfb38B81a9488062DAC6BD158AD52Fb43",
+      "block": 234926928,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xD46993F25D298ebbCD31E941156C66f7e628A52a",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "195640000000000000000000"
+      ],
+      "timestamp": 1721665886,
+      "txHash": "0x9546b32c249b380e142fd754145613ce189c73af2ce31addc9eeae317d38fb48",
+      "owner": ""
+    },
+    "pSV-WBTC/USDCe-C-2": {
+      "address": "0x101Eb8b3b0fda101922648728838a3F279986B63",
+      "block": 234926939,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x45dF5EA836A15B561937Ae8373ab9eE984aea531",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "156585000000000000000000"
+      ],
+      "timestamp": 1721665889,
+      "txHash": "0xb0559ddc00549fa071dcb6201f3ff9c750afd435204041f123fcbb2bb454f511",
+      "owner": ""
+    },
+    "pSV-WBTC/USDCe-P-2": {
+      "address": "0xa248C1A2121aE42D2E46b1ECD95A6dAB77209169",
+      "block": 234926951,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0x6A1FC0E1c60BA6564CDe4910A425F1F1a1d18C1F",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "156585000000000000000000"
+      ],
+      "timestamp": 1721665892,
+      "txHash": "0xa0133ce86cadb7328c34d8d3b8a16d0bd1915775c465fbdf457f3f759d6a8d97",
+      "owner": ""
+    },
+    "pSV-ARB/USDCe-C-2": {
+      "address": "0x992F4e2B145e74De7B3344f5e9C557937C6D502A",
+      "block": 234926962,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xDC631d88dbB5eb39f5c4Bf8B4e5298d098912fFf",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "117165000000000000000000"
+      ],
+      "timestamp": 1721665895,
+      "txHash": "0x3e95b6a6696cab2653ae20ffb9646f1ab95d0277607379bae2b1eab8e1441188",
+      "owner": ""
+    },
+    "pSV-ARB/USDCe-P-2": {
+      "address": "0xA632c12d1d59b6F80F8F9EFc13Cfd53E9a0cE43D",
+      "block": 234926973,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xBe3E229319f86F5EE96EE1Dc0B6D55e8b68a439e",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "117165000000000000000000"
+      ],
+      "timestamp": 1721665898,
+      "txHash": "0x789a638f486877bc7436113ad859c4bf30d9f0ef093dceee2bbb56de423e2c10",
+      "owner": ""
+    },
+    "pSV-PREMIA/USDCe-C-1": {
+      "address": "0x668aEaCcf944eAE06309Cc5DA91Fb8DD09a46839",
+      "block": 234926985,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xA8FF43e1953139a830c3dF25C4a922cF985B079A",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "45625000000000000000000"
+      ],
+      "timestamp": 1721665901,
+      "txHash": "0xf2a2f4379d6a8effbc66bb0da6dbc28974a48ea5fe09902af75d8b3ab22692b1",
+      "owner": ""
+    },
+    "pSV-PREMIA/USDCe-P-1": {
+      "address": "0xC2034eDcd7d5fe40cef9e3a8CC273CA52c27428f",
+      "block": 234926996,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xF1f6B7e04549976f6274917a86575D55d6e6e3C8",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "45625000000000000000000"
+      ],
+      "timestamp": 1721665904,
+      "txHash": "0x443f3c7c51ac7745217e3bf33b9096870e5f5905c15fb3334fa5d9e32f98c2a2",
+      "owner": ""
+    },
+    "pSV-OP/USDCe-C-1": {
+      "address": "0x881BadD6cBE5523839994926c982565146b771AF",
+      "block": 234927008,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xd4AF4096891A45c488bd330bbEa7fE5c38890613",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "32485000000000000000000"
+      ],
+      "timestamp": 1721665907,
+      "txHash": "0xc8e804b38f8b40cc232bca79fe496c39de8296221ba6b4f9009f88f815e0cc01",
+      "owner": ""
+    },
+    "pSV-OP/USDCe-P-1": {
+      "address": "0xB21b2400696a3e653531b2Ac9f90736f5c6f8403",
+      "block": 234927020,
+      "commitHash": "a1fd791ea4a94f925f00acc2cd111e3c1d492bbe",
+      "contractType": "Proxy",
+      "deploymentArgs": [
+        "0x83cf0755CF7499a2fa9ada5F2F94296523b84434",
+        "0xD9A6443FB26259FdDD781b4f546cE57f153feeE8",
+        "0x912CE59144191C1204E64559FE8253a0e49E6548",
+        "32485000000000000000000"
+      ],
+      "timestamp": 1721665910,
+      "txHash": "0xec636686675778aba4644a403029f27fe0e9ca6026a556a5afde8f1788326a16",
+      "owner": ""
     }
   },
   "rewardDistributor": {
