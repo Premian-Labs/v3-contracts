@@ -609,5 +609,6 @@
     }
   },
   "dualMining": {},
-  "rewardDistributor": {}
+  "rewardDistributor": {},
+  "premiaAirdrip": {}
 }
